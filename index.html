@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#142b46">
+  <meta name="description" content="Internes Coachingportal der Schiedsrichtergruppe Main-Spessart.">
+  <title>Coachingportal-MSP · Anmeldung</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; font: 16px system-ui, -apple-system, sans-serif;
+      background: #f3f6fa; color: #142b46;
+    }
+    header {
+      background: #142b46; color: #fff; padding: 24px 20px;
+      box-shadow: 0 2px 8px rgba(15, 35, 60, .12);
+    }
+    .header-inner { max-width: 960px; margin: 0 auto; }
+    .eyebrow { margin: 0 0 4px; color: #c5d8e9; font-size: .82rem; letter-spacing: .06em; text-transform: uppercase; }
+    header h1 { margin: 0; font-size: clamp(1.4rem, 3vw, 2rem); line-height: 1.25; }
+    main { width: min(100% - 32px, 440px); margin: clamp(36px, 8vh, 84px) auto 40px; }
+    .panel {
+      background: #fff; border-radius: 16px; padding: clamp(24px, 5vw, 36px);
+      border: 1px solid #e0e8f0; box-shadow: 0 12px 38px rgba(20,43,70,.08);
+    }
+    h2 { margin: 0 0 10px; font-size: 1.45rem; }
+    .intro { margin: 0 0 26px; color: #55687d; line-height: 1.55; }
+    label { display: block; margin: 18px 0 7px; font-weight: 650; font-size: .93rem; }
+    input {
+      display: block; width: 100%; padding: 12px 14px; border-radius: 9px;
+      border: 1px solid #cdd8e3; background: #f8fafc; color: #405367; font: inherit;
+    }
+    input:disabled { cursor: not-allowed; opacity: .8; }
+    button {
+      margin-top: 25px; width: 100%; min-height: 47px; border: 0; border-radius: 9px;
+      background: #a8b7c7; color: #fff; font: inherit; font-weight: 700;
+      cursor: not-allowed;
+    }
+    .notice {
+      margin-top: 20px; padding: 14px 16px; border-radius: 9px;
+      border: 1px solid #cfdfed; background: #f0f6fc;
+      color: #294b69; line-height: 1.5; font-size: .93rem;
+    }
+    footer { text-align: center; margin: 22px 0; color: #65778a; font-size: .83rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <p class="eyebrow">SRG Main-Spessart</p>
+      <h1>Coachingportal-MSP</h1>
+    </div>
+  </header>
+  <main>
+    <section class="panel" aria-labelledby="login-title">
+      <h2 id="login-title">Anmeldung</h2>
+      <p class="intro">Interner Zugang für Coaches und die Portalverwaltung.</p>
+      <!-- Die Anmeldung ist absichtlich deaktiviert, bis Supabase Auth und Rollenrechte sicher eingerichtet sind. -->
+      <form aria-describedby="login-notice">
+        <label for="username">Benutzername</label>
+        <input id="username" name="username" type="text" autocomplete="username" placeholder="Benutzername" disabled>
+        <label for="password">Passwort</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Passwort" disabled>
+        <button type="button" disabled>Anmelden</button>
+      </form>
+      <div class="notice" id="login-notice" role="status">
+        Die Anmeldung wird derzeit eingerichtet. Es sind noch keine Benutzerkonten freigeschaltet.
+      </div>
+    </section>
+    <footer>Coachingportal-MSP · Interner Bereich</footer>
+  </main>
+</body>
+</html>
