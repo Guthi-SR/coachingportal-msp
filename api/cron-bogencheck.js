@@ -15,7 +15,8 @@ export default async function handler(req,res){
  try{
   const today=new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Berlin",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
   const maxDate=new Date(Date.parse(today+"T12:00:00Z")-5*86400000).toISOString().slice(0,10);
-  const games=await query("portal_games?match_date=lte."+maxDate+"&received_at=is.null&check_in_sent_at=is.null&select=*&order=match_date.asc&limit=200",key);
+  const minDate=new Date(Date.parse(maxDate+"T12:00:00Z")-2*86400000).toISOString().slice(0,10);
+  const games=await query("portal_games?match_date=gte."+minDate+"&match_date=lte."+maxDate+"&received_at=is.null&check_in_sent_at=is.null&select=*&order=match_date.asc&limit=200",key);
   let sent=0,skipped=0,failed=0;
   const profiles=new Map();
   for(const g of games){
