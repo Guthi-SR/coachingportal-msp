@@ -1,1 +1,101 @@
-<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Spiele – Coachingportal MSP</title><style>body{margin:0;font:16px system-ui;background:#f3f6fa;color:#142b46}header{background:#142b46;color:white;padding:22px}.shell{display:grid;grid-template-columns:230px 1fr;min-height:calc(100vh - 90px)}nav{background:white;border-right:1px solid #dce5ee;padding:22px 14px}nav a{display:block;padding:12px;color:#142b46;text-decoration:none;border-radius:8px}nav a[aria-current]{background:#e8f0f8;font-weight:700}main{padding:24px;min-width:0}section{background:white;padding:24px;border-radius:12px;border:1px solid #dce5ee;overflow-x:auto}table{border-collapse:collapse;width:100%}th,td{padding:10px;border-bottom:1px solid #ddd;text-align:left}a{color:#142b46}td select{min-width:160px;padding:8px;border:1px solid #abbac9;border-radius:6px;background:white;font:inherit}@media(max-width:650px){.shell{grid-template-columns:140px 1fr}nav{padding:8px}nav a{padding:9px}main{padding:10px}}</style><header><h1>Coachingportal MSP</h1></header><div class="shell"><nav aria-label="Hauptmenü"><strong>Menü</strong><a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html" aria-current="page">Spiele</a><a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav><main><section><h2>Spiele</h2><p id="status">Spiele werden geladen …</p><table><thead><tr><th>Spieldatum</th><th>Uhrzeit</th><th>Spielkennung</th><th>Heimmannschaft</th><th>Gastmannschaft</th><th>Liga</th><th>Spielstätte</th><th>Schiedsrichter</th><th>Coach / Beobachter</th></tr></thead><tbody id="rows"></tbody></table><p><a href="/spiele-anlegen.html">Neues Spiel anlegen</a></p><p>Hinweis: Bis zur Anbindung an die zentrale Datenbank sind die Spiele nur in diesem Browser gespeichert.</p></section></main></div><script type="module">import{createClient}from"https://esm.sh/@supabase/supabase-js@2.57.4";const sb=createClient("https://izuwixrvuxrhviyabgom.supabase.co","sb_publishable_2Cep_1Pu93JXSKVrYzyRQA_5Nbq9XEZ");const {data:{user}}=await sb.auth.getUser();const status=document.getElementById("status");if(!user){status.textContent="Bitte zuerst anmelden."}else{const resetKey="msp-games-reset-20261019-v1-"+user.id;if(localStorage.getItem(resetKey)!=="done"){localStorage.removeItem("msp-games-draft-"+user.id);localStorage.setItem(resetKey,"done");}let games=[];try{games=JSON.parse(localStorage.getItem("msp-games-draft-"+user.id))||[]}catch{}const gameKey="msp-games-draft-"+user.id;const readPeople=key=>{try{return(JSON.parse(localStorage.getItem(key+"-"+user.id))?.refs||[]).filter(p=>p.id&&p.name)}catch{return[]}};const referees=readPeople("msp-admin-draft"),coaches=readPeople("msp-coach-draft");games.sort((a,b)=>(a.date||"").localeCompare(b.date||""));for(const g of games){const tr=document.createElement("tr");for(const val of [formatPortalDate(g.date),g.kickoff,g.id,g.home,g.away,g.league,g.venue]){const td=document.createElement("td");td.textContent=val||"–";tr.append(td)}for(const [field,people] of [["referee",referees],["coach",coaches]]){const td=document.createElement("td");const select=document.createElement("select");select.setAttribute("aria-label",(field==="referee"?"Schiedsrichter":"Coach / Beobachter")+" für "+(g.home||"Spiel")+" gegen "+(g.away||""));select.add(new Option("Bitte auswählen",""));for(const p of people)select.add(new Option(p.name,p.id));select.value=g[field]||"";if(select.value!==g[field]&&g[field]){const prior=people.find(p=>p.name===g[field]);if(prior)select.value=prior.id}select.addEventListener("change",()=>{g[field]=select.value;try{localStorage.setItem(gameKey,JSON.stringify(games));status.textContent="Zuordnung gespeichert."}catch(e){status.textContent="Speichern fehlgeschlagen: "+e.message}});td.append(select);tr.append(td)}document.getElementById("rows").append(tr)}status.textContent=games.length?games.length+" Spiel(e) angelegt.":"Noch keine Spiele angelegt."}function formatPortalDate(value){if(!value)return "–";const str=String(value);const match=str.match(/^(\d{4})-(\d{2})-(\d{2})(.*)$/);return match?match[3]+"."+match[2]+"."+match[1]+match[4]:str;}</script></html>
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Spiele – Coachingportal MSP</title>
+<style>body{margin:0;background:#f3f6fa;color:#142b46;font:15px system-ui,sans-serif}header{background:#142b46;color:#fff;padding:22px}.shell{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 88px)}nav{padding:22px 14px;background:#fff;border-right:1px solid #dce5ee}nav a{display:block;padding:12px;border-radius:8px;color:#142b46;text-decoration:none}nav a[aria-current]{background:#e8f0f8;font-weight:700}main{padding:24px;min-width:0}section{background:#fff;padding:22px;border:1px solid #dce5ee;border-radius:12px}.scroll{overflow-x:auto}table{min-width:1150px;border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #dce5ee;padding:11px 10px;text-align:left;vertical-align:middle}th{font-size:13px}td select{min-width:125px;max-width:170px}select,input,textarea{font:inherit;border:1px solid #bccad7;border-radius:7px;padding:8px;box-sizing:border-box}input[type=checkbox]{width:20px;height:20px;cursor:pointer}button{font:inherit;border-radius:7px;padding:8px 12px;cursor:pointer;border:1px solid #9eafc2;background:#f7f9fb;color:#142b46}button.primary{background:#142b46;color:#fff;border-color:#142b46}button:disabled{opacity:.5;cursor:not-allowed}td button{margin:3px}.green{background:#e0f3e6}.yellow{background:#fff1be}.red{background:#fbdede}.legend{display:flex;flex-wrap:wrap;gap:18px;padding:8px 0 18px}.dot{display:inline-block;width:13px;height:13px;border-radius:4px;margin-right:5px;vertical-align:-1px;border:1px solid #bbc}.dot.green{background:#b0dfbd}.dot.yellow{background:#ffe48a}.dot.red{background:#f6aaaa}dialog{border:1px solid #bfd0e0;border-radius:13px;box-shadow:0 18px 64px #142b4640;width:min(92vw,650px);max-height:85vh;overflow:auto;padding:24px;color:#142b46}dialog::backdrop{background:#142b4680}dialog label{display:block;font-weight:600;margin-top:12px}dialog input,dialog textarea{width:100%;margin-top:6px}dialog textarea{min-height:160px;resize:vertical}dialog .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.small{color:#5b7185;font-size:13px}a{color:#142b46}@media(max-width:680px){.shell{grid-template-columns:145px minmax(0,1fr)}nav{padding:8px 5px}nav a{padding:9px 6px;font-size:13px}main{padding:10px}section{padding:12px}}</style></head><body>
+<header><h1>Coachingportal MSP</h1></header><div class="shell"><nav aria-label="Hauptmenü"><strong>Menü</strong><a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html" aria-current="page">Spiele</a><a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav>
+<main><section><h2>Spiele und Bogenstatus</h2><p id="status" role="status">Spiele und Bögen werden geladen …</p>
+<div class="legend"><span><i class="dot green"></i>Grün: Bogen versendet</span><span><i class="dot yellow"></i>Gelb: Spiel in den nächsten 5 Tagen</span><span><i class="dot red"></i>Rot: 5 Tage nach Spiel noch kein Bogen eingegangen</span></div>
+<div class="scroll"><table><thead><tr><th>Datum</th><th>Uhrzeit</th><th>Spielkennung</th><th>Heim</th><th>Gast</th><th>Liga</th><th>Spielstätte</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Bogen</th><th>Eingegangen</th><th>Geprüft</th><th>Versand</th></tr></thead><tbody id="rows"></tbody></table></div>
+<p><a href="/spiele-anlegen.html">Neues Spiel anlegen</a> · <a href="/beobachtungsboegen.html">Alle Beobachtungsbögen</a></p>
+<p class="small">Automatische E-Mails benötigen die serverseitige Absender-Konfiguration. Status und Zuordnungen werden zusätzlich im Portal gespeichert. Bereits vorhandene lokale Datensätze bleiben erhalten.</p></section></main></div>
+<dialog id="manual"><form method="dialog" id="manual-form"><h2>Bogen bereits versendet</h2><p>Hier kannst du einen Versand dokumentieren, der außerhalb des Portals stattgefunden hat. Es wird keine E-Mail versendet.</p><label>Versanddatum <input type="date" id="manual-date" required></label><label>Notiz zum Versandweg oder Grund <textarea id="manual-note" required placeholder="Beispiel: am 12.10.2026 per E-Mail von meiner bisherigen Adresse verschickt"></textarea></label><p id="manual-error" role="status"></p><div class="actions"><button type="button" id="cancel-manual">Abbrechen</button><button type="submit" class="primary">Als bereits versendet speichern</button></div></form></dialog>
+<dialog id="mail"><form method="dialog" id="mail-form"><h2 id="mail-head">E-Mail versenden</h2><label>Empfänger <input id="mail-recipient" readonly></label><label>Betreff <input id="mail-subject" required></label><label>Nachricht <textarea id="mail-body" required rows="12"></textarea></label><p class="small" id="attachment-info"></p><p class="small">Die persönliche Signatur wird später ergänzt. Vor dem Versand können Text und Betreff geändert werden.</p><p id="mail-error" role="status"></p><div class="actions"><button type="button" id="cancel-mail">Abbrechen</button><button type="submit" id="mail-submit" class="primary">E-Mail jetzt senden</button></div></form></dialog>
+<script type="module">
+import{requireAdmin,localGames,localPeople,syncGames,syncObservations,associateUniqueObservations,updateGame,gameColor,dateDE,reminderBody,sendBody,sendMail}from"/portal-workflow.js";
+const $=id=>document.getElementById(id),status=$("status");let userId="",games=[],docs=[],refs=[],coaches=[],selected=null,mailKind="";
+const currentIso=()=>{const t=new Date();return [t.getFullYear(),String(t.getMonth()+1).padStart(2,"0"),String(t.getDate()).padStart(2,"0")].join("-")};
+function person(people,id){return people.find(x=>x.id===id||x.name===id)}
+function fullName(p){return p?.name||[p?.first,p?.last].filter(Boolean).join(" ")||""}
+function cell(row,value){const td=document.createElement("td");td.textContent=value||"–";row.append(td);return td}
+async function change(g,patch){
+ try{const updated=await updateGame(userId,g.game_key,patch);Object.assign(g,updated);render();status.textContent="Änderung gespeichert."}
+ catch(e){status.textContent="Speichern fehlgeschlagen: "+e.message;render()}
+}
+async function assignment(g,type,val){
+ const local=localGames(userId);
+ let item=local.find(x=>String(x.id)===g.game_key);
+ if(!item){item={id:g.game_key,date:g.match_date,kickoff:g.kickoff,home:g.home,away:g.away,league:g.league,venue:g.venue,referee:g.referee_id,coach:g.coach_id};local.push(item)}
+ item[type]=val;localStorage.setItem("msp-games-draft-"+userId,JSON.stringify(local));
+ try{games=await syncGames(userId);render();status.textContent="Zuordnung gespeichert."}
+ catch(e){status.textContent="Zuordnung konnte nicht synchronisiert werden: "+e.message}
+}
+function render(){
+ const tbody=$("rows");tbody.replaceChildren();
+ for(const g of games){
+  const row=document.createElement("tr");const cls=gameColor(g);if(cls)row.className=cls;
+  for(const v of [dateDE(g.match_date),g.kickoff,g.game_key,g.home,g.away,g.league,g.venue])cell(row,v);
+  for(const type of ["referee","coach"]){
+   const td=document.createElement("td"),select=document.createElement("select"),people=type==="referee"?refs:coaches;
+   select.setAttribute("aria-label",(type==="referee"?"Schiedsrichter":"Coach")+" für "+g.game_key);
+   select.add(new Option("Bitte auswählen",""));
+   for(const p of people)select.add(new Option(fullName(p),p.id));
+   select.value=g[type+"_id"]||"";
+   select.addEventListener("change",()=>assignment(g,type,select.value));td.append(select);row.append(td)
+  }
+  const doc=docs.find(d=>d.document_id===g.pdf_id||d.game_key===g.game_key);
+  const pdfCell=document.createElement("td");
+  if(doc){const a=document.createElement("a");a.href="/beobachtungsbogen-ansehen.html?pdf="+encodeURIComponent(doc.document_id);a.target="_blank";a.rel="noopener noreferrer";a.textContent="📘";a.style.fontSize="24px";a.title="Bogen separat öffnen";pdfCell.append(a)}
+  else pdfCell.textContent="–";row.append(pdfCell);
+  for(const [field,prop] of [["received_at","Bogen eingegangen"],["checked_at","Bogen geprüft"]]){
+   const td=document.createElement("td"),input=document.createElement("input");input.type="checkbox";input.checked=!!g[field];input.title=prop;input.setAttribute("aria-label",prop+" für "+g.game_key);
+   if(field==="checked_at"&&!g.received_at)input.disabled=true;
+   input.addEventListener("change",()=>change(g,field==="received_at"?{received_at:input.checked?new Date().toISOString():null,...(!input.checked?{checked_at:null}:{})}:{checked_at:input.checked?new Date().toISOString():null}));
+   td.append(input);row.append(td)
+  }
+  const sendCell=document.createElement("td");const sent=!!(g.sent_at||g.sent_manual_at);
+  const label=document.createElement("div");label.textContent=sent?"✓ Versendet":g.received_at?"Bogen eingegangen":"Noch nicht versendet";label.className="small";sendCell.append(label);
+  const manual=document.createElement("button");manual.type="button";manual.textContent=g.sent_manual_at?"Versandnotiz ändern":"Bereits versendet";manual.onclick=()=>{
+   selected=g;$("manual-date").value=g.sent_manual_at?String(g.sent_manual_at).slice(0,10):currentIso();$("manual-note").value=g.manual_note||"";$("manual-error").textContent="";$("manual").showModal()
+  };sendCell.append(manual);
+  if(doc&&!sent){
+   const send=document.createElement("button");send.type="button";send.className="primary";send.textContent="Bogen versenden";send.disabled=!g.referee_email;
+   send.title=g.referee_email?"Bogen per E-Mail versenden":"E-Mail-Adresse beim Schiedsrichter fehlt";
+   send.onclick=()=>openMail(g,"bogen_versendet");sendCell.append(send)
+  }
+  if(cls==="red"){
+   const remind=document.createElement("button");remind.type="button";remind.textContent="Erinnerung versenden";
+   remind.disabled=!g.coach_email;remind.title=g.coach_email?"Erinnerung an Coach senden":"E-Mail-Adresse beim Coach fehlt";
+   remind.onclick=()=>openMail(g,"coach_erinnerung");sendCell.append(remind)
+  }
+  row.append(sendCell);tbody.append(row)
+ }
+ status.textContent=games.length?games.length+" Spiel(e) vorhanden.":"Noch keine Spiele vorhanden.";
+}
+function openMail(g,kind){
+ selected=g;mailKind=kind;
+ const isRef=kind==="bogen_versendet";
+ $("mail-head").textContent=isRef?"Beobachtungsbogen an Schiedsrichter versenden":"Erinnerung an Coach versenden";
+ $("mail-recipient").value=(isRef?g.referee_email:g.coach_email)||"";
+ $("mail-subject").value=isRef?"Beobachtungsbogen: "+g.home+" – "+g.away:"Erinnerung – Fehlender Beobachtungsbogen: "+g.home+" – "+g.away;
+ $("mail-body").value=isRef?sendBody(g):reminderBody(g);
+ $("attachment-info").textContent=isRef?"Der zugeordnete PDF-Beobachtungsbogen wird automatisch angehängt.":"Erinnerung ohne PDF-Anhang.";
+ $("mail-error").textContent="";$("mail-submit").disabled=false;$("mail").showModal()
+}
+$("cancel-manual").onclick=()=>$("manual").close();$("cancel-mail").onclick=()=>$("mail").close();
+$("manual-form").onsubmit=async e=>{
+ e.preventDefault();if(!selected)return;const date=$("manual-date").value,note=$("manual-note").value.trim();
+ if(!date||!note){$("manual-error").textContent="Bitte Datum und Notiz ausfüllen.";return}
+ try{await change(selected,{sent_manual_at:date+"T12:00:00+02:00",manual_note:note});$("manual").close()}
+ catch(error){$("manual-error").textContent=error.message}
+};
+$("mail-form").onsubmit=async e=>{
+ e.preventDefault();if(!selected)return;const button=$("mail-submit");button.disabled=true;$("mail-error").textContent="E-Mail wird versendet …";
+ try{await sendMail(selected.game_key,mailKind,$("mail-subject").value.trim(),$("mail-body").value.trim());
+  $("mail").close();games=await syncGames(userId);render();status.textContent="E-Mail erfolgreich versendet und protokolliert."}
+ catch(error){$("mail-error").textContent=error.message;button.disabled=false}
+};
+try{
+ const{user}=await requireAdmin();userId=user.id;refs=localPeople(userId,"referee");coaches=localPeople(userId,"coach");
+ games=await syncGames(userId);docs=await syncObservations(userId);
+ if(await associateUniqueObservations(userId,games,docs))games=await syncGames(userId);
+ render()
+}catch(error){status.textContent="Laden fehlgeschlagen: "+error.message}
+</script><script type="module" src="/portal-ui.js"></script></body></html>
