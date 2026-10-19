@@ -1,75 +1,84 @@
 <!doctype html>
 <html lang="de">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#142b46">
-  <meta name="description" content="Internes Coachingportal der Schiedsrichtergruppe Main-Spessart.">
-  <title>Coachingportal-MSP · Anmeldung</title>
-  <style>
-    :root { color-scheme: light; }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; min-height: 100vh; font: 16px system-ui, -apple-system, sans-serif;
-      background: #f3f6fa; color: #142b46;
-    }
-    header {
-      background: #142b46; color: #fff; padding: 24px 20px;
-      box-shadow: 0 2px 8px rgba(15, 35, 60, .12);
-    }
-    .header-inner { max-width: 960px; margin: 0 auto; }
-    .eyebrow { margin: 0 0 4px; color: #c5d8e9; font-size: .82rem; letter-spacing: .06em; text-transform: uppercase; }
-    header h1 { margin: 0; font-size: clamp(1.4rem, 3vw, 2rem); line-height: 1.25; }
-    main { width: min(100% - 32px, 440px); margin: clamp(36px, 8vh, 84px) auto 40px; }
-    .panel {
-      background: #fff; border-radius: 16px; padding: clamp(24px, 5vw, 36px);
-      border: 1px solid #e0e8f0; box-shadow: 0 12px 38px rgba(20,43,70,.08);
-    }
-    h2 { margin: 0 0 10px; font-size: 1.45rem; }
-    .intro { margin: 0 0 26px; color: #55687d; line-height: 1.55; }
-    label { display: block; margin: 18px 0 7px; font-weight: 650; font-size: .93rem; }
-    input {
-      display: block; width: 100%; padding: 12px 14px; border-radius: 9px;
-      border: 1px solid #cdd8e3; background: #f8fafc; color: #405367; font: inherit;
-    }
-    input:disabled { cursor: not-allowed; opacity: .8; }
-    button {
-      margin-top: 25px; width: 100%; min-height: 47px; border: 0; border-radius: 9px;
-      background: #a8b7c7; color: #fff; font: inherit; font-weight: 700;
-      cursor: not-allowed;
-    }
-    .notice {
-      margin-top: 20px; padding: 14px 16px; border-radius: 9px;
-      border: 1px solid #cfdfed; background: #f0f6fc;
-      color: #294b69; line-height: 1.5; font-size: .93rem;
-    }
-    footer { text-align: center; margin: 22px 0; color: #65778a; font-size: .83rem; }
-  </style>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Coachingportal MSP – Anmeldung</title>
+<style>
+body{font:16px system-ui,sans-serif;margin:0;background:#f3f6fa;color:#142b46}
+header{background:#142b46;color:white;padding:24px;text-align:center}
+main{max-width:440px;margin:55px auto;padding:0 18px}
+section{background:white;border:1px solid #dce5ee;border-radius:14px;padding:28px}
+label{display:block;margin:16px 0 7px;font-weight:600}
+input,button{box-sizing:border-box;width:100%;padding:13px;border-radius:8px;font:inherit}
+input{border:1px solid #b9c8d7}
+button{margin-top:16px;border:0;background:#142b46;color:white;cursor:pointer}
+button.secondary{background:#45627f}
+#status{margin-top:20px;line-height:1.5} [hidden]{display:none!important}
+</style>
 </head>
 <body>
-  <header>
-    <div class="header-inner">
-      <p class="eyebrow">SRG Main-Spessart</p>
-      <h1>Coachingportal-MSP</h1>
-    </div>
-  </header>
-  <main>
-    <section class="panel" aria-labelledby="login-title">
-      <h2 id="login-title">Anmeldung</h2>
-      <p class="intro">Interner Zugang für Coaches und die Portalverwaltung.</p>
-      <!-- Die Anmeldung ist absichtlich deaktiviert, bis Supabase Auth und Rollenrechte sicher eingerichtet sind. -->
-      <form aria-describedby="login-notice">
-        <label for="username">Benutzername</label>
-        <input id="username" name="username" type="text" autocomplete="username" placeholder="Benutzername" disabled>
-        <label for="password">Passwort</label>
-        <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Passwort" disabled>
-        <button type="button" disabled>Anmelden</button>
-      </form>
-      <div class="notice" id="login-notice" role="status">
-        Die Anmeldung wird derzeit eingerichtet. Es sind noch keine Benutzerkonten freigeschaltet.
-      </div>
-    </section>
-    <footer>Coachingportal-MSP · Interner Bereich</footer>
-  </main>
-</body>
-</html>
+<header><h1>Coachingportal MSP</h1><div>SRG Main-Spessart</div></header>
+<main><section>
+<h2>Anmeldung</h2>
+<div id="auth-form">
+<label for="email">E-Mail-Adresse</label>
+<input id="email" type="email" autocomplete="email" required>
+<label for="password">Passwort</label>
+<input id="password" type="password" autocomplete="current-password">
+<button id="login">Anmelden</button>
+<button id="magic" class="secondary">Erstzugang per E-Mail</button>
+<button id="reset" class="secondary">Passwort zurücksetzen</button>
+</div>
+<div id="password-form" hidden>
+<label for="new-password">Neues Passwort (mindestens 12 Zeichen)</label>
+<input id="new-password" type="password" autocomplete="new-password" minlength="12">
+<button id="save-password">Passwort speichern</button>
+</div>
+<div id="account" hidden><h2>Willkommen</h2><p id="role"></p><button id="logout">Abmelden</button></div>
+<p id="status" role="status" aria-live="polite"></p>
+</section></main>
+<script type="module">
+import {createClient} from "https://esm.sh/@supabase/supabase-js@2.57.4";
+const supabase=createClient("https://izuwixrvuxrhviyabgom.supabase.co","sb_publishable_2Cep_1Pu93JXSKVrYzyRQA_5Nbq9XEZ");
+const el=id=>document.getElementById(id);
+const msg=text=>{el("status").textContent=text};
+const email=()=>el("email").value.trim();
+const redirect=location.origin+location.pathname;
+async function render(){
+  const {data:{user},error}=await supabase.auth.getUser();
+  if(error||!user){el("auth-form").hidden=false;el("account").hidden=true;return}
+  const {data:profile,error:profileError}=await supabase.from("portal_profiles").select("role").eq("user_id",user.id).single();
+  el("auth-form").hidden=true;el("account").hidden=false;
+  el("role").textContent=profileError?"Benutzerprofil noch nicht verfügbar.":profile.role==="admin"?"Administrator":"Coach";
+}
+el("login").onclick=async()=>{
+  if(!email()||!el("password").value)return msg("Bitte E-Mail-Adresse und Passwort eingeben.");
+  const {error}=await supabase.auth.signInWithPassword({email:email(),password:el("password").value});
+  msg(error?"Anmeldung fehlgeschlagen. Bitte Zugangsdaten prüfen.":"");
+  if(!error)await render();
+};
+el("magic").onclick=async()=>{
+  if(!email())return msg("Bitte zuerst deine E-Mail-Adresse eingeben.");
+  const {error}=await supabase.auth.signInWithOtp({email:email(),options:{emailRedirectTo:redirect,shouldCreateUser:false}});
+  msg(error?"Der Erstzugang konnte nicht angefordert werden. Bitte prüfen, ob dein Konto bereits eingerichtet wurde.":"Falls dein Konto besteht, erhältst du eine E-Mail mit einem Anmeldelink.");
+};
+el("reset").onclick=async()=>{
+  if(!email())return msg("Bitte zuerst deine E-Mail-Adresse eingeben.");
+  const {error}=await supabase.auth.resetPasswordForEmail(email(),{redirectTo:redirect});
+  msg(error?"Zurücksetzen derzeit nicht möglich.":"Falls dein Konto besteht, erhältst du eine E-Mail.");
+};
+el("save-password").onclick=async()=>{
+  const password=el("new-password").value;
+  if(password.length<12)return msg("Bitte mindestens 12 Zeichen verwenden.");
+  const {error}=await supabase.auth.updateUser({password});
+  if(error)return msg("Das Passwort konnte nicht gespeichert werden.");
+  el("password-form").hidden=true;el("new-password").value="";msg("Passwort gespeichert.");await render();
+};
+el("logout").onclick=async()=>{await supabase.auth.signOut();msg("Abgemeldet.");await render()};
+supabase.auth.onAuthStateChange(event=>{
+  if(event==="PASSWORD_RECOVERY"){el("password-form").hidden=false;el("account").hidden=true;el("auth-form").hidden=true;msg("Bitte jetzt dein neues Passwort festlegen.");}
+  else if(event==="SIGNED_IN"||event==="SIGNED_OUT")setTimeout(render,0);
+});
+await render();
+</script>
+</body></html>
