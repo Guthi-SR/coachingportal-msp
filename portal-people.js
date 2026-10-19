@@ -8,13 +8,15 @@ export async function cloudPeople(userId,kind){
  let local={refs:[],docs:[]};try{local=JSON.parse(localStorage.getItem(key)||"{}")||local}catch{}
  const stored=Array.isArray(local.refs)?local.refs:[];
  const present=new Set(people.map(x=>x.id));
- const missing=stored.filter(x=>x?.id&&!present.has(x.id));
+ const marker="msp-cloud-migrated-"+kind+"-"+userId;
+ const missing=localStorage.getItem(marker)==="yes"?[]:stored.filter(x=>x?.id&&!present.has(x.id));
  if(missing.length){
   const {error:e}=await sb.from("portal_people").upsert(missing.map(p=>({owner_id:userId,kind,person_id:p.id,details:p})),{onConflict:"owner_id,kind,person_id"});
   if(e)throw e;
   people.push(...missing);
  }
  localStorage.setItem(key,JSON.stringify({...local,refs:people}));
+ localStorage.setItem(marker,"yes");
  return people;
 }
 export async function saveCloudPerson(userId,kind,person){
