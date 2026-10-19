@@ -19,7 +19,7 @@ if(!content.trim()){report.textContent="Die PDF enthält keinen auslesbaren Text
 const matchLabel=(pattern)=>{for(let i=0;i<lines.length;i++){const m=lines[i].match(pattern);if(m){const candidate=(m[1]||"").trim();if(candidate&&candidate.length>2)return candidate;return(lines[i+1]||"").trim()}}return""};
 const referee=matchLabel(/(?:Schiedsrichter(?:in)?|SR(?:-Name)?)\s*[:：-]\s*(.*)$/i);
 const observer=matchLabel(/(?:Coach\s*\/\s*Beobachter(?:in)?|Beobachter(?:in)?|Coach)\s*[:：-]\s*(.*)$/i);
-ref.textContent=referee||"Nicht eindeutig erkannt";coach.textContent=observer&&observer.trim().toLocaleLowerCase("de")!==referee.trim().toLocaleLowerCase("de")?observer:"Nicht eindeutig erkannt";
+const cleanRef=referee.replace(/\s+(?:Coach|Beobachter(?:in)?)(?:\s*[:：-])?\s+.*$/i,"").trim();const cleanObserver=observer.replace(/\s+(?:Schiedsrichter(?:in)?)(?:\s*[:：-])?\s+.*$/i,"").trim();ref.textContent=cleanRef||"Nicht eindeutig erkannt";coach.textContent=cleanObserver&&cleanObserver.toLocaleLowerCase("de")!==cleanRef.toLocaleLowerCase("de")?cleanObserver:"Nicht eindeutig erkannt";
 report.textContent="Auswertung abgeschlossen: "+pdf.numPages+" Seite(n). Bitte die Namen überprüfen.";
 }catch(error){report.textContent="PDF konnte nicht ausgewertet werden: "+error.message}
 }
