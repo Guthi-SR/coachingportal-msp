@@ -6,19 +6,19 @@
 <style>
 body{font:16px system-ui,sans-serif;margin:0;background:#f3f6fa;color:#142b46}
 header{background:#142b46;color:white;padding:24px;text-align:center}
-main{max-width:440px;margin:55px auto;padding:0 18px}
+main{max-width:1100px;margin:35px auto;padding:0 18px}
 section{background:white;border:1px solid #dce5ee;border-radius:14px;padding:28px}
 label{display:block;margin:16px 0 7px;font-weight:600}
 input,button{box-sizing:border-box;width:100%;padding:13px;border-radius:8px;font:inherit}
 input{border:1px solid #b9c8d7}
 button{margin-top:16px;border:0;background:#142b46;color:white;cursor:pointer}
 button.secondary{background:#45627f}
-#status{margin-top:20px;line-height:1.5} [hidden]{display:none!important}
+#dashboard{display:grid;grid-template-columns:220px 1fr;gap:20px}#dashboard nav{background:#fff;border:1px solid #dce5ee;border-radius:14px;padding:18px}#dashboard nav a{display:block;padding:12px 8px;color:#142b46;text-decoration:none;border-radius:8px}#dashboard nav a:hover{background:#edf3f9}@media(max-width:650px){#dashboard{grid-template-columns:1fr}}#status{margin-top:20px;line-height:1.5} [hidden]{display:none!important}
 </style>
 </head>
 <body>
 <header><h1>Coachingportal MSP</h1><div>SRG Main-Spessart</div></header>
-<main><section>
+<main><div id="dashboard" hidden><nav aria-label="Hauptmenü"><strong>Menü</strong><a href="/" aria-current="page">Startseite</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a></nav><section><h2>Startseite</h2><button id="dashboard-logout">Abmelden</button></section></div><section id="login-section">
 <h2>Anmeldung</h2>
 <div id="auth-form">
 <label for="email">E-Mail-Adresse</label>
@@ -46,9 +46,9 @@ const email=()=>el("email").value.trim();
 const redirect=location.origin+location.pathname;
 async function render(){
   const {data:{user},error}=await supabase.auth.getUser();
-  if(error||!user){el("auth-form").hidden=false;el("account").hidden=true;return}
+  if(error||!user){el("auth-form").hidden=false;el("account").hidden=true;el("dashboard").hidden=true;el("login-section").hidden=false;return}
   const {data:profile,error:profileError}=await supabase.from("portal_profiles").select("role").eq("user_id",user.id).single();
-  el("auth-form").hidden=true;el("account").hidden=false;
+  el("auth-form").hidden=true;el("account").hidden=true;el("dashboard").hidden=false;el("login-section").hidden=true;
   el("admin-link").hidden=profileError||profile.role!=="admin";
   el("role").textContent=profileError?"Benutzerprofil noch nicht verfügbar.":profile.role==="admin"?"Administrator":"Coach";
 }
@@ -75,7 +75,7 @@ el("save-password").onclick=async()=>{
   if(error)return msg("Das Passwort konnte nicht gespeichert werden.");
   el("password-form").hidden=true;el("new-password").value="";msg("Passwort gespeichert.");await render();
 };
-el("logout").onclick=async()=>{await supabase.auth.signOut();msg("Abgemeldet.");await render()};
+el("dashboard-logout").onclick=async()=>{await supabase.auth.signOut();msg("Abgemeldet.");await render()};el("logout").onclick=async()=>{await supabase.auth.signOut();msg("Abgemeldet.");await render()};
 supabase.auth.onAuthStateChange(event=>{
   if(event==="PASSWORD_RECOVERY"){el("password-form").hidden=false;el("account").hidden=true;el("auth-form").hidden=true;msg("Bitte jetzt dein neues Passwort festlegen.");}
   else if(event==="SIGNED_IN"||event==="SIGNED_OUT")setTimeout(render,0);
