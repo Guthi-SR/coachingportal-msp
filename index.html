@@ -34,7 +34,7 @@ button.secondary{background:#45627f}
 <input id="new-password" type="password" autocomplete="new-password" minlength="12">
 <button id="save-password">Passwort speichern</button>
 </div>
-<div id="account" hidden><h2>Willkommen</h2><p id="role"></p><button id="logout">Abmelden</button></div>
+<div id="account" hidden><h2>Willkommen</h2><p id="role"></p><p id="admin-link" hidden><a href="/verwaltung.html">Schiedsrichterverwaltung öffnen →</a></p><button id="logout">Abmelden</button></div>
 <p id="status" role="status" aria-live="polite"></p>
 </section></main>
 <script type="module">
@@ -49,6 +49,7 @@ async function render(){
   if(error||!user){el("auth-form").hidden=false;el("account").hidden=true;return}
   const {data:profile,error:profileError}=await supabase.from("portal_profiles").select("role").eq("user_id",user.id).single();
   el("auth-form").hidden=true;el("account").hidden=false;
+  el("admin-link").hidden=profileError||profile.role!=="admin";
   el("role").textContent=profileError?"Benutzerprofil noch nicht verfügbar.":profile.role==="admin"?"Administrator":"Coach";
 }
 el("login").onclick=async()=>{
