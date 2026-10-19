@@ -64,8 +64,11 @@ export async function syncObservations(ownerId){
  const {data:existing,error}=await sb.from("portal_observations").select("*").eq("owner_id",ownerId);
  if(error)throw error;
  const synced=new Set((existing||[]).map(x=>x.document_id));
+ const {data:deleted,error:deletedError}=await sb.from("portal_deleted_observations").select("document_id").eq("owner_id",ownerId);
+ if(deletedError)throw deletedError;
+ const blocked=new Set((deleted||[]).map(x=>x.document_id));
  for(const o of records){
-  if(!o?.id||synced.has(o.id))continue;
+  if(!o?.id||synced.has(o.id)||blocked.has(o.id))continue;
   const blob=await localPdf(o.id);if(!(blob instanceof Blob))continue;
   const path=ownerId+"/"+o.id+".pdf";
   const uploaded=await sb.storage.from(B).upload(path,blob,{contentType:"application/pdf",upsert:false});
@@ -97,7 +100,10 @@ export async function deleteObservation(ownerId,docId){
  if(readError||!doc)throw Error("Beobachtungsbogen nicht gefunden.");
  const{error:unlinkError}=await sb.rpc("portal_unlink_observation",{p_document_id:docId});
  if(unlinkError)throw unlinkError;
- return deleteUnassignedObservation(ownerId,docId);
+ const result=await deleteUnassignedObservation(ownerId,docId);
+ const {error:tombstoneError}=await sb.from("portal_deleted_observations").upsert({owner_id:ownerId,document_id:docId},{onConflict:"owner_id,document_id"});
+ if(tombstoneError)throw Error("Bogen gelöscht, aber die dauerhafte Löschmarkierung fehlt: "+tombstoneError.message);
+ return result;
 }
 export async function deleteUnassignedObservation(ownerId,docId){
  const{data:doc,error:readError}=await sb.from("portal_observations").select("document_id,game_key,storage_path").eq("owner_id",ownerId).eq("document_id",docId).single();
