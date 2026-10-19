@@ -9,7 +9,7 @@ header{background:#142b46;color:#fff;padding:22px}.shell{display:grid;grid-templ
 <a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav>
 <main><section><h2>Alle Beobachtungsbögen</h2><p>Alle erfassten Bögen – sortiert nach Spieldatum, neueste zuerst. Ein Klick auf den Bogen öffnet nur das PDF in einem separaten Tab.</p>
 <p id="status" role="status">Bögen werden geladen …</p><table id="table" hidden><thead><tr><th>Spieldatum</th><th>Begegnung</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Beobachtungsbogen</th><th>Zuordnung</th></tr></thead><tbody id="rows"></tbody></table></section></main></div>
-<script type="module">
+<script type="module">import {cloudPeople} from "/portal-people.js";
 import{requireAdmin,syncGames,syncObservations,associateUniqueObservations,observationAssignments,localPeople,linkObservation,dateDE}from"/portal-workflow.js";
 const status=document.getElementById("status"),rows=document.getElementById("rows");
 try{
@@ -18,7 +18,7 @@ try{
  if(await associateUniqueObservations(user.id,games,docs)){games=await syncGames(user.id);docs=await syncObservations(user.id)}
  const local=observationAssignments(user.id);
  const seen=new Set(docs.map(x=>x.document_id));for(const o of local)if(!seen.has(o.id))docs.push({document_id:o.id,game_key:o.gameKey||null,referee_id:o.referee,coach_id:o.coach,file_name:o.fileName,created_at:o.createdAt});
- const refs=localPeople(user.id,"referee"),coaches=localPeople(user.id,"coach");
+ const refs=await cloudPeople(user.id,"referee"),coaches=await cloudPeople(user.id,"coach");
  const person=(list,id)=>{const p=list.find(x=>x.id===id||x.name===id);return p?.name||[p?.first,p?.last].filter(Boolean).join(" ")||"–"};
  const byGame=doc=>games.find(g=>g.game_key===doc.game_key||g.pdf_id===doc.document_id);
  docs.sort((a,b)=>{
