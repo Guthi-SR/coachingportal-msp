@@ -29,13 +29,22 @@ for(const item of items){if(!item.str?.trim())continue;const y=Math.round(item.t
 lines.push(...[...groups.entries()].sort((a,b)=>b[0]-a[0]).map(([y,parts])=>parts.sort((a,b)=>a.x-b.x).map(p=>p.text).join(" ").trim()));
 }
 const content=lines.join("\n");preview.textContent=content||"Kein maschinenlesbarer Text gefunden.";
-if(!content.trim()){report.textContent="Die PDF enthält keinen auslesbaren Text (möglicherweise ein Scan). Dafür benötigen wir OCR.";return}
+if(!content.trim()){
+ report.textContent="Die PDF enthält keinen auslesbaren Text (möglicherweise ein Scan). Du kannst Schiedsrichter und Coach / Beobachter trotzdem manuell zuordnen und den Bogen speichern.";
+ detectedRef="";detectedCoach="";
+ ref.textContent="Manuell auswählen";coach.textContent="Manuell auswählen";
+ document.getElementById("assignment").hidden=false;
+ document.getElementById("assignment-hint").textContent="Keine automatische Namenszuordnung möglich. Bitte beide Personen aus den Listen auswählen.";
+ document.getElementById("confirm-assignment").disabled=true;
+ document.getElementById("manual-fields").hidden=false;
+ return;
+}
 const matchLabel=(pattern)=>{for(let i=0;i<lines.length;i++){const m=lines[i].match(pattern);if(m){const candidate=(m[1]||"").trim();if(candidate&&candidate.length>2)return candidate;return(lines[i+1]||"").trim()}}return""};
 const referee=matchLabel(/(?:Schiedsrichter(?:in)?|SR(?:-Name)?)\s*[:：-]\s*(.*)$/i);
 const observer=matchLabel(/(?:Coach\s*\/\s*Beobachter(?:in)?|Beobachter(?:in)?|Coach)\s*[:：-]\s*(.*)$/i);
 const cleanRef=referee.replace(/\s+(?:Coach|Beobachter(?:in)?)(?:\s*[:：-])?\s+.*$/i,"").trim();const cleanObserver=observer.replace(/\s+(?:Schiedsrichter(?:in)?)(?:\s*[:：-])?\s+.*$/i,"").trim();ref.textContent=cleanRef||"Nicht eindeutig erkannt";coach.textContent=cleanObserver&&cleanObserver.toLocaleLowerCase("de")!==cleanRef.toLocaleLowerCase("de")?cleanObserver:"Nicht eindeutig erkannt";
-detectedRef=cleanRef;detectedCoach=cleanObserver&&norm(cleanObserver)!==norm(cleanRef)?cleanObserver:"";document.getElementById("assignment").hidden=false;const rr=findPerson(refs,detectedRef),cc=findPerson(coaches,detectedCoach);document.getElementById("assignment-hint").textContent="Erkannt: "+(detectedRef||"unbekannt")+" / "+(detectedCoach||"unbekannt")+". "+(rr.length===1&&cc.length===1?"Beide Namen eindeutig in den Personenlisten gefunden.":"Mindestens eine Person ist nicht eindeutig zugeordnet. Bitte manuell auswählen.");document.getElementById("confirm-assignment").disabled=!(rr.length===1&&cc.length===1);report.textContent="Auswertung abgeschlossen: "+pdf.numPages+" Seite(n). Bitte die Namen überprüfen.";
-}catch(error){report.textContent="PDF konnte nicht ausgewertet werden: "+error.message}
+detectedRef=cleanRef;detectedCoach=cleanObserver&&norm(cleanObserver)!==norm(cleanRef)?cleanObserver:"";document.getElementById("assignment").hidden=false;const rr=findPerson(refs,detectedRef),cc=findPerson(coaches,detectedCoach);document.getElementById("assignment-hint").textContent="Erkannt: "+(detectedRef||"unbekannt")+" / "+(detectedCoach||"unbekannt")+". "+(rr.length===1&&cc.length===1?"Beide Namen eindeutig in den Personenlisten gefunden.":"Mindestens eine Person ist nicht eindeutig zugeordnet. Bitte manuell auswählen.");document.getElementById("confirm-assignment").disabled=!(rr.length===1&&cc.length===1);if(rr.length!==1||cc.length!==1){document.getElementById("manual-fields").hidden=false;if(rr.length===1)document.getElementById("assign-ref").value=rr[0].id;if(cc.length===1)document.getElementById("assign-coach").value=cc[0].id}report.textContent="Auswertung abgeschlossen: "+pdf.numPages+" Seite(n). Bitte die Namen überprüfen.";
+}catch(error){report.textContent="Automatische Auswertung nicht möglich: "+error.message+". Du kannst die Personen manuell zuordnen.";detectedRef="";detectedCoach="";document.getElementById("assignment").hidden=false;document.getElementById("assignment-hint").textContent="Bitte Schiedsrichter und Coach / Beobachter manuell auswählen.";document.getElementById("confirm-assignment").disabled=true;document.getElementById("manual-fields").hidden=false}
 }
 input.addEventListener("change",()=>showFile(input.files[0]));
 for(const event of ["dragenter","dragover"]){zone.addEventListener(event,e=>{e.preventDefault();zone.classList.add("dragging")})}
