@@ -31,11 +31,15 @@ SMTP: `smtp.strato.de`, Port `465`, SSL/TLS. Der Versand erfolgt mit Nodemailer 
 
 Der SMTP-Zugang wird ausschließlich serverseitig genutzt. SMTP-Passwörter gehören **niemals** in die Website, GitHub-Dateien oder Chatnachrichten. Für Tests zunächst eine Mail an ein eigenes Testpostfach senden und nicht an einen Coach oder Schiedsrichter.
 
-## Datenspeicherung
+## Zentrale Datenspeicherung (Supabase)
 
-Die bisherigen Spiel-, Coach-, Schiedsrichter- und PDF-Daten liegen zunächst in `localStorage` bzw. `IndexedDB` des erstellenden Browsers. Beim Aufruf von „Spiele“ oder „Beobachtungsbögen“ werden zugeordnete Inhalte über die angemeldete Admin-Sitzung in `public.portal_games` / `public.portal_observations` und den privaten Storage-Bucket `portal-observation-pdfs` kopiert. Der erste Abgleich muss im bisherigen Browser erfolgen. Alte lokale Dateien werden dabei nicht gelöscht.
-
-Die PDF-Dokumente sind über RLS auf den Admin beschränkt. Eine vollständig browserunabhängige Personen-Stammdatenverwaltung ist eine separate spätere Aufgabe.
+- Spiele und Zuordnungen werden zentral in `public.portal_games` gespeichert. Neu angelegte Spiele werden unmittelbar dort geschrieben, und Änderungen an Schiedsrichter/Coach gehen direkt an Supabase.
+- Schiedsrichter- und Coach-Stammdaten werden in `public.portal_people` gesichert. Listen, Profile, Auswahlfelder und Navigation laden diese Daten aus Supabase.
+- Bestehende Stammdaten aus `localStorage` werden **einmalig beim Öffnen der Personenverwaltung im bisherigen Browser** nach Supabase übernommen. Alte Browserdaten bleiben als Sicherung liegen, sind aber keine führende Datenquelle mehr.
+- Beobachtungsbögen und Dokumentmetadaten liegen in `public.portal_observations`, PDF-Dateien im geschützten Storage-Bucket `portal-observation-pdfs`. Einmal lokal erfasste ältere PDFs müssen im **ursprünglichen Browser** durch Öffnen der Bogenübersicht synchronisiert werden.
+- Profilansichten und Bogenübersicht verwenden die zentralen Daten. Der lokale PDF-Speicher kann als zusätzlicher Fallback dienen, wenn die Datei im aktuellen Browser verfügbar ist.
+- Zugriffsschutz: Authentifizierter Portal-Admin, private RLS-Richtlinien. SMTP-Geheimnisse nur in Vercel.
+- **Wichtig:** Eine tatsächliche Live-Funktionsprüfung mit den konkreten Bestandsdaten ist nach dem erstmaligen Synchronisieren notwendig. Die lokale Sicherung bitte bis zu dieser Prüfung nicht löschen.
 
 ## Nach Veröffentlichung testen
 
