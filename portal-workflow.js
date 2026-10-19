@@ -22,7 +22,7 @@ export async function syncGames(userId){
  const old=new Map((remote||[]).map(x=>[x.game_key,x]));
  const rows=[];
  for(const g of local){
-  if(!g?.id||!/^\d{4}-\d{2}-\d{2}$/.test(g.date||""))continue;
+  if(!g?.id||!/^\d{4}-\d{2}-\d{2}$/.test(g.date||"")||old.has(String(g.id)))continue;
   const r=findPerson(refs,g.referee),c=findPerson(coaches,g.coach);
   rows.push({
    ...(old.get(String(g.id))||{}),owner_id:userId,game_key:String(g.id),
