@@ -87,6 +87,18 @@ export async function linkObservation(ownerId,gameKey,docId){
  const {error:e}=await sb.from("portal_observations").update({game_key:gameKey}).eq("owner_id",ownerId).eq("document_id",docId);
  if(e)throw e;return updateGame(ownerId,gameKey,{pdf_id:docId,received_at:new Date().toISOString()});
 }
+export async function reassignObservation(ownerId,gameKey,docId){
+ const {error}=await sb.rpc("portal_reassign_observation",{p_document_id:docId,p_game_key:gameKey});
+ if(error)throw error;
+ return true;
+}
+export async function deleteObservation(ownerId,docId){
+ const{data:doc,error:readError}=await sb.from("portal_observations").select("document_id,storage_path").eq("owner_id",ownerId).eq("document_id",docId).single();
+ if(readError||!doc)throw Error("Beobachtungsbogen nicht gefunden.");
+ const{error:unlinkError}=await sb.rpc("portal_unlink_observation",{p_document_id:docId});
+ if(unlinkError)throw unlinkError;
+ return deleteUnassignedObservation(ownerId,docId);
+}
 export async function deleteUnassignedObservation(ownerId,docId){
  const{data:doc,error:readError}=await sb.from("portal_observations").select("document_id,game_key,storage_path").eq("owner_id",ownerId).eq("document_id",docId).single();
  if(readError||!doc)throw Error("Bogen wurde nicht in Supabase gefunden.");
