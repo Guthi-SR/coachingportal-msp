@@ -3,7 +3,7 @@
 <header><h1>Coachingportal MSP</h1></header><div class="shell"><nav aria-label="Hauptmenü"><strong>Menü</strong><a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html" aria-current="page">Spiele</a><a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav>
 <main><section><h2>Spiele und Bogenstatus</h2><p id="status" role="status">Spiele und Bögen werden geladen …</p>
 <div class="legend"><span><i class="dot green"></i>Grün: Bogen versendet</span><span><i class="dot yellow"></i>Gelb: Spiel in den nächsten 5 Tagen</span><span><i class="dot red"></i>Rot: 5 Tage nach Spiel noch kein Bogen eingegangen</span></div>
-<div class="game-filters" role="group" aria-label="Spiele filtern"><button type="button" class="active" data-game-filter="all" aria-pressed="true">Alle Spiele</button><button type="button" data-game-filter="future" aria-pressed="false">Zukünftige Spiele</button><button type="button" data-game-filter="without" aria-pressed="false">Spiele ohne Bogen</button></div><div class="game-sort"><label for="game-sort-field">Sortieren nach:</label><select id="game-sort-field"><option value="date">Datum</option><option value="referee">Schiedsrichter</option><option value="coach">Coach / Beobachter</option></select><button type="button" id="game-sort-direction" aria-label="Sortierreihenfolge ändern">Neueste zuerst ↓</button></div><p id="filter-count" class="small"></p>
+<div class="game-filters" role="group" aria-label="Spiele filtern"><button type="button" class="active" data-game-filter="all" aria-pressed="true">Alle Spiele</button><button type="button" data-game-filter="future" aria-pressed="false">Zukünftige Spiele</button><button type="button" data-game-filter="without" aria-pressed="false">Spiele ohne Bogen</button></div><div class="game-sort"><label for="referee-filter">Schiedsrichter filtern:</label><select id="referee-filter"><option value="">Alle Schiedsrichter</option></select><label for="game-sort-field">Sortieren nach:</label><select id="game-sort-field"><option value="date">Datum</option><option value="referee">Schiedsrichter</option><option value="coach">Coach / Beobachter</option></select><button type="button" id="game-sort-direction" aria-label="Sortierreihenfolge ändern">Neueste zuerst ↓</button></div><p id="filter-count" class="small"></p>
 <div class="scroll"><table><thead><tr><th>Datum</th><th>Uhrzeit</th><th>Spielkennung</th><th>Heim</th><th>Gast</th><th>Liga</th><th>Spielstätte</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Bogen</th><th>Eingegangen</th><th>Geprüft</th><th>Versand</th></tr></thead><tbody id="rows"></tbody></table></div>
 <p><a href="/spiele-anlegen.html">Neues Spiel anlegen</a> · <a href="/beobachtungsboegen.html">Alle Beobachtungsbögen</a></p>
 <p class="small">Automatische E-Mails benötigen die serverseitige Absender-Konfiguration. Status und Zuordnungen werden zusätzlich im Portal gespeichert. Bereits vorhandene lokale Datensätze bleiben erhalten.</p></section></main></div>
@@ -11,7 +11,7 @@
 <dialog id="mail"><form method="dialog" id="mail-form"><h2 id="mail-head">E-Mail versenden</h2><label>Empfänger <input id="mail-recipient" readonly></label><label>Betreff <input id="mail-subject" required></label><label>Nachricht <textarea id="mail-body" required rows="12"></textarea></label><p class="small" id="attachment-info"></p><p class="small">Die persönliche Signatur wird später ergänzt. Vor dem Versand können Text und Betreff geändert werden.</p><p id="mail-error" role="status"></p><div class="actions"><button type="button" id="cancel-mail">Abbrechen</button><button type="submit" id="mail-submit" class="primary">E-Mail jetzt senden</button></div></form></dialog>
 <script type="module">import {cloudPeople} from "/portal-people.js";
 import{requireAdmin,localGames,localPeople,syncGames,syncObservations,associateUniqueObservations,updateGame,gameColor,dateDE,reminderBody,sendBody,sendMail}from"/portal-workflow.js";
-const $=id=>document.getElementById(id),status=$("status");let userId="",games=[],docs=[],refs=[],coaches=[],selected=null,mailKind="",gameFilter="all",sortKey="date",sortDir="desc";
+const $=id=>document.getElementById(id),status=$("status");let userId="",games=[],docs=[],refs=[],coaches=[],selected=null,mailKind="",gameFilter="all",refereeFilter="",sortKey="date",sortDir="desc";
 const currentIso=()=>{const t=new Date();return [t.getFullYear(),String(t.getMonth()+1).padStart(2,"0"),String(t.getDate()).padStart(2,"0")].join("-")};
 function person(people,id){return people.find(x=>x.id===id||x.name===id)}
 function fullName(p){return p?.name||[p?.first,p?.last].filter(Boolean).join(" ")||""}
@@ -55,7 +55,7 @@ function updateSortDirectionLabel(){
 function render(){
  const tbody=$("rows");tbody.replaceChildren();
  const today=currentIso();
- const visible=games.filter(g=>gameFilter==="future"?g.match_date>=today:gameFilter==="without"?!hasBogen(g):true).sort(compareGames);
+ const visible=games.filter(g=>(!refereeFilter||g.referee_id===refereeFilter)&&(gameFilter==="future"?g.match_date>=today:gameFilter==="without"?!hasBogen(g):true)).sort(compareGames);
  $("filter-count").textContent=visible.length+" von "+games.length+" Spielen angezeigt.";
  for(const g of visible){
   const row=document.createElement("tr");const cls=gameColor(g);if(cls)row.className=cls;
@@ -111,6 +111,7 @@ document.querySelectorAll("[data-game-filter]").forEach(btn=>btn.addEventListene
 $("game-sort-field").addEventListener("change",()=>{sortKey=$("game-sort-field").value;sortDir=sortKey==="date"?"desc":"asc";updateSortDirectionLabel();render()});
 $("game-sort-direction").addEventListener("click",()=>{sortDir=sortDir==="asc"?"desc":"asc";updateSortDirectionLabel();render()});
 updateSortDirectionLabel();
+$("referee-filter").addEventListener("change",()=>{refereeFilter=$("referee-filter").value;render()});
 $("cancel-manual").onclick=()=>$("manual").close();$("cancel-mail").onclick=()=>$("mail").close();
 $("manual-form").onsubmit=async e=>{
  e.preventDefault();if(!selected)return;const date=$("manual-date").value,note=$("manual-note").value.trim();
@@ -126,6 +127,7 @@ $("mail-form").onsubmit=async e=>{
 };
 try{
  const{user}=await requireAdmin();userId=user.id;refs=await cloudPeople(userId,"referee");coaches=await cloudPeople(userId,"coach");
+ const refFilter=$("referee-filter");for(const p of [...refs].sort((a,b)=>fullName(a).localeCompare(fullName(b),"de")))refFilter.add(new Option(fullName(p),p.id));
  games=await syncGames(userId);docs=await syncObservations(userId);
  if(await associateUniqueObservations(userId,games,docs))games=await syncGames(userId);
  render()
