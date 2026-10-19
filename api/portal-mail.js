@@ -1,3 +1,4 @@
+import {deliverMail,mailConfigured} from "./_strato-mail.js";
 const SB="https://izuwixrvuxrhviyabgom.supabase.co";
 const PUBLIC="sb_publishable_2Cep_1Pu93JXSKVrYzyRQA_5Nbq9XEZ";
 const json=(res,code,body)=>res.status(code).json(body);
@@ -28,8 +29,7 @@ export default async function handler(req,res){
   const g=records[0];if(!g)return json(res,404,{error:"Spiel nicht gefunden."});
   const recipient=kind==="bogen_versendet"?g.referee_email:g.coach_email;
   if(!mailValid(recipient))return json(res,422,{error:"Beim zugeordneten Empfänger fehlt eine gültige E-Mail-Adresse in den Stammdaten."});
-  const from=process.env.PORTAL_MAIL_FROM,key=process.env.RESEND_API_KEY;
-  if(!from||!key)return json(res,503,{error:"E-Mail-Versand ist noch nicht eingerichtet. Bitte RESEND_API_KEY und PORTAL_MAIL_FROM in Vercel hinterlegen."});
+  if(!mailConfigured())return json(res,503,{error:"STRATO-Mailversand noch nicht eingerichtet. Bitte STRATO_SMTP_USER und STRATO_SMTP_PASSWORD in Vercel hinterlegen."});
   const attachments=[];
   if(kind==="bogen_versendet"){
    if(!g.pdf_id)return json(res,409,{error:"Dem Spiel ist noch kein PDF-Beobachtungsbogen zugeordnet."});
@@ -46,12 +46,10 @@ export default async function handler(req,res){
    const deadline=new Date(Date.parse(today+"T12:00:00Z")-5*86400000).toISOString().slice(0,10);
    if(g.match_date>deadline||g.received_at||g.sent_at||g.sent_manual_at)return json(res,409,{error:"Die Erinnerungsmail steht nur für rote, noch offene Spiele zur Verfügung."});
   }
-  const payload={from,to:[recipient],subject:subject.trim(),text:body.trim()};
-  if(mailValid(profile.email))payload.reply_to=profile.email;
-  if(attachments.length)payload.attachments=attachments;
-  const sent=await fetch("https://api.resend.com/emails",{method:"POST",headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json"},body:JSON.stringify(payload)});
-  const result=await sent.json().catch(()=>({}));
-  if(!sent.ok)return json(res,502,{error:"Mail-Anbieter: "+String(result.message||"Versand fehlgeschlagen").slice(0,300)});
+  let result;
+  try {
+   result=await deliverMail({to:recipient,subject:subject.trim(),text:body.trim(),attachments});
+  }catch(e){return json(res,502,{error:"STRATO-SMTP: "+String(e?.message||"Versand fehlgeschlagen").slice(0,300)})}
   const now=new Date().toISOString();
   const patch=kind==="bogen_versendet"?{sent_at:now,updated_at:now}:{coach_reminder_at:now,updated_at:now};
   try{
