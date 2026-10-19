@@ -13,12 +13,12 @@ input,button{box-sizing:border-box;width:100%;padding:13px;border-radius:8px;fon
 input{border:1px solid #b9c8d7}
 button{margin-top:16px;border:0;background:#142b46;color:white;cursor:pointer}
 button.secondary{background:#45627f}
-#dashboard{display:grid;grid-template-columns:220px 1fr;gap:20px}#dashboard nav{background:#fff;border:1px solid #dce5ee;border-radius:14px;padding:18px}#dashboard nav a{display:block;padding:12px 8px;color:#142b46;text-decoration:none;border-radius:8px}#dashboard nav a:hover{background:#edf3f9}@media(max-width:650px){#dashboard{grid-template-columns:1fr}}#status{margin-top:20px;line-height:1.5} [hidden]{display:none!important}
-</style>
+#dashboard{display:block}#status{margin-top:20px;line-height:1.5} [hidden]{display:none!important}
+.portal-shell{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 90px)}.portal-sidebar{background:#fff;border-right:1px solid #dce5ee;padding:22px 14px;display:flex;flex-direction:column;gap:4px}.portal-sidebar strong{padding:10px 12px}.portal-sidebar a{display:block;padding:12px;color:#142b46;text-decoration:none;border-radius:8px}.portal-sidebar a:hover{background:#f0f4f9}.portal-sidebar a[aria-current="page"]{background:#e8f0f8;font-weight:700}.portal-content{min-width:0}.portal-content main{max-width:1050px;margin:auto;padding:22px}@media(max-width:650px){.portal-shell{grid-template-columns:190px minmax(0,1fr)}.portal-sidebar{padding:12px 6px}.portal-sidebar a{padding:10px 6px;font-size:13px}.portal-content main{padding:12px}}</style>
 </head>
 <body>
 <header><h1>Coachingportal MSP</h1><div>SRG Main-Spessart</div></header>
-<main><div id="dashboard" hidden><nav aria-label="Hauptmenü"><strong>Menü</strong><a href="/" aria-current="page">Startseite</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a></nav><section><h2>Startseite</h2><button id="dashboard-logout">Abmelden</button></section></div><section id="login-section">
+<main><div id="dashboard" hidden class="portal-shell"><nav class="portal-sidebar" aria-label="Hauptmenü"><strong>Menü</strong><a href="/" aria-current="page">Startseite</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav><section class="portal-content"><h2>Startseite</h2><button id="dashboard-logout">Abmelden</button></section></div><section id="login-section">
 <h2>Anmeldung</h2>
 <div id="auth-form">
 <label for="email">E-Mail-Adresse</label>
