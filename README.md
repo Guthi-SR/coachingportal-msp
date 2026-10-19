@@ -13,20 +13,23 @@ Internes Coachingportal: https://coachingportal-msp.vercel.app/
 - Täglicher Server-Prüflauf: an Tag fünf nach dem Spiel Erinnerung an den Portaladmin, falls kein Bogen als eingegangen markiert ist. Zwei Folgetage als Nachholfenster.
 - Personenadresse und Vornamen kommen aus den vorhandenen Stammdaten im Browser und werden beim Aufrufen der Spielliste in die geschützte Portal-Datenbank übernommen.
 
-## Wichtig: Einmalige E-Mail-Konfiguration
+## E-Mail-Konfiguration: STRATO SMTP
 
-Diese vier serverseitigen Umgebungsvariablen müssen in **Vercel → coachingportal-msp → Settings → Environment Variables** für **Production** hinterlegt werden. Die tatsächliche Einrichtung erfolgt im Nutzerkonto, nicht im Repository.
+Der E-Mail-Versand erfolgt direkt über das vorhandene STRATO-Postfach `daniel.gutermuth@srgmsp.de`. Es wird keine eigene Domainverwaltung und kein Resend-Konto benötigt. Für **Production** in **Vercel → coachingportal-msp → Settings → Environment Variables** folgende drei serverseitigen Variablen setzen:
 
-| Variable | Verwendung |
+| Name | Inhalt |
 | --- | --- |
-| `RESEND_API_KEY` | Schlüssel des für die Domain freigeschalteten Maildiensts Resend |
-| `PORTAL_MAIL_FROM` | Bestätigte Absenderadresse des Administrators (z. B. `Coachingportal <coaching@eigene-domain.de>`) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Geheimer Supabase-Serverschlüssel nur für die tägliche Abfrage; niemals in Client-Dateien veröffentlichen |
-| `CRON_SECRET` | Langes zufälliges Geheimnis, das Vercel als Bearer-Token für Cron-Aufrufe nutzt |
+| `STRATO_SMTP_USER` | `daniel.gutermuth@srgmsp.de` |
+| `STRATO_SMTP_PASSWORD` | Passwort des STRATO-Mailpostfachs (ausschließlich in den geschützten Vercel-Einstellungen eintragen, nie im Chat/GitHub) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Geheimer Supabase-Schlüssel ausschließlich für den täglichen Admin-Prüflauf |
 
-Ohne Resend-Konfiguration werden **keine E-Mails** gesendet; die Oberfläche meldet das bei einem Versandversuch. Nach der Einrichtung ist eine neue Produktionsbereitstellung erforderlich. Ausgehende E-Mails verwenden die bestätigte Admin-Absenderadresse und nutzen die Admin-Profiladresse als Antwortadresse.
+Für den automatischen Cron-Endpunkt muss auch `CRON_SECRET` in den Vercel-Umgebungsvariablen hinterlegt werden. Vercel legt ihn bei entsprechender Cron-Konfiguration gegebenenfalls selbst an, alternativ sicher erzeugen und serverseitig hinterlegen.
 
-Die persönliche E-Mail-Signatur wird später ergänzt, sobald die Angaben vorliegen.
+SMTP: `smtp.strato.de`, Port `465`, SSL/TLS. Der Versand erfolgt mit Nodemailer über die Vercel Serverless Functions. Ohne diese Zugangsdaten verschickt das Portal keine E-Mails. Änderungen an Umgebungsvariablen benötigen ein anschließendes neues Produktions-Deployment. Die persönliche E-Mail-Signatur wird später ergänzt.
+
+## Sicherheit
+
+Der SMTP-Zugang wird ausschließlich serverseitig genutzt. SMTP-Passwörter gehören **niemals** in die Website, GitHub-Dateien oder Chatnachrichten. Für Tests zunächst eine Mail an ein eigenes Testpostfach senden und nicht an einen Coach oder Schiedsrichter.
 
 ## Datenspeicherung
 
