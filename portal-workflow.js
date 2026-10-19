@@ -87,6 +87,23 @@ export async function linkObservation(ownerId,gameKey,docId){
  const {error:e}=await sb.from("portal_observations").update({game_key:gameKey}).eq("owner_id",ownerId).eq("document_id",docId);
  if(e)throw e;return updateGame(ownerId,gameKey,{pdf_id:docId,received_at:new Date().toISOString()});
 }
+export async function deleteUnassignedObservation(ownerId,docId){
+ const{data:doc,error:readError}=await sb.from("portal_observations").select("document_id,game_key,storage_path").eq("owner_id",ownerId).eq("document_id",docId).single();
+ if(readError||!doc)throw Error("Bogen wurde nicht in Supabase gefunden.");
+ const{data:games,error:gameError}=await sb.from("portal_games").select("game_key").eq("owner_id",ownerId).eq("pdf_id",docId);
+ if(gameError)throw gameError;
+ if(doc.game_key||(games||[]).length)throw Error("Zugeordnete Bögen können hier nicht gelöscht werden.");
+ if(doc.storage_path){
+  const{error:storageError}=await sb.storage.from(B).remove([doc.storage_path]);
+  if(storageError)throw Error("PDF konnte nicht gelöscht werden: "+storageError.message);
+ }
+ const{data:deleted,error:deleteError}=await sb.from("portal_observations").delete().eq("owner_id",ownerId).eq("document_id",docId).is("game_key",null).select("document_id");
+ if(deleteError)throw deleteError;
+ if(!deleted?.length)throw Error("Der Bogen konnte nicht gelöscht werden. Bitte aktualisieren.");
+ const key="msp-observation-assignments-"+ownerId;
+ try{const list=JSON.parse(localStorage.getItem(key)||"[]");localStorage.setItem(key,JSON.stringify(list.filter(x=>x.id!==docId)))}catch{}
+ return true;
+}
 export async function associateUniqueObservations(ownerId,games,observations){
  let changed=false;
  for(const o of observations){
