@@ -20,13 +20,14 @@ async function change(g,patch){
  catch(e){status.textContent="Speichern fehlgeschlagen: "+e.message;render()}
 }
 async function assignment(g,type,val){
- const local=localGames(userId);
- let item=local.find(x=>String(x.id)===g.game_key);
- if(!item){item={id:g.game_key,date:g.match_date,kickoff:g.kickoff,home:g.home,away:g.away,league:g.league,venue:g.venue,referee:g.referee_id,coach:g.coach_id};local.push(item)}
- item[type]=val;localStorage.setItem("msp-games-draft-"+userId,JSON.stringify(local));
- try{games=await syncGames(userId);render();status.textContent="Zuordnung gespeichert."}
- catch(e){status.textContent="Zuordnung konnte nicht synchronisiert werden: "+e.message}
+ const people=type==="referee"?refs:coaches;
+ const p=person(people,val);
+ const name=fullName(p);
+ const patch=type==="referee"?{referee_id:val||null,referee_name:name||null,referee_email:p?.mail||p?.email||null}:{coach_id:val||null,coach_name:name||null,coach_first_name:p?.first||name.split(" ")[0]||null,coach_email:p?.mail||p?.email||null};
+ try{Object.assign(g,await updateGame(userId,g.game_key,patch));render();status.textContent="Zuordnung in Supabase gespeichert."}
+ catch(e){status.textContent="Speichern fehlgeschlagen: "+e.message;render()}
 }
+
 function render(){
  const tbody=$("rows");tbody.replaceChildren();
  for(const g of games){
