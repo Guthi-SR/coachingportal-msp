@@ -1,0 +1,51 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Beobachtungsbögen – Coachingportal MSP</title><style>
+body{margin:0;font:16px system-ui,sans-serif;background:#f3f6fa;color:#142b46}
+header{background:#142b46;color:#fff;padding:22px}.shell{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 88px)}nav{background:#fff;border-right:1px solid #dce5ee;padding:22px 14px}nav a{display:block;padding:12px;color:#142b46;text-decoration:none;border-radius:8px}nav a[aria-current]{background:#e8f0f8;font-weight:700}main{padding:24px;min-width:0}section{background:white;padding:24px;border-radius:12px;border:1px solid #dce5ee;overflow:auto}table{border-collapse:collapse;width:100%;min-width:820px}th,td{padding:12px;border-bottom:1px solid #dce5ee;text-align:left}td a{color:#142b46;font-weight:600}select,button{font:inherit;padding:8px;border-radius:7px;border:1px solid #b7c6d5}button{background:#142b46;color:#fff;cursor:pointer}p{line-height:1.5}@media(max-width:700px){.shell{grid-template-columns:150px minmax(0,1fr)}nav{padding:10px 5px}nav a{padding:9px 6px;font-size:13px}main{padding:10px}section{padding:12px}}</style></head><body>
+<header><h1>Coachingportal MSP</h1></header><div class="shell"><nav aria-label="Hauptmenü"><strong>Menü</strong>
+<a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html">Spiele</a>
+<a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a>
+<a href="/beobachtungsboegen.html" aria-current="page">Beobachtungsbögen</a>
+<a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a>
+<a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav>
+<main><section><h2>Alle Beobachtungsbögen</h2><p>Alle erfassten Bögen – sortiert nach Spieldatum, neueste zuerst. Ein Klick auf den Bogen öffnet nur das PDF in einem separaten Tab.</p>
+<p id="status" role="status">Bögen werden geladen …</p><table id="table" hidden><thead><tr><th>Spieldatum</th><th>Begegnung</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Beobachtungsbogen</th><th>Zuordnung</th></tr></thead><tbody id="rows"></tbody></table></section></main></div>
+<script type="module">
+import{requireAdmin,syncGames,syncObservations,associateUniqueObservations,observationAssignments,localPeople,linkObservation,dateDE}from"/portal-workflow.js";
+const status=document.getElementById("status"),rows=document.getElementById("rows");
+try{
+ const{user}=await requireAdmin();let games=await syncGames(user.id);
+ let docs=await syncObservations(user.id);
+ if(await associateUniqueObservations(user.id,games,docs)){games=await syncGames(user.id);docs=await syncObservations(user.id)}
+ const local=observationAssignments(user.id);
+ const seen=new Set(docs.map(x=>x.document_id));for(const o of local)if(!seen.has(o.id))docs.push({document_id:o.id,game_key:o.gameKey||null,referee_id:o.referee,coach_id:o.coach,file_name:o.fileName,created_at:o.createdAt});
+ const refs=localPeople(user.id,"referee"),coaches=localPeople(user.id,"coach");
+ const person=(list,id)=>{const p=list.find(x=>x.id===id||x.name===id);return p?.name||[p?.first,p?.last].filter(Boolean).join(" ")||"–"};
+ const byGame=doc=>games.find(g=>g.game_key===doc.game_key||g.pdf_id===doc.document_id);
+ docs.sort((a,b)=>{
+  const da=byGame(a)?.match_date||String(a.created_at||"").slice(0,10),db=byGame(b)?.match_date||String(b.created_at||"").slice(0,10);
+  return db.localeCompare(da)||(b.created_at||"").localeCompare(a.created_at||"");
+ });
+ for(const d of docs){
+  const g=byGame(d);const tr=document.createElement("tr");
+  const values=[dateDE(g?.match_date||String(d.created_at||"").slice(0,10)),g?g.home+" – "+g.away:"Noch keinem Spiel zugeordnet",person(refs,d.referee_id),person(coaches,d.coach_id)];
+  for(const v of values){const td=document.createElement("td");td.textContent=v;tr.append(td)}
+  const tdPdf=document.createElement("td"),link=document.createElement("a");
+  link.href="/beobachtungsbogen-ansehen.html?pdf="+encodeURIComponent(d.document_id);link.target="_blank";link.rel="noopener noreferrer";link.textContent="📘 "+(d.file_name||"Bogen öffnen");tdPdf.append(link);tr.append(tdPdf);
+  const tdAssign=document.createElement("td");
+  if(g){tdAssign.textContent="Zugeordnet"}
+  else{const sel=document.createElement("select");sel.setAttribute("aria-label","Spiel zuordnen");
+   sel.add(new Option("Spiel auswählen",""));
+   for(const m of games.filter(x=>x.referee_id===d.referee_id&&x.coach_id===d.coach_id&&!x.pdf_id))
+    sel.add(new Option(dateDE(m.match_date)+" "+m.home+" – "+m.away,m.game_key));
+   const button=document.createElement("button");button.type="button";button.textContent="Zuordnen";
+   button.disabled=sel.options.length<=1;button.onclick=async()=>{
+    if(!sel.value)return;button.disabled=true;
+    try{await linkObservation(user.id,sel.value,d.document_id);location.reload()}
+    catch(e){status.textContent="Zuordnung fehlgeschlagen: "+e.message;button.disabled=false}
+   };tdAssign.append(sel,button)
+  }tr.append(tdAssign);rows.append(tr);
+ }
+ status.textContent=docs.length?docs.length+" Beobachtungsbogen/-bögen vorhanden.":"Noch keine Bögen erfasst.";
+ document.getElementById("table").hidden=!docs.length;
+}catch(e){status.textContent="Laden fehlgeschlagen: "+e.message}
+</script><script type="module" src="/portal-ui.js"></script></body></html>
