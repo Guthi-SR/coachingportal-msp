@@ -17,19 +17,34 @@ document.getElementById("save-assignment").onclick=saveAssignment;
 async function showFile(file){if(!file)return;if(file.type!=="application/pdf"&&!file.name.toLowerCase().endsWith(".pdf")){status.textContent="Bitte eine PDF-Datei auswählen.";return}currentFile=file;document.getElementById("assignment").hidden=true;document.getElementById("confirm-assignment").disabled=false;document.getElementById("save-assignment").disabled=false;document.getElementById("manual-fields").hidden=true;status.textContent="Ausgewählt: "+file.name+" – lokale Auswertung läuft.";await analyze(file)}
 function recognizeGame(lines){
  const select=document.getElementById("assign-game"),output=document.getElementById("detected-game");
- select.value="";output.textContent="Nicht eindeutig erkannt – bitte manuell auswählen";
+ select.value="";output.textContent="Spiel oder Datum nicht eindeutig erkannt – bitte manuell auswählen";
  if(!openGames.length){output.textContent="Keine offenen Spiele verfügbar";return}
- const header=lines.slice(0,55).join(" ").replace(/\\s+/g," ");
- const ids=[...header.matchAll(/\\b(?:\\d[\\s-]?){9}\\b/g)].map(m=>m[0].replace(/\\D/g,""));
- let matches=openGames.filter(g=>ids.includes(String(g.game_key)));
- if(matches.length!==1){
-  const normalized=norm(header);
-  matches=openGames.filter(g=>{const home=norm(g.home),away=norm(g.away);return home.length>=5&&away.length>=5&&normalized.includes(home)&&normalized.includes(away)});
+ const header=lines.slice(0,70);
+ const labelIndex=header.findIndex(x=>/^\s*Spiel\s*[:：]/i.test(x));
+ if(labelIndex<0){output.textContent="Feld „Spiel:“ nicht erkannt – bitte manuell auswählen";return}
+ const inline=header[labelIndex].replace(/^\s*Spiel\s*[:：]\s*/i,"").trim();
+ const next=(header[labelIndex+1]||"").trim();
+ const matchText=inline||next;
+ const nearby=header.slice(labelIndex,Math.min(header.length,labelIndex+9)).join(" ");
+ const dateMatch=nearby.match(/\b([0-3]?\d)\s*[.\/]\s*([01]?\d)\s*[.\/]\s*(20\d{2})\b/)||nearby.match(/\b(20\d{2})-([01]\d)-([0-3]\d)\b/);
+ let date="";
+ if(dateMatch){
+  date=dateMatch[1].length===4?dateMatch[1]+"-"+dateMatch[2].padStart(2,"0")+"-"+dateMatch[3].padStart(2,"0"):dateMatch[3]+"-"+dateMatch[2].padStart(2,"0")+"-"+dateMatch[1].padStart(2,"0");
  }
+ if(!date){output.textContent="Spiel erkannt, aber Datum nicht gefunden – bitte manuell auswählen";return}
+ const words=v=>String(v||"").toLocaleLowerCase("de").replace(/\(sg\)|\b(?:tsv|tus|sv|fc|fv|vfl|vfb|tsg|sc|spvgg|sg|e\.?v\.?|19\d{2}|20\d{2})\b/g," ").replace(/[^a-zäöüß0-9]+/g," ").trim().split(/\s+/).filter(w=>w.length>=4);
+ const phrase=norm(matchText);
+ const dateGames=openGames.filter(g=>g.match_date===date);
+ const matches=dateGames.filter(g=>{
+  const home=words(g.home),away=words(g.away);
+  return home.some(w=>phrase.includes(norm(w)))&&away.some(w=>phrase.includes(norm(w)));
+ });
  if(matches.length===1){
   const g=matches[0];select.value=g.game_key;
-  output.textContent=dateDE(g.match_date)+" · "+g.game_key+" · "+g.home+" – "+g.away+" (bitte prüfen)";
- }else if(matches.length>1){output.textContent="Mehrere passende Spiele – bitte manuell auswählen"}
+  output.textContent=dateDE(g.match_date)+" · "+g.home+" – "+g.away+" (erkannt aus „Spiel:“ und Datum, bitte prüfen)";
+ }else{
+  output.textContent=matches.length>1?"Mehrere Spiele am "+dateDE(date)+" passen – bitte auswählen":"Keine eindeutige Übereinstimmung für „"+matchText+"“ am "+dateDE(date)+" – bitte auswählen";
+ }
 }
 async function analyze(file){
 const report=document.getElementById("analysis-status"),ref=document.getElementById("referee-name"),coach=document.getElementById("observer-name"),preview=document.getElementById("pdf-text");
