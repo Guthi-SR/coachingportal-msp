@@ -8,9 +8,9 @@ header{background:#142b46;color:#fff;padding:22px}.shell{display:grid;grid-templ
 <a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a>
 <a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav>
 <main><section><h2>Alle Beobachtungsbögen</h2><p>Alle erfassten Bögen – sortiert nach Spieldatum, neueste zuerst. Ein Klick auf den Bogen öffnet nur das PDF in einem separaten Tab.</p>
-<p id="status" role="status">Bögen werden geladen …</p><table id="table" hidden><thead><tr><th>Spieldatum</th><th>Begegnung</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Beobachtungsbogen</th><th>Zuordnung</th></tr></thead><tbody id="rows"></tbody></table></section></main></div>
+<p id="status" role="status">Bögen werden geladen …</p><table id="table" hidden><thead><tr><th>Spieldatum</th><th>Begegnung</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Beobachtungsbogen</th><th>Zuordnung</th><th>Aktionen</th></tr></thead><tbody id="rows"></tbody></table></section></main></div>
 <script type="module">import {cloudPeople} from "/portal-people.js";
-import{requireAdmin,syncGames,syncObservations,associateUniqueObservations,observationAssignments,localPeople,linkObservation,dateDE}from"/portal-workflow.js";
+import{requireAdmin,syncGames,syncObservations,associateUniqueObservations,observationAssignments,localPeople,linkObservation,deleteUnassignedObservation,dateDE}from"/portal-workflow.js";
 const status=document.getElementById("status"),rows=document.getElementById("rows");
 try{
  const{user}=await requireAdmin();let games=await syncGames(user.id);
@@ -35,7 +35,7 @@ try{
   if(g){tdAssign.textContent="Zugeordnet"}
   else{const sel=document.createElement("select");sel.setAttribute("aria-label","Spiel zuordnen");
    sel.add(new Option("Spiel auswählen",""));
-   for(const m of games.filter(x=>x.referee_id===d.referee_id&&x.coach_id===d.coach_id&&!x.pdf_id))
+   for(const m of games.filter(x=>!x.pdf_id&&!docs.some(other=>other.document_id!==d.document_id&&other.game_key===x.game_key)))
     sel.add(new Option(dateDE(m.match_date)+" "+m.home+" – "+m.away,m.game_key));
    const button=document.createElement("button");button.type="button";button.textContent="Zuordnen";
    button.disabled=sel.options.length<=1;button.onclick=async()=>{
@@ -43,7 +43,20 @@ try{
     try{await linkObservation(user.id,sel.value,d.document_id);location.reload()}
     catch(e){status.textContent="Zuordnung fehlgeschlagen: "+e.message;button.disabled=false}
    };tdAssign.append(sel,button)
-  }tr.append(tdAssign);rows.append(tr);
+  }tr.append(tdAssign);
+  const tdActions=document.createElement("td");
+  if(!g){
+   const del=document.createElement("button");del.type="button";del.textContent="Bogen löschen";
+   del.style.background="#9d2936";del.style.borderColor="#9d2936";
+   del.onclick=async()=>{
+    if(!confirm("Nicht zugeordneten Beobachtungsbogen „"+(d.file_name||"PDF")+"“ endgültig löschen? Die PDF-Datei wird ebenfalls aus Supabase entfernt."))return;
+    del.disabled=true;status.textContent="Beobachtungsbogen wird gelöscht …";
+    try{await deleteUnassignedObservation(user.id,d.document_id);location.reload()}
+    catch(e){status.textContent="Löschen fehlgeschlagen: "+e.message;del.disabled=false}
+   };
+   tdActions.append(del);
+  }
+  tr.append(tdActions);rows.append(tr);
  }
  status.textContent=docs.length?docs.length+" Beobachtungsbogen/-bögen vorhanden.":"Noch keine Bögen erfasst.";
  document.getElementById("table").hidden=!docs.length;
