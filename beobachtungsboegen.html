@@ -10,7 +10,7 @@ header{background:#142b46;color:#fff;padding:22px}.shell{display:grid;grid-templ
 <main><section><h2>Alle Beobachtungsbögen</h2><p>Alle erfassten Bögen – sortiert nach Spieldatum, neueste zuerst. Ein Klick auf den Bogen öffnet nur das PDF in einem separaten Tab.</p>
 <p id="status" role="status">Bögen werden geladen …</p><table id="table" hidden><thead><tr><th>Spieldatum</th><th>Begegnung</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Beobachtungsbogen</th><th>Zuordnung</th><th>Aktionen</th></tr></thead><tbody id="rows"></tbody></table></section></main></div>
 <script type="module">import {cloudPeople} from "/portal-people.js";
-import{requireAdmin,syncGames,syncObservations,associateUniqueObservations,observationAssignments,localPeople,linkObservation,deleteUnassignedObservation,dateDE}from"/portal-workflow.js";
+import{requireAdmin,syncGames,syncObservations,associateUniqueObservations,observationAssignments,localPeople,linkObservation,reassignObservation,deleteObservation,dateDE}from"/portal-workflow.js";
 const status=document.getElementById("status"),rows=document.getElementById("rows");
 try{
  const{user}=await requireAdmin();let games=await syncGames(user.id);
@@ -31,31 +31,32 @@ try{
   for(const v of values){const td=document.createElement("td");td.textContent=v;tr.append(td)}
   const tdPdf=document.createElement("td"),link=document.createElement("a");
   link.href="/beobachtungsbogen-ansehen.html?pdf="+encodeURIComponent(d.document_id);link.target="_blank";link.rel="noopener noreferrer";link.textContent="📘 "+(d.file_name||"Bogen öffnen");tdPdf.append(link);tr.append(tdPdf);
-  const tdAssign=document.createElement("td");
-  if(g){tdAssign.textContent="Zugeordnet"}
-  else{const sel=document.createElement("select");sel.setAttribute("aria-label","Spiel zuordnen");
-   sel.add(new Option("Spiel auswählen",""));
-   for(const m of games.filter(x=>!x.pdf_id&&!docs.some(other=>other.document_id!==d.document_id&&other.game_key===x.game_key)))
-    sel.add(new Option(dateDE(m.match_date)+" "+m.home+" – "+m.away,m.game_key));
-   const button=document.createElement("button");button.type="button";button.textContent="Zuordnen";
-   button.disabled=sel.options.length<=1;button.onclick=async()=>{
-    if(!sel.value)return;button.disabled=true;
-    try{await linkObservation(user.id,sel.value,d.document_id);location.reload()}
-    catch(e){status.textContent="Zuordnung fehlgeschlagen: "+e.message;button.disabled=false}
-   };tdAssign.append(sel,button)
-  }tr.append(tdAssign);
-  const tdActions=document.createElement("td");
-  if(!g){
-   const del=document.createElement("button");del.type="button";del.textContent="Bogen löschen";
-   del.style.background="#9d2936";del.style.borderColor="#9d2936";
-   del.onclick=async()=>{
-    if(!confirm("Nicht zugeordneten Beobachtungsbogen „"+(d.file_name||"PDF")+"“ endgültig löschen? Die PDF-Datei wird ebenfalls aus Supabase entfernt."))return;
-    del.disabled=true;status.textContent="Beobachtungsbogen wird gelöscht …";
-    try{await deleteUnassignedObservation(user.id,d.document_id);location.reload()}
-    catch(e){status.textContent="Löschen fehlgeschlagen: "+e.message;del.disabled=false}
-   };
-   tdActions.append(del);
-  }
+  const tdAssign=document.createElement("td"),tdActions=document.createElement("td");
+  const sel=document.createElement("select");sel.setAttribute("aria-label","Spiel zuordnen oder neu zuordnen");
+  sel.add(new Option(g?"Anderes Spiel auswählen":"Spiel auswählen",""));
+  for(const m of games.filter(x=>x.game_key!==g?.game_key&&!x.pdf_id&&!docs.some(other=>other.document_id!==d.document_id&&other.game_key===x.game_key)))
+    sel.add(new Option(dateDE(m.match_date)+" · "+m.game_key+" · "+m.home+" – "+m.away,m.game_key));
+  const assignButton=document.createElement("button");assignButton.type="button";assignButton.textContent=g?"Neu zuordnen":"Zuordnen";
+  assignButton.disabled=sel.options.length<=1;
+  assignButton.onclick=async()=>{
+   if(!sel.value)return;
+   if(g&&!confirm("Beobachtungsbogen vom bisherigen Spiel lösen und dem ausgewählten Spiel zuordnen?"))return;
+   assignButton.disabled=true;
+   try{await reassignObservation(user.id,sel.value,d.document_id);location.reload()}
+   catch(e){status.textContent="Zuordnung fehlgeschlagen: "+e.message;assignButton.disabled=false}
+  };
+  if(g){const marker=document.createElement("div");marker.textContent="Aktuell: "+g.game_key;tdAssign.append(marker)}
+  tdAssign.append(sel,assignButton);
+  tr.append(tdAssign);
+  const del=document.createElement("button");del.type="button";del.textContent="Bogen löschen";
+  del.style.background="#9d2936";del.style.borderColor="#9d2936";
+  del.onclick=async()=>{
+   if(!confirm("Beobachtungsbogen „"+(d.file_name||"PDF")+"“ endgültig löschen? "+(g?"Die Zuordnung zum Spiel "+g.game_key+" wird entfernt. ":"")+"Die PDF wird aus Supabase gelöscht. Dieser Vorgang kann nicht rückgängig gemacht werden."))return;
+   del.disabled=true;status.textContent="Beobachtungsbogen wird gelöscht …";
+   try{await deleteObservation(user.id,d.document_id);location.reload()}
+   catch(e){status.textContent="Löschen fehlgeschlagen: "+e.message;del.disabled=false}
+  };
+  tdActions.append(del);
   tr.append(tdActions);rows.append(tr);
  }
  status.textContent=docs.length?docs.length+" Beobachtungsbogen/-bögen vorhanden.":"Noch keine Bögen erfasst.";
