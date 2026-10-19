@@ -17,7 +17,10 @@ try{
  let docs=await syncObservations(user.id);
  if(await associateUniqueObservations(user.id,games,docs)){games=await syncGames(user.id);docs=await syncObservations(user.id)}
  const local=observationAssignments(user.id);
- const seen=new Set(docs.map(x=>x.document_id));for(const o of local)if(!seen.has(o.id))docs.push({document_id:o.id,game_key:o.gameKey||null,referee_id:o.referee,coach_id:o.coach,file_name:o.fileName,created_at:o.createdAt});
+ const {data:deletedDocs,error:deletedError}=await (await import("/portal-workflow.js")).sb.from("portal_deleted_observations").select("document_id").eq("owner_id",user.id);
+ if(deletedError)throw deletedError;
+ const deletedIds=new Set((deletedDocs||[]).map(x=>x.document_id));
+ const seen=new Set(docs.map(x=>x.document_id));for(const o of local)if(!seen.has(o.id)&&!deletedIds.has(o.id))docs.push({document_id:o.id,game_key:o.gameKey||null,referee_id:o.referee,coach_id:o.coach,file_name:o.fileName,created_at:o.createdAt});
  const refs=await cloudPeople(user.id,"referee"),coaches=await cloudPeople(user.id,"coach");
  const person=(list,id)=>{const p=list.find(x=>x.id===id||x.name===id);return p?.name||[p?.first,p?.last].filter(Boolean).join(" ")||"–"};
  const byGame=doc=>games.find(g=>g.game_key===doc.game_key||g.pdf_id===doc.document_id);
