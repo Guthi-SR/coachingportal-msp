@@ -27,6 +27,7 @@ export async function syncGames(userId){
   rows.push({
    ...(old.get(String(g.id))||{}),owner_id:userId,game_key:String(g.id),
    match_date:g.date,kickoff:g.kickoff||null,home:g.home||"",away:g.away||"",
+   updated_at:new Date().toISOString(),
    league:g.league||null,venue:g.venue||null,
    referee_id:g.referee||null,referee_name:fullName(r)||g.referee||null,referee_email:r?.mail||r?.email||null,
    coach_id:g.coach||null,coach_name:fullName(c)||g.coach||null,
