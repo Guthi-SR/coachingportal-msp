@@ -16,7 +16,7 @@ else{
 $("name").textContent=r.name||[r.first,r.last].filter(Boolean).join(" ")||"Coach-Beobachter";
 $("status").hidden=true;
 const fields=[["Vorname","first"],["Nachname","last"],["Straße","street"],["Hausnummer","houseNumber"],["Postleitzahl","zip"],["Ort","city"],["Geburtsdatum","birth"],["E-Mail","mail"],["Telefon privat","phonePrivate"],["Telefon geschäftlich","phoneBusiness"],["Telefon mobil","phoneMobile"],["Schiedsrichter seit","since"],["Verein","club"],["Ausweisnummer","cardNumber"]];
-for(const [label,key] of fields){const dt=document.createElement("dt"),dd=document.createElement("dd");dt.textContent=label;dd.textContent=r[key]||"–";const box=document.createElement("div");box.className="detail";box.append(dt,dd);$("details").append(box)}
+for(const [label,key] of fields){const dt=document.createElement("dt"),dd=document.createElement("dd");dt.textContent=label;dd.textContent=(["birth","since"].includes(key)&&r[key])?(()=>{const m=String(r[key]).match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}.${m[2]}.${m[1]}`:r[key]})():(r[key]||"–");const box=document.createElement("div");box.className="detail";box.append(dt,dd);$("details").append(box)}
 $("details").hidden=false;
 }
 }}
