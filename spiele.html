@@ -4,13 +4,13 @@
 <main><section><h2>Spiele und Bogenstatus</h2><p id="status" role="status">Spiele und Bögen werden geladen …</p>
 <div class="legend"><span><i class="dot green"></i>Grün: Bogen versendet</span><span><i class="dot yellow"></i>Gelb: Spiel in den nächsten 5 Tagen</span><span><i class="dot red"></i>Rot: 5 Tage nach Spiel noch kein Bogen eingegangen</span></div>
 <div class="game-filters" role="group" aria-label="Spiele filtern"><button type="button" class="active" data-game-filter="all" aria-pressed="true">Alle Spiele</button><button type="button" data-game-filter="future" aria-pressed="false">Zukünftige Spiele</button><button type="button" data-game-filter="without" aria-pressed="false">Spiele ohne Bogen</button></div><div class="game-sort"><label for="referee-filter">Schiedsrichter filtern:</label><select id="referee-filter"><option value="">Alle Schiedsrichter</option></select><label for="game-sort-field">Sortieren nach:</label><select id="game-sort-field"><option value="date">Datum</option><option value="referee">Schiedsrichter</option><option value="coach">Coach / Beobachter</option></select><button type="button" id="game-sort-direction" aria-label="Sortierreihenfolge ändern">Neueste zuerst ↓</button></div><p id="filter-count" class="small"></p>
-<div class="scroll"><table><thead><tr><th>Datum</th><th>Uhrzeit</th><th>Spielkennung</th><th>Heim</th><th>Gast</th><th>Liga</th><th>Spielstätte</th><th>Kilometer</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Bogen</th><th>Eingegangen</th><th>Geprüft</th><th>Versand</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div class="scroll"><table><thead><tr><th>Datum</th><th>Uhrzeit</th><th>Spielkennung</th><th>Heim</th><th>Gast</th><th>Liga</th><th>Spielstätte</th><th>Kilometer</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Bogen</th><th>Eingegangen</th><th>Geprüft</th><th>Versand</th><th>Aktion</th></tr></thead><tbody id="rows"></tbody></table></div>
 <p><a href="/spiele-anlegen.html">Neues Spiel anlegen</a> · <a href="/beobachtungsboegen.html">Alle Beobachtungsbögen</a></p>
 <p class="small">Automatische E-Mails benötigen die serverseitige Absender-Konfiguration. Status und Zuordnungen werden zusätzlich im Portal gespeichert. Bereits vorhandene lokale Datensätze bleiben erhalten.</p></section></main></div>
 <dialog id="manual"><form method="dialog" id="manual-form"><h2>Bogen bereits versendet</h2><p>Hier kannst du einen Versand dokumentieren, der außerhalb des Portals stattgefunden hat. Es wird keine E-Mail versendet.</p><label>Versanddatum <input type="date" id="manual-date" required></label><label>Notiz zum Versandweg oder Grund <textarea id="manual-note" required placeholder="Beispiel: am 12.10.2026 per E-Mail von meiner bisherigen Adresse verschickt"></textarea></label><p id="manual-error" role="status"></p><div class="actions"><button type="button" id="cancel-manual">Abbrechen</button><button type="submit" class="primary">Als bereits versendet speichern</button></div></form></dialog>
 <dialog id="mail"><form method="dialog" id="mail-form"><h2 id="mail-head">E-Mail versenden</h2><label>Empfänger <input id="mail-recipient" readonly></label><label>Betreff <input id="mail-subject" required></label><label>Nachricht <textarea id="mail-body" required rows="12"></textarea></label><p class="small" id="attachment-info"></p><p class="small">Die persönliche Signatur wird später ergänzt. Vor dem Versand können Text und Betreff geändert werden.</p><p id="mail-error" role="status"></p><div class="actions"><button type="button" id="cancel-mail">Abbrechen</button><button type="submit" id="mail-submit" class="primary">E-Mail jetzt senden</button></div></form></dialog>
 <script type="module">import {cloudPeople} from "/portal-people.js";
-import{requireAdmin,localGames,localPeople,syncGames,syncObservations,associateUniqueObservations,updateGame,gameColor,dateDE,reminderBody,sendBody,sendMail}from"/portal-workflow.js";
+import{sb,requireAdmin,localGames,localPeople,syncGames,syncObservations,associateUniqueObservations,updateGame,gameColor,dateDE,reminderBody,sendBody,sendMail}from"/portal-workflow.js";
 const $=id=>document.getElementById(id),status=$("status");let userId="",games=[],docs=[],refs=[],coaches=[],selected=null,mailKind="",gameFilter="all",refereeFilter="",sortKey="date",sortDir="desc";
 const currentIso=()=>{const t=new Date();return [t.getFullYear(),String(t.getMonth()+1).padStart(2,"0"),String(t.getDate()).padStart(2,"0")].join("-")};
 function person(people,id){return people.find(x=>x.id===id||x.name===id)}
@@ -105,7 +105,32 @@ function render(){
    remind.disabled=!g.coach_email;remind.title=g.coach_email?"Erinnerung an Coach senden":"E-Mail-Adresse beim Coach fehlt";
    remind.onclick=()=>openMail(g,"coach_erinnerung");sendCell.append(remind)
   }
-  row.append(sendCell);tbody.append(row)
+  row.append(sendCell);
+  const actionCell=document.createElement("td"),del=document.createElement("button");
+  del.type="button";del.textContent="Spiel löschen";
+  del.setAttribute("aria-label","Spiel "+g.game_key+" löschen");
+  del.onclick=async()=>{
+    const attached=docs.filter(d=>d.game_key===g.game_key||(g.pdf_id&&d.document_id===g.pdf_id));
+    if(!confirm("Spiel "+g.home+" – "+g.away+" vom "+dateDE(g.match_date)+" wirklich löschen?"))return;
+    if((attached.length||g.pdf_id)&&!confirm("ZWEITE BESTÄTIGUNG: Es ist mindestens ein Bogen hinterlegt. Spiel wirklich löschen? Die zugehörigen PDF-Bögen bleiben in der internen Ablage erhalten und werden vom Spiel gelöst."))return;
+    del.disabled=true;
+    status.textContent="Spiel wird gelöscht …";
+    try{
+      for(const d of attached){
+        const{error:e}=await sb.rpc("portal_unlink_observation",{p_document_id:d.document_id});
+        if(e)throw e;
+      }
+      const{data:deleted,error}=await sb.from("portal_games").delete().eq("owner_id",userId).eq("game_key",g.game_key).select("game_key");
+      if(error)throw error;
+      if(!deleted?.length)throw Error("Spiel konnte nicht gelöscht werden.");
+      const key="msp-games-draft-"+userId;
+      try{const local=JSON.parse(localStorage.getItem(key)||"[]");localStorage.setItem(key,JSON.stringify(local.filter(x=>String(x.id)!==g.game_key)))}catch{}
+      for(const d of attached)d.game_key=null;
+      games=games.filter(x=>x.game_key!==g.game_key);
+      render();status.textContent="Spiel gelöscht. Zugehörige Bögen bleiben intern gespeichert.";
+    }catch(e){status.textContent="Löschen fehlgeschlagen: "+e.message;del.disabled=false;}
+  };
+  actionCell.append(del);row.append(actionCell);tbody.append(row)
  }
  status.textContent=games.length?games.length+" Spiel(e) vorhanden.":"Noch keine Spiele vorhanden.";
 }
