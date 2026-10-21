@@ -92,6 +92,15 @@ if(nav){
 if(nav){
  const style=document.createElement("style");style.textContent=".person-submenu{padding:2px 4px 6px 16px;display:flex;flex-direction:column;gap:2px}.person-submenu a{padding:7px 9px!important;font-size:13px;line-height:1.3;white-space:normal;overflow-wrap:anywhere}.person-submenu a[aria-current='page']{font-weight:700;background:#e8f0f8}.person-submenu .none{font-size:12px;color:#62768a;padding:6px 8px}";
  document.head.append(style);
+
+ const gameLink=[...nav.querySelectorAll("a")].find(a=>a.getAttribute("href")==="/spiele.html");
+ if(gameLink&&!nav.querySelector('a[href="/auswertung.html"]')){
+   const evaluation=document.createElement("a");
+   evaluation.href="/auswertung.html";
+   evaluation.textContent="Auswertung";
+   if(location.pathname==="/auswertung.html")evaluation.setAttribute("aria-current","page");
+   gameLink.insertAdjacentElement("afterend",evaluation);
+ }
  const links=[...nav.querySelectorAll("a")];
  const capture=links.find(x=>x.getAttribute("href")==="/beobachtungsbogen-erfassen.html");
  if(capture&&!links.some(x=>x.getAttribute("href")==="/beobachtungsboegen.html")){
