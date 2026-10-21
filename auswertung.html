@@ -37,7 +37,7 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 <div class="tablebox"><table class="summary">
 <thead><tr><th>Coach</th><th>Anzahl Spiele</th><th>Kilometer gesamt</th></tr></thead>
 <tbody><tr><td id="coach-name"></td><td id="game-count"></td><td id="km-total"></td></tr></tbody></table></div>
-<p><button class="secondary" id="toggle-details" type="button" aria-expanded="false" aria-controls="details">Details anzeigen</button></p>
+<p style="display:flex;gap:10px;flex-wrap:wrap"><button class="secondary" id="toggle-details" type="button" aria-expanded="false" aria-controls="details">Details anzeigen</button><button id="export-excel" type="button" disabled>Excel exportieren (.xlsx)</button></p>
 <div id="details" hidden>
 <h3>Einzelne Coachings</h3>
 <div class="tablebox"><table class="details-table"><thead><tr><th>Datum</th><th>Coaching</th><th>Kilometer</th></tr></thead><tbody id="detail-rows"></tbody></table></div>
@@ -49,7 +49,7 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 import{requireAdmin,sb,dateDE}from"/portal-workflow.js";
 import{cloudPeople}from"/portal-people.js";
 const $=id=>document.getElementById(id);
-let games=[],coaches=[];
+let games=[],coaches=[],lastResult=null,excelLibraryPromise=null;
 function displayName(p){return String(p?.name||[p?.first,p?.last].filter(Boolean).join(" ")||"").trim()}
 function distance(s){
  const input=String(s??"").trim().replace(/\s*km\s*$/i,"").trim();
@@ -66,6 +66,8 @@ function showResult(e){
  const p=coaches.find(x=>x.id===id),name=displayName(p);
  const filtered=games.filter(g=>!g.is_test&&(String(g.coach_id||"")===id||(!g.coach_id&&String(g.coach_name||"").trim().toLocaleLowerCase("de")===name.toLocaleLowerCase("de")))&&(!from||g.match_date>=from)&&(!to||g.match_date<=to)).sort((a,b)=>String(a.match_date).localeCompare(String(b.match_date))||String(a.kickoff||"").localeCompare(String(b.kickoff||"")));
  const kms=filtered.map(g=>distance(g.kilometers_text)),sum=kms.reduce((acc,k)=>acc+(k??0),0);
+ lastResult={name,from,to,games:[...filtered],sum,missing:filtered.filter(g=>g.kilometers_text&&distance(g.kilometers_text)===null).length};
+ $("export-excel").disabled=false;
  $("coach-name").textContent=name;
  $("game-count").textContent=filtered.length;
  $("km-total").textContent=labelKm(sum);
@@ -84,6 +86,115 @@ function showResult(e){
  $("status").textContent=filtered.length+" Coaching-Spiele im gewählten Zeitraum gefunden.";
 }
 $("search-form").addEventListener("submit",showResult);
+for(const input of ["from","to","coach"])$(input).addEventListener("change",()=>{
+  lastResult=null;$("export-excel").disabled=true;$("results").hidden=true;
+});
+function loadExcelLibrary(){
+ if(window.ExcelJS)return Promise.resolve(window.ExcelJS);
+ if(excelLibraryPromise)return excelLibraryPromise;
+ excelLibraryPromise=new Promise((resolve,reject)=>{
+  const script=document.createElement("script");
+  script.src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js";
+  script.async=true;script.crossOrigin="anonymous";
+  script.onload=()=>window.ExcelJS?resolve(window.ExcelJS):reject(Error("Excel-Bibliothek wurde nicht geladen."));
+  script.onerror=()=>reject(Error("Excel-Bibliothek konnte nicht geladen werden. Internetverbindung prüfen."));
+  document.head.append(script);
+ }).catch(error=>{excelLibraryPromise=null;throw error});
+ return excelLibraryPromise;
+}
+const noFormula=x=>String(x??"");
+async function exportExcel(){
+ const current=lastResult;if(!current)return;
+ const button=$("export-excel");button.disabled=true;
+ const oldLabel=button.textContent;button.textContent="Excel wird erstellt …";
+ try{
+  const ExcelJS=await loadExcelLibrary();
+  const book=new ExcelJS.Workbook();
+  book.creator="Coachingportal MSP";
+  book.title="Coaching-Auswertung";
+  book.subject="Coachingspiele und Kilometer im gewählten Zeitraum";
+  book.created=new Date();
+  book.calcProperties.fullCalcOnLoad=true;
+  const detail=book.addWorksheet("Details");
+  detail.columns=[
+   {header:"Datum",key:"date",width:17},
+   {header:"Coaching",key:"game",width:57},
+   {header:"Kilometer",key:"km",width:19}
+  ];
+  for(const game of current.games){
+   const raw=String(game.kilometers_text??"").trim();
+   const numeric=distance(raw);
+   detail.addRow({
+    date:new Date(game.match_date+"T12:00:00Z"),
+    game:noFormula([game.home,game.away].filter(Boolean).join(" – ")||"Coaching"),
+    km:numeric===null?(raw||null):numeric
+   });
+  }
+  detail.getColumn(1).numFmt="dd.mm.yyyy";
+  detail.getColumn(3).numFmt='0.##" km"';
+  detail.views=[{state:"frozen",ySplit:1}];
+  detail.autoFilter={from:"A1",to:"C"+Math.max(1,current.games.length+1)};
+  detail.getRow(1).height=27;
+  detail.getRow(1).eachCell(cell=>{
+   cell.font={name:"Aptos",size:11,bold:true,color:{argb:"FFFFFFFF"}};
+   cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};
+   cell.alignment={vertical:"middle"};
+  });
+  for(let i=2;i<=current.games.length+1;i++){
+   const row=detail.getRow(i);
+   row.height=23;
+   row.eachCell(cell=>{
+    cell.font={name:"Aptos",size:11,color:{argb:"FF142B46"}};
+    cell.alignment={vertical:"middle",wrapText:cell.col===2};
+    if(i%2===0)cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFF3F6FA"}};
+   });
+  }
+  const sumSheet=book.addWorksheet("Übersicht",{views:[{state:"frozen",ySplit:2}]});
+  sumSheet.columns=[{width:29},{width:40},{width:20}];
+  sumSheet.mergeCells("A1:C1");
+  const title=sumSheet.getCell("A1");title.value="Coaching-Auswertung";title.font={name:"Aptos Display",size:18,bold:true,color:{argb:"FFFFFFFF"}};
+  title.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};
+  title.alignment={vertical:"middle"};sumSheet.getRow(1).height=38;
+  sumSheet.getCell("A3").value="Coach";
+  sumSheet.getCell("B3").value=current.name;
+  sumSheet.getCell("A4").value="Zeitraum";
+  sumSheet.getCell("B4").value=(current.from?dateDE(current.from):"Beginn offen")+" – "+(current.to?dateDE(current.to):"Ende offen");
+  sumSheet.getCell("A6").value="Anzahl Spiele";
+  sumSheet.getCell("A7").value="Kilometer gesamt";
+  const endRow=Math.max(2,current.games.length+1);
+  sumSheet.getCell("B6").value={formula:"COUNTA(Details!A2:A"+endRow+")",result:current.games.length};
+  sumSheet.getCell("B7").value={formula:"SUM(Details!C2:C"+endRow+")",result:current.sum};
+  sumSheet.getCell("B7").numFmt='0.##" km"';
+  sumSheet.mergeCells("A9:C9");
+  sumSheet.getCell("A9").value="Testspiele werden nicht berücksichtigt.";
+  sumSheet.mergeCells("A10:C10");
+  sumSheet.getCell("A10").value=current.missing?"Hinweis: "+current.missing+" nicht numerische Kilometerangaben sind nicht in der Summe enthalten.":"Datenstand zum Zeitpunkt des Exports.";
+  for(const addr of ["A3","A4","A6","A7"]){
+   sumSheet.getCell(addr).font={name:"Aptos",bold:true,color:{argb:"FF142B46"}};
+  }
+  for(const addr of ["A6","B6","A7","B7"]){
+   sumSheet.getCell(addr).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE8F0F8"}};
+   sumSheet.getCell(addr).alignment={vertical:"middle"};
+  }
+  for(const row of [6,7])sumSheet.getRow(row).height=29;
+  sumSheet.getCell("A9").font={italic:true,color:{argb:"FF51667C"}};
+  sumSheet.getCell("A10").font={italic:true,color:{argb:"FF51667C"}};
+  const buffer=await book.xlsx.writeBuffer();
+  const blob=new Blob([buffer],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  const safeName=current.name.normalize("NFKD").replace(/[^a-zA-Z0-9_-]+/g,"_").replace(/^_+|_+$/g,"").slice(0,60)||"Coach";
+  const start=current.from||"alle",end=current.to||"alle";
+  const filename="Coaching_Auswertung_"+safeName+"_"+start+"_bis_"+end+".xlsx";
+  const url=URL.createObjectURL(blob),link=document.createElement("a");
+  link.href=url;link.download=filename;document.body.append(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);
+  $("status").textContent="Excel-Datei für "+current.name+" erstellt.";
+ }catch(error){
+  $("status").textContent="Excel-Export fehlgeschlagen: "+error.message;
+ }finally{
+  button.disabled=!lastResult;button.textContent=oldLabel;
+ }
+}
+$("export-excel").addEventListener("click",exportExcel);
 $("toggle-details").addEventListener("click",()=>{
  const expanded=$("details").hidden;
  $("details").hidden=!expanded;
