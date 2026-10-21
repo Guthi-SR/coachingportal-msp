@@ -105,17 +105,34 @@ if(nav){
   const main=links.find(x=>x.getAttribute("href")===(type==="referee"?"/schiedsrichter.html":"/coach-beobachter.html"));
   if(main)try{
     const{user}=await requireAdmin();
-    const people=(await cloudPeople(user.id,type)).sort((a,b)=>{const surname=p=>String(p.last||p.name?.trim().split(/\s+/).at(-1)||"").trim();const first=type==="referee"?(surname(a).localeCompare(surname(b),"de",{sensitivity:"base"})):String(a.name||a.last||"").localeCompare(String(b.name||b.last||""),"de");return first||String(a.name||"").localeCompare(String(b.name||""),"de",{sensitivity:"base"});});
+    const people=await cloudPeople(user.id,type);
+    const cmp=(a,b)=>String(a||"").localeCompare(String(b||""),"de",{sensitivity:"base"});
+    const firstName=p=>String(p.first||p.name?.trim().split(/\s+/)[0]||"").trim();
+    const lastName=p=>String(p.last||p.name?.trim().split(/\s+/).at(-1)||"").trim();
+    const personSort=(a,b)=>{
+      if(type==="referee"){
+        const mode=localStorage.getItem("msp-referee-sort-mode")==="first"?"first":"last";
+        const primary=mode==="first"?firstName:lastName;
+        const secondary=mode==="first"?lastName:firstName;
+        return cmp(primary(a),primary(b))||cmp(secondary(a),secondary(b))||cmp(a.name,b.name);
+      }
+      return cmp(a.name||a.last,b.name||b.last)||cmp(a.name,b.name);
+    };
     const wrap=document.createElement("div");wrap.className="person-submenu";
     wrap.setAttribute("aria-label",type==="referee"?"Schiedsrichter-Untermenü":"Coaches-Untermenü");
-    for(const p of people){
-      const a=document.createElement("a");a.href=(type==="referee"?"/schiedsrichter-profil.html?id=":"/coach-beobachter-profil.html?id=")+encodeURIComponent(p.id);
-      a.textContent=p.name||[p.first,p.last].filter(Boolean).join(" ")||"Unbenannt";
-      if(new URLSearchParams(location.search).get("id")===p.id)a.setAttribute("aria-current","page");
-      wrap.append(a);
-    }
-    if(!people.length){const empty=document.createElement("span");empty.className="none";empty.textContent="Noch keine Einträge";wrap.append(empty)}
+    const renderSubmenu=()=>{
+      wrap.replaceChildren();
+      for(const p of [...people].sort(personSort)){
+        const a=document.createElement("a");a.href=(type==="referee"?"/schiedsrichter-profil.html?id=":"/coach-beobachter-profil.html?id=")+encodeURIComponent(p.id);
+        a.textContent=p.name||[p.first,p.last].filter(Boolean).join(" ")||"Unbenannt";
+        if(new URLSearchParams(location.search).get("id")===p.id)a.setAttribute("aria-current","page");
+        wrap.append(a);
+      }
+      if(!people.length){const empty=document.createElement("span");empty.className="none";empty.textContent="Noch keine Einträge";wrap.append(empty)}
+    };
+    renderSubmenu();
     main.insertAdjacentElement("afterend",wrap);
+    if(type==="referee")window.addEventListener("msp-referee-sort-change",renderSubmenu);
   }catch(e){console.warn("Untermenü:",e.message)}
  }
 }
