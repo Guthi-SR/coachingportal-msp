@@ -27,6 +27,7 @@ export default async function handler(req,res){
   if(typeof subject!=="string"||!subject.trim()||subject.length>200||typeof body!=="string"||!body.trim()||body.length>20000)return json(res,400,{error:"Betreff oder Nachricht ungültig."});
   const records=await supa("portal_games?owner_id=eq."+encodeURIComponent(user.id)+"&game_key=eq."+encodeURIComponent(gameKey)+"&select=*",token);
   const g=records[0];if(!g)return json(res,404,{error:"Spiel nicht gefunden."});
+  if(g.is_test)return json(res,409,{error:"Testspiele sind ausschließlich für interne Tests. E-Mails werden nicht versendet."});
   const recipient=kind==="bogen_versendet"?g.referee_email:g.coach_email;
   if(!mailValid(recipient))return json(res,422,{error:"Beim zugeordneten Empfänger fehlt eine gültige E-Mail-Adresse in den Stammdaten."});
   if(!mailConfigured())return json(res,503,{error:"STRATO-Mailversand noch nicht eingerichtet. Bitte STRATO_SMTP_USER und STRATO_SMTP_PASSWORD in Vercel hinterlegen."});
