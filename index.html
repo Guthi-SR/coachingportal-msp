@@ -14,11 +14,87 @@ input{border:1px solid #b9c8d7}
 button{margin-top:16px;border:0;background:#142b46;color:white;cursor:pointer}
 button.secondary{background:#45627f}
 #dashboard{display:block}#status{margin-top:20px;line-height:1.5} [hidden]{display:none!important}
-.portal-shell{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 90px)}.portal-sidebar{background:#fff;border-right:1px solid #dce5ee;padding:22px 14px;display:flex;flex-direction:column;gap:4px}.portal-sidebar strong{padding:10px 12px}.portal-sidebar a{display:block;padding:12px;color:#142b46;text-decoration:none;border-radius:8px}.portal-sidebar a:hover{background:#f0f4f9}.portal-sidebar a[aria-current="page"]{background:#e8f0f8;font-weight:700}.portal-content{min-width:0}.portal-content main{max-width:1050px;margin:auto;padding:22px}@media(max-width:650px){.portal-shell{grid-template-columns:190px minmax(0,1fr)}.portal-sidebar{padding:12px 6px}.portal-sidebar a{padding:10px 6px;font-size:13px}.portal-content main{padding:12px}}</style>
+.portal-shell{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 90px)}.portal-sidebar{background:#fff;border-right:1px solid #dce5ee;padding:22px 14px;display:flex;flex-direction:column;gap:4px}.portal-sidebar strong{padding:10px 12px}.portal-sidebar a{display:block;padding:12px;color:#142b46;text-decoration:none;border-radius:8px}.portal-sidebar a:hover{background:#f0f4f9}.portal-sidebar a[aria-current="page"]{background:#e8f0f8;font-weight:700}.portal-content{min-width:0}.portal-content main{max-width:1050px;margin:auto;padding:22px}@media(max-width:650px){.portal-shell{grid-template-columns:190px minmax(0,1fr)}.portal-sidebar{padding:12px 6px}.portal-sidebar a{padding:10px 6px;font-size:13px}.portal-content main{padding:12px}}
+/* Dashboard: desktop and mobile */
+body.dashboard-active > main{max-width:none;margin:0;padding:0}
+body.dashboard-active .portal-shell{min-height:calc(100vh - 90px)}
+body.dashboard-active .dash-page{border:0;border-radius:0;min-width:0;max-width:none;width:100%;padding:28px clamp(16px,3vw,38px);background:#f3f6fa}
+.dash-top{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:22px}
+.dash-kicker{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748b;margin:0 0 7px}
+.dash-top h2{font-size:clamp(25px,3vw,34px);line-height:1.15;margin:0}
+.dash-sub{margin:10px 0 0;color:#51667b;line-height:1.45}
+.dash-actions{display:flex;gap:8px;flex-wrap:wrap}
+.dash-actions button{width:auto;margin:0;padding:9px 14px;font-size:14px}
+.dash-actions .dash-logout{background:#fff;color:#142b46;border:1px solid #b9c8d7}
+.dash-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px}
+.dash-stat{min-width:0;display:flex;flex-direction:column;gap:8px;padding:18px;border:1px solid #dce5ee;border-radius:14px;background:#fff;color:#142b46;text-decoration:none;box-shadow:0 1px 3px #142b4608}
+.dash-stat:hover,.dash-item:hover{border-color:#93abc0}
+.dash-stat span{font-size:14px;font-weight:650}
+.dash-stat strong{font-size:34px;line-height:1.1}
+.dash-stat small{font-size:12px;color:#60758b;line-height:1.4}
+.dash-block{background:#fff;border:1px solid #dce5ee;border-radius:14px;padding:20px;margin-bottom:18px;min-width:0}
+.dash-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:15px}
+.dash-heading h3{font-size:17px;margin:0 0 5px}
+.dash-heading p{margin:0;color:#617589;font-size:13px}
+.dash-heading a{color:#17568c;font-size:13px;font-weight:650;text-decoration:none}
+.dash-traffic{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.dash-traffic-card{display:flex;flex-direction:column;gap:8px;text-decoration:none;color:#142b46;padding:15px;border:1px solid #dce5ee;border-radius:10px}
+.dash-traffic-card span{font-size:13px;font-weight:650}
+.dash-traffic-card strong{font-size:30px}
+.dash-traffic-card.green{background:#eaf7ed;border-color:#bfdfc5}
+.dash-traffic-card.yellow{background:#fff8dc;border-color:#efd997}
+.dash-traffic-card.red{background:#fff0ee;border-color:#f0bab6}
+.dash-help{font-size:13px;line-height:1.55;color:#617589;margin:14px 0 0}
+.dash-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.dash-columns .dash-block{margin:0 0 18px}
+.dash-items{display:flex;flex-direction:column;gap:9px}
+.dash-item{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;background:#fafbfd;border:1px solid #e4eaf1;border-radius:9px;padding:12px;text-decoration:none;color:#142b46;min-width:0}
+.dash-item > div{min-width:0}
+.dash-item strong{display:block;font-size:13px;line-height:1.4;overflow-wrap:anywhere}
+.dash-item small{display:block;color:#60758b;margin-top:5px;font-size:12px;line-height:1.5}
+.dash-pill{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;padding:5px 8px;border-radius:99px;border:1px solid #dce5ee;background:white;font-size:11px;font-weight:650;text-align:center;max-width:140px}
+.dash-pill.red{color:#912720;background:#fff0ee;border-color:#efc2bd}
+.dash-pill.yellow{color:#7b5800;background:#fff8dc;border-color:#f0db9b}
+.dash-pill.green{color:#1a6432;background:#eaf7ed;border-color:#c1e3c6}
+.dash-pill.info{color:#38536b;background:#f0f5fa}
+.dash-empty{padding:15px 12px;color:#617589;font-size:13px;border:1px dashed #dce5ee;border-radius:9px}
+.dash-mail-off{font-size:12px;font-weight:650;color:#715417;background:#fff6dc;border:1px solid #e7d29b;padding:6px 10px;border-radius:8px}
+.dash-message{background:#fff;border:1px solid #dce5ee;border-radius:12px;padding:18px;line-height:1.5}
+@media(max-width:1050px){.dash-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.dash-columns{grid-template-columns:1fr}}
+@media(max-width:767px){body.dashboard-active .dash-page{padding:15px 12px!important;width:100%!important}body.dashboard-active > main{max-width:100%!important;width:100%!important;margin:0!important;padding:0!important}.dash-stats{gap:9px}.dash-stat{padding:14px}.dash-stat strong{font-size:28px}.dash-traffic{grid-template-columns:1fr}.dash-traffic-card{flex-direction:row;align-items:center;justify-content:space-between}.dash-block{padding:15px}.dash-item{flex-wrap:wrap}.dash-top{padding:0 0 5px}}
+</style>
 </head>
 <body>
 <header><h1>Coachingportal MSP</h1><div>SRG Main-Spessart</div></header>
-<main><div id="dashboard" hidden class="portal-shell"><nav class="portal-sidebar" aria-label="Hauptmenü"><strong>Menü</strong><a href="/" aria-current="page">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html">Spiele</a><a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav><section class="portal-content"><h2>Startseite</h2><button id="dashboard-logout">Abmelden</button></section></div><section id="login-section">
+<main><div id="dashboard" hidden class="portal-shell"><nav class="portal-sidebar" aria-label="Hauptmenü"><strong>Menü</strong><a href="/" aria-current="page">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html">Spiele</a><a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav><section class="portal-content dash-page" aria-label="Dashboard">
+ <div class="dash-top"><div><p class="dash-kicker">SRG Main-Spessart · Übersicht</p><h2>Dein Dashboard</h2><p class="dash-sub">Spiele, Beobachtungsbögen und Coaching-Aufgaben auf einen Blick</p></div><div class="dash-actions"><button id="refresh-dashboard" type="button">↻ Aktualisieren</button><button id="dashboard-logout" type="button" class="dash-logout">Abmelden</button></div></div>
+ <p id="dash-loading" class="dash-message" role="status" aria-live="polite">Dashboard wird geladen …</p>
+ <div id="dash-body" hidden>
+  <div class="dash-stats" aria-label="Kennzahlen">
+   <a class="dash-stat" href="/spiele.html"><span>Spiele gesamt</span><strong id="dash-games">–</strong><small>Erfasste Coachingspiele</small></a>
+   <a class="dash-stat" href="/coach-beobachter.html"><span>Coaches</span><strong id="dash-coaches">–</strong><small>Hinterlegte Beobachter</small></a>
+   <a class="dash-stat" href="/beobachtungsboegen.html"><span>Beobachtungsbögen</span><strong id="dash-docs">–</strong><small>Gespeicherte PDF-Bögen</small></a>
+   <a class="dash-stat" href="/spiele.html"><span>Eingang offen</span><strong id="dash-missing">–</strong><small>Vergangene Spiele ohne Bogeneingang</small></a>
+   <a class="dash-stat" href="/spiele.html"><span>Zur Prüfung</span><strong id="dash-review">–</strong><small>Eingegangen, noch nicht geprüft</small></a>
+   <a class="dash-stat" href="/spiele.html"><span>Erledigt / versendet</span><strong id="dash-done">–</strong><small>Bogen bereits versendet</small></a>
+  </div>
+  <div class="dash-block"><div class="dash-heading"><div><h3>Ampelsystem</h3><p>Nach dem Status der Spiele und Beobachtungsbögen</p></div><a href="/spiele.html">Alle Spiele →</a></div>
+   <div class="dash-traffic">
+    <a class="dash-traffic-card green" href="/spiele.html"><span>● Grün · Bogen versendet</span><strong id="dash-green">–</strong></a>
+    <a class="dash-traffic-card yellow" href="/spiele.html"><span>● Gelb · Spiel in 5 Tagen</span><strong id="dash-yellow">–</strong></a>
+    <a class="dash-traffic-card red" href="/spiele.html"><span>● Rot · Bogen überfällig</span><strong id="dash-red">–</strong></a>
+   </div><p class="dash-help">Rot: mindestens fünf Tage nach dem Spiel ist noch kein Bogen eingegangen. Gelb: Spiel findet in den nächsten fünf Tagen statt. Grün: Bogen wurde versendet oder der Versand manuell vermerkt.</p>
+  </div>
+  <div class="dash-columns">
+   <div class="dash-block"><div class="dash-heading"><div><h3>Jetzt wichtig</h3><p>Überfällige Bögen und offene Prüfungen</p></div><a href="/spiele.html">Bearbeiten →</a></div><div id="dash-todo" class="dash-items"></div></div>
+   <div class="dash-block"><div class="dash-heading"><div><h3>Nächste Coachings</h3><p>Die nächsten angesetzten Spiele</p></div><a href="/spiele.html">Übersicht →</a></div><div id="dash-upcoming" class="dash-items"></div></div>
+  </div>
+  <div class="dash-block"><div class="dash-heading"><div><h3>Coach-Infomails · fünf Tage vorher</h3><p>Vorbereitung für Spiele in den nächsten fünf Tagen</p></div><span class="dash-mail-off">Versand deaktiviert</span></div>
+   <p class="dash-help">Hier siehst du, welche Coaches eine Information erhalten sollen. Diese Funktion verschickt keine E-Mails und legt keine automatischen Sendungen an.</p>
+   <div id="dash-mails" class="dash-items"></div>
+  </div>
+ </div>
+</section></div><section id="login-section">
 <h2>Anmeldung</h2>
 <div id="auth-form">
 <label for="email">E-Mail-Adresse</label>
@@ -44,13 +120,114 @@ const el=id=>document.getElementById(id);
 const msg=text=>{el("status").textContent=text};
 const email=()=>el("email").value.trim();
 const redirect=location.origin+location.pathname;
+
+const dashboardDate=()=>new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Berlin",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+const dayNumber=value=>Date.parse(String(value||"")+"T12:00:00Z")/86400000;
+const deltaDate=(date,today)=>Math.round(dayNumber(date)-dayNumber(today));
+const asDate=iso=>String(iso||"").replace(/^(\d{4})-(\d{2})-(\d{2})$/,(_whole,y,m,d)=>d+"."+m+"."+y);
+const number=id=>value=>{el(id).textContent=String(value)};
+const clearList=id=>{const list=el(id);list.replaceChildren();return list};
+const badge=(label,color)=>{
+  const span=document.createElement("span");span.className="dash-pill "+color;span.textContent=label;return span;
+};
+const appendEmpty=(list,message)=>{
+  const div=document.createElement("div");div.className="dash-empty";div.textContent=message;list.append(div);
+};
+const addItem=(list,g,subtitle,status,color)=>{
+  const link=document.createElement("a");link.href="/spiele.html";link.className="dash-item";
+  const detail=document.createElement("div"),title=document.createElement("strong"),sub=document.createElement("small");
+  title.textContent=(g.home||"Heim")+" – "+(g.away||"Gast");
+  sub.textContent=asDate(g.match_date)+(g.kickoff?" · "+g.kickoff+" Uhr":"")+(g.coach_name?" · Coach: "+g.coach_name:"")+(subtitle?" · "+subtitle:"");
+  detail.append(title,sub);link.append(detail,badge(status,color));list.append(link);
+};
+const gameSignal=(g,today)=>{
+  if(g.sent_at||g.sent_manual_at)return "green";
+  const diff=deltaDate(g.match_date,today);
+  if(diff<=-5&&!g.received_at)return "red";
+  if(diff>=0&&diff<=5)return "yellow";
+  return "";
+};
+let dashboardLoadId=0;
+async function loadDashboard(userId){
+ const loadId=++dashboardLoadId;
+ el("dash-loading").hidden=false;
+ el("dash-loading").textContent="Dashboard wird geladen …";
+ el("dash-body").hidden=true;
+ try{
+  const [gameResult,docResult,coachResult]=await Promise.all([
+   supabase.from("portal_games").select("game_key,match_date,kickoff,home,away,referee_name,coach_name,coach_email,received_at,checked_at,sent_at,sent_manual_at").eq("owner_id",userId),
+   supabase.from("portal_observations").select("document_id").eq("owner_id",userId),
+   supabase.from("portal_people").select("person_id").eq("owner_id",userId).eq("kind","coach")
+  ]);
+  if(loadId!==dashboardLoadId||el("dashboard").hidden)return;
+  for(const result of [gameResult,docResult,coachResult])if(result.error)throw result.error;
+  const games=gameResult.data||[],docs=docResult.data||[],coaches=coachResult.data||[];
+  const today=dashboardDate(),valid=g=>Number.isFinite(dayNumber(g.match_date));
+  const past=games.filter(g=>valid(g)&&deltaDate(g.match_date,today)<0);
+  const red=games.filter(g=>valid(g)&&gameSignal(g,today)==="red");
+  const yellow=games.filter(g=>valid(g)&&gameSignal(g,today)==="yellow");
+  const green=games.filter(g=>gameSignal(g,today)==="green");
+  const reviews=games.filter(g=>g.received_at&&!g.checked_at);
+  number("dash-games")(games.length);
+  number("dash-coaches")(coaches.length);
+  number("dash-docs")(docs.length);
+  number("dash-missing")(past.filter(g=>!g.received_at).length);
+  number("dash-review")(reviews.length);
+  number("dash-done")(green.length);
+  number("dash-green")(green.length);
+  number("dash-yellow")(yellow.length);
+  number("dash-red")(red.length);
+  const todo=clearList("dash-todo");
+  for(const g of red.sort((a,b)=>(a.match_date||"").localeCompare(b.match_date||"")).slice(0,5))addItem(todo,g,"Bogen noch nicht eingegangen","Überfällig","red");
+  for(const g of reviews.sort((a,b)=>(b.match_date||"").localeCompare(a.match_date||"")).slice(0,Math.max(0,8-todo.children.length)))addItem(todo,g,"Eingegangen, Prüfung offen","Prüfen","yellow");
+  if(!todo.children.length)appendEmpty(todo,"Aktuell keine überfälligen Bögen oder offenen Prüfungen.");
+  const upcoming=clearList("dash-upcoming");
+  const next=games.filter(g=>valid(g)&&deltaDate(g.match_date,today)>=0).sort((a,b)=>(a.match_date||"").localeCompare(b.match_date||"")||String(a.kickoff||"").localeCompare(String(b.kickoff||"")));
+  for(const g of next.slice(0,8)){const d=deltaDate(g.match_date,today);addItem(upcoming,g,g.referee_name?"Schiedsrichter: "+g.referee_name:"",d===0?"Heute":d===1?"Morgen":"In "+d+" Tagen",d<=5?"yellow":"info")}
+  if(!next.length)appendEmpty(upcoming,"Keine bevorstehenden Coaching-Spiele eingetragen.");
+  const mails=clearList("dash-mails");
+  const prepare=next.filter(g=>deltaDate(g.match_date,today)<=5);
+  for(const g of prepare.slice(0,12)){
+    const diff=deltaDate(g.match_date,today);
+    const message="Info-Mail vormerken: "+(diff===5?"heute":diff===0?"Spiel ist heute":"Spiel in "+diff+" Tag"+(diff===1?"":"en"))+(g.coach_email?" · E-Mail-Adresse vorhanden":" · Coach-E-Mail fehlt");
+    addItem(mails,g,message,"Nicht versendet",g.coach_email?"info":"yellow");
+  }
+  if(!prepare.length)appendEmpty(mails,"Keine Spiele in den nächsten fünf Tagen. Der automatische E-Mail-Versand bleibt ausgeschaltet.");
+  el("dash-loading").hidden=true;
+  el("dash-body").hidden=false;
+ }catch(error){
+  if(loadId!==dashboardLoadId)return;
+  el("dash-loading").hidden=false;
+  el("dash-loading").textContent="Dashboard konnte nicht geladen werden: "+String(error.message||error)+". Bitte erneut auf „Aktualisieren“ tippen.";
+ }
+}
+el("refresh-dashboard").addEventListener("click",async()=>{
+ const {data:{user}}=await supabase.auth.getUser();
+ if(user)await loadDashboard(user.id);
+});
+
 async function render(){
   const {data:{user},error}=await supabase.auth.getUser();
-  if(error||!user){el("auth-form").hidden=false;el("account").hidden=true;el("dashboard").hidden=true;el("login-section").hidden=false;return}
+  if(error||!user){
+    dashboardLoadId++;
+    document.body.classList.remove("dashboard-active");
+    el("auth-form").hidden=false;el("account").hidden=true;el("dashboard").hidden=true;el("login-section").hidden=false;
+    return;
+  }
   const {data:profile,error:profileError}=await supabase.from("portal_profiles").select("role").eq("user_id",user.id).single();
-  el("auth-form").hidden=true;el("account").hidden=true;el("dashboard").hidden=false;el("login-section").hidden=true;
-  el("admin-link").hidden=profileError||profile.role!=="admin";
-  el("role").textContent=profileError?"Benutzerprofil noch nicht verfügbar.":profile.role==="admin"?"Administrator":"Coach";
+  el("auth-form").hidden=true;el("account").hidden=true;
+  el("dashboard").hidden=false;el("login-section").hidden=true;
+  document.body.classList.add("dashboard-active");
+  const admin=!profileError&&profile?.role==="admin";
+  el("admin-link").hidden=!admin;
+  el("role").textContent=profileError?"Benutzerprofil noch nicht verfügbar.":admin?"Administrator":"Coach";
+  if(admin)await loadDashboard(user.id);
+  else{
+    dashboardLoadId++;
+    el("dash-body").hidden=true;
+    el("dash-loading").hidden=false;
+    el("dash-loading").textContent="Willkommen im Coachingportal. Dieses Verwaltungs-Dashboard ist für Administratoren freigegeben.";
+  }
 }
 el("login").onclick=async()=>{
   if(!email()||!el("password").value)return msg("Bitte E-Mail-Adresse und Passwort eingeben.");
