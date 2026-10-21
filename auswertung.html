@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Auswertung – Coachingportal MSP</title>
+<style>
+body{margin:0;background:#f3f6fa;color:#142b46;font:16px system-ui}header{padding:20px;background:#142b46;color:#fff}
+.shell{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 85px)}
+nav{padding:16px;background:white;border-right:1px solid #dce5ee}nav a{display:block;padding:11px;color:#142b46;text-decoration:none;border-radius:8px}nav a[aria-current]{background:#e8f0f8;font-weight:700}
+main{padding:24px;max-width:1100px}h2{margin-top:0}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+article{padding:18px;background:white;border:1px solid #dce5ee;border-radius:12px}article strong{display:block;font-size:30px;margin-top:10px}
+small{color:#647589}.hint{margin:18px 0;color:#536b80}table{border-collapse:collapse;width:100%}td,th{padding:10px;border-bottom:1px solid #e4e8ee;text-align:left} .tablebox{overflow-x:auto;background:white;border-radius:12px;padding:12px}
+@media(max-width:700px){.shell{grid-template-columns:145px 1fr}nav{padding:8px}nav a{font-size:13px;padding:8px}main{padding:12px}}
+</style></head><body><header><h1>Coachingportal MSP</h1></header>
+<div class="shell"><nav aria-label="Hauptmenü"><strong>Menü</strong>
+<a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html">Spiele</a><a href="/auswertung.html" aria-current="page">Auswertung</a>
+<a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav>
+<main><h2>Auswertung</h2><p id="status" role="status">Auswertung wird geladen …</p>
+<p class="hint">Ausschließlich echte Coaching-Spiele. Testspiele und zugehörige Bögen werden nicht mitgezählt.</p>
+<div class="cards"><article>Spiele gesamt<strong id="total">–</strong></article><article>Bögen eingegangen<strong id="received">–</strong></article><article>Bögen geprüft<strong id="checked">–</strong></article><article>Bögen versendet<strong id="sent">–</strong></article><article>Kilometer gesamt<strong id="kilometers">–</strong><small>Nur eindeutig numerische Kilometer-Einträge</small></article></div>
+<h3>Spiele und Kilometer</h3><div class="tablebox"><table><thead><tr><th>Spieltag</th><th>Spiel</th><th>Liga</th><th>Kilometer</th><th>Status</th></tr></thead><tbody id="rows"></tbody></table></div></main></div>
+<script type="module">
+import{requireAdmin,sb,dateDE}from"/portal-workflow.js";
+const $=id=>document.getElementById(id);
+function numericKilometers(value){const s=String(value||"").trim();if(!/^\d+(?:[.,]\d+)?$/.test(s))return null;return Number(s.replace(",","."))}
+try{
+ const{user}=await requireAdmin();
+ const{data:all,error}=await sb.from("portal_games").select("game_key,match_date,home,away,league,is_test,kilometers_text,received_at,checked_at,sent_at,sent_manual_at").eq("owner_id",user.id).order("match_date",{ascending:false});
+ if(error)throw error;
+ const games=(all||[]).filter(g=>!g.is_test),totalKm=games.map(g=>numericKilometers(g.kilometers_text)).filter(v=>v!==null).reduce((a,b)=>a+b,0);
+ $("total").textContent=games.length;
+ $("received").textContent=games.filter(g=>!!g.received_at).length;
+ $("checked").textContent=games.filter(g=>!!g.checked_at).length;
+ $("sent").textContent=games.filter(g=>!!(g.sent_at||g.sent_manual_at)).length;
+ $("kilometers").textContent=totalKm.toLocaleString("de-DE",{maximumFractionDigits:2})+" km";
+ const tbody=$("rows");
+ for(const g of games){
+  const tr=document.createElement("tr");
+  const status=g.sent_at||g.sent_manual_at?"Versendet":g.checked_at?"Geprüft":g.received_at?"Eingegangen":"Noch offen";
+  for(const value of [dateDE(g.match_date),g.home+" – "+g.away,g.league||"–",g.kilometers_text||"–",status]){const td=document.createElement("td");td.textContent=value;tr.append(td)}
+  tbody.append(tr);
+ }
+ $("status").textContent=games.length+" echte Spiele werden ausgewertet.";
+}catch(error){$("status").textContent="Auswertung konnte nicht geladen werden: "+error.message}
+</script><script type="module" src="/portal-ui.js"></script></body></html>
