@@ -4,7 +4,7 @@ const nav=document.querySelector(".portal-sidebar,nav[aria-label='Hauptmenü']")
 
 /* Mobile navigation: the main content remains full width while the menu is off-canvas. */
 const mobileNavCss=document.createElement("style");
-mobileNavCss.textContent=String.raw\`
+mobileNavCss.textContent=String.raw`
 .portal-mobile-toggle,.portal-mobile-backdrop{display:none}
 @media(max-width:767px){
   *,*::before,*::after{box-sizing:border-box}
@@ -54,7 +54,7 @@ mobileNavCss.textContent=String.raw\`
 }
 @media(prefers-reduced-motion:reduce){
  body.portal-mobile-nav nav[aria-label="Hauptmenü"]{transition:none!important}
-}\`;
+}`;
 document.head.append(mobileNavCss);
 if(nav){
  document.body.classList.add("portal-mobile-nav");
