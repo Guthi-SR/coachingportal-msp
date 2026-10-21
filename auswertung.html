@@ -3,41 +3,105 @@
 <title>Auswertung – Coachingportal MSP</title>
 <style>
 body{margin:0;background:#f3f6fa;color:#142b46;font:16px system-ui}header{padding:20px;background:#142b46;color:#fff}
-.shell{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 85px)}
-nav{padding:16px;background:white;border-right:1px solid #dce5ee}nav a{display:block;padding:11px;color:#142b46;text-decoration:none;border-radius:8px}nav a[aria-current]{background:#e8f0f8;font-weight:700}
-main{padding:24px;max-width:1100px}h2{margin-top:0}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
-article{padding:18px;background:white;border:1px solid #dce5ee;border-radius:12px}article strong{display:block;font-size:30px;margin-top:10px}
-small{color:#647589}.hint{margin:18px 0;color:#536b80}table{border-collapse:collapse;width:100%}td,th{padding:10px;border-bottom:1px solid #e4e8ee;text-align:left} .tablebox{overflow-x:auto;background:white;border-radius:12px;padding:12px}
-@media(max-width:700px){.shell{grid-template-columns:145px 1fr}nav{padding:8px}nav a{font-size:13px;padding:8px}main{padding:12px}}
-</style></head><body><header><h1>Coachingportal MSP</h1></header>
+.shell{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 85px)}nav{padding:16px;background:white;border-right:1px solid #dce5ee}
+nav a{display:block;padding:11px;color:#142b46;text-decoration:none;border-radius:8px}nav a[aria-current]{background:#e8f0f8;font-weight:700}
+main{padding:24px;max-width:1100px;min-width:0}h2{margin:0 0 12px}.box{background:white;border:1px solid #dce5ee;border-radius:12px;padding:20px;margin:16px 0}
+.filters{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr)) auto;gap:12px;align-items:end}.filters label{display:block;font-weight:600}
+.filters input,.filters select{display:block;box-sizing:border-box;width:100%;margin-top:5px;font:inherit;padding:12px;border:1px solid #b5c4d3;border-radius:7px;background:white}
+button{font:inherit;cursor:pointer;border:1px solid #142b46;border-radius:7px;padding:12px 18px;background:#142b46;color:white;min-height:44px}
+button.secondary{background:white;color:#142b46}.hint{color:#536b80;font-size:14px}table{border-collapse:collapse;width:100%}
+td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child td{border-bottom:0}th{color:#536b80}
+.tablebox{overflow-x:auto}.summary{min-width:520px}.summary th:last-child,.summary td:last-child{text-align:right}
+.details-table{min-width:420px}.details-table th:last-child,.details-table td:last-child{text-align:right}
+.badge{background:#edf2f7;padding:4px 8px;border-radius:5px;font-size:12px}
+@media(max-width:900px){.filters{grid-template-columns:repeat(2,minmax(140px,1fr))}.filters button{grid-column:1/-1}}
+@media(max-width:700px){.shell{grid-template-columns:145px minmax(0,1fr)}nav{padding:8px}nav a{font-size:13px;padding:8px}main{padding:12px}.filters{grid-template-columns:1fr}}
+</style></head><body>
+<header><h1>Coachingportal MSP</h1></header>
 <div class="shell"><nav aria-label="Hauptmenü"><strong>Menü</strong>
 <a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html">Spiele</a><a href="/auswertung.html" aria-current="page">Auswertung</a>
 <a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav>
-<main><h2>Auswertung</h2><p id="status" role="status">Auswertung wird geladen …</p>
-<p class="hint">Ausschließlich echte Coaching-Spiele. Testspiele und zugehörige Bögen werden nicht mitgezählt.</p>
-<div class="cards"><article>Spiele gesamt<strong id="total">–</strong></article><article>Bögen eingegangen<strong id="received">–</strong></article><article>Bögen geprüft<strong id="checked">–</strong></article><article>Bögen versendet<strong id="sent">–</strong></article><article>Kilometer gesamt<strong id="kilometers">–</strong><small>Nur eindeutig numerische Kilometer-Einträge</small></article></div>
-<h3>Spiele und Kilometer</h3><div class="tablebox"><table><thead><tr><th>Spieltag</th><th>Spiel</th><th>Liga</th><th>Kilometer</th><th>Status</th></tr></thead><tbody id="rows"></tbody></table></div></main></div>
+<main><h2>Auswertung der Coaches</h2>
+<div class="box">
+<form id="search-form" class="filters">
+<label for="from">Datum von<input id="from" type="date"></label>
+<label for="to">Datum bis<input id="to" type="date"></label>
+<label for="coach">Coach<select id="coach" required><option value="">Coach auswählen</option></select></label>
+<button type="submit" id="search">Suchen</button>
+</form>
+<p class="hint">Ohne Datum wird der gesamte Zeitraum ausgewertet. Testspiele sind ausgeschlossen.</p>
+<p id="status" role="status" aria-live="polite">Coaches und Spiele werden geladen …</p>
+</div>
+<div class="box" id="results" hidden>
+<h3>Suchergebnis</h3>
+<div class="tablebox"><table class="summary">
+<thead><tr><th>Coach</th><th>Anzahl Spiele</th><th>Kilometer gesamt</th></tr></thead>
+<tbody><tr><td id="coach-name"></td><td id="game-count"></td><td id="km-total"></td></tr></tbody></table></div>
+<p><button class="secondary" id="toggle-details" type="button" aria-expanded="false" aria-controls="details">Details anzeigen</button></p>
+<div id="details" hidden>
+<h3>Einzelne Coachings</h3>
+<div class="tablebox"><table class="details-table"><thead><tr><th>Datum</th><th>Coaching</th><th>Kilometer</th></tr></thead><tbody id="detail-rows"></tbody></table></div>
+</div>
+<p class="hint" id="km-note"></p>
+</div>
+</main></div>
 <script type="module">
 import{requireAdmin,sb,dateDE}from"/portal-workflow.js";
+import{cloudPeople}from"/portal-people.js";
 const $=id=>document.getElementById(id);
-function numericKilometers(value){const s=String(value||"").trim();if(!/^\d+(?:[.,]\d+)?$/.test(s))return null;return Number(s.replace(",","."))}
-try{
- const{user}=await requireAdmin();
- const{data:all,error}=await sb.from("portal_games").select("game_key,match_date,home,away,league,is_test,kilometers_text,received_at,checked_at,sent_at,sent_manual_at").eq("owner_id",user.id).order("match_date",{ascending:false});
- if(error)throw error;
- const games=(all||[]).filter(g=>!g.is_test),totalKm=games.map(g=>numericKilometers(g.kilometers_text)).filter(v=>v!==null).reduce((a,b)=>a+b,0);
- $("total").textContent=games.length;
- $("received").textContent=games.filter(g=>!!g.received_at).length;
- $("checked").textContent=games.filter(g=>!!g.checked_at).length;
- $("sent").textContent=games.filter(g=>!!(g.sent_at||g.sent_manual_at)).length;
- $("kilometers").textContent=totalKm.toLocaleString("de-DE",{maximumFractionDigits:2})+" km";
- const tbody=$("rows");
- for(const g of games){
+let games=[],coaches=[];
+function displayName(p){return String(p?.name||[p?.first,p?.last].filter(Boolean).join(" ")||"").trim()}
+function distance(s){
+ const input=String(s??"").trim().replace(/\s*km\s*$/i,"").trim();
+ if(!/^\d+(?:[,.]\d+)?$/.test(input))return null;
+ const value=Number(input.replace(",","."));
+ return Number.isFinite(value)?value:null;
+}
+function labelKm(value){return value.toLocaleString("de-DE",{maximumFractionDigits:2})+" km"}
+function showResult(e){
+ e.preventDefault();
+ const id=$("coach").value,from=$("from").value,to=$("to").value;
+ if(!id){$("status").textContent="Bitte zuerst einen Coach auswählen.";return}
+ if(from&&to&&from>to){$("status").textContent="Das Enddatum muss nach dem Anfangsdatum liegen.";return}
+ const p=coaches.find(x=>x.id===id),name=displayName(p);
+ const filtered=games.filter(g=>!g.is_test&&(String(g.coach_id||"")===id||(!g.coach_id&&String(g.coach_name||"").trim().toLocaleLowerCase("de")===name.toLocaleLowerCase("de")))&&(!from||g.match_date>=from)&&(!to||g.match_date<=to)).sort((a,b)=>String(a.match_date).localeCompare(String(b.match_date))||String(a.kickoff||"").localeCompare(String(b.kickoff||"")));
+ const kms=filtered.map(g=>distance(g.kilometers_text)),sum=kms.reduce((acc,k)=>acc+(k??0),0);
+ $("coach-name").textContent=name;
+ $("game-count").textContent=filtered.length;
+ $("km-total").textContent=labelKm(sum);
+ const tbody=$("detail-rows");tbody.replaceChildren();
+ for(const g of filtered){
   const tr=document.createElement("tr");
-  const status=g.sent_at||g.sent_manual_at?"Versendet":g.checked_at?"Geprüft":g.received_at?"Eingegangen":"Noch offen";
-  for(const value of [dateDE(g.match_date),g.home+" – "+g.away,g.league||"–",g.kilometers_text||"–",status]){const td=document.createElement("td");td.textContent=value;tr.append(td)}
+  const values=[dateDE(g.match_date),[g.home,g.away].filter(Boolean).join(" – ")||"Coaching",g.kilometers_text?g.kilometers_text:"–"];
+  for(const v of values){const td=document.createElement("td");td.textContent=v;tr.append(td)}
   tbody.append(tr);
  }
- $("status").textContent=games.length+" echte Spiele werden ausgewertet.";
-}catch(error){$("status").textContent="Auswertung konnte nicht geladen werden: "+error.message}
+ if(!filtered.length){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=3;td.textContent="Für diesen Coach wurden im Zeitraum keine Spiele gefunden.";tr.append(td);tbody.append(tr)}
+ const missing=filtered.filter(g=>g.kilometers_text&&distance(g.kilometers_text)===null).length;
+ $("km-note").textContent=missing?missing+" Kilometerangabe(n) sind nicht numerisch und wurden nicht zur Summe addiert. Bitte in „Spiele“ korrigieren.":"";
+ $("details").hidden=true;$("toggle-details").textContent="Details anzeigen";$("toggle-details").setAttribute("aria-expanded","false");
+ $("results").hidden=false;
+ $("status").textContent=filtered.length+" Coaching-Spiele im gewählten Zeitraum gefunden.";
+}
+$("search-form").addEventListener("submit",showResult);
+$("toggle-details").addEventListener("click",()=>{
+ const expanded=$("details").hidden;
+ $("details").hidden=!expanded;
+ $("toggle-details").textContent=expanded?"Details schließen":"Details anzeigen";
+ $("toggle-details").setAttribute("aria-expanded",String(expanded));
+});
+try{
+ const{user}=await requireAdmin();
+ const [list,gameResult]=await Promise.all([
+  cloudPeople(user.id,"coach"),
+  sb.from("portal_games").select("game_key,match_date,kickoff,home,away,league,coach_id,coach_name,is_test,kilometers_text").eq("owner_id",user.id)
+ ]);
+ if(gameResult.error)throw gameResult.error;
+ games=gameResult.data||[];
+ coaches=[...list];
+ for(const g of games){if(g.coach_id&&!coaches.some(p=>p.id===g.coach_id))coaches.push({id:g.coach_id,name:g.coach_name||g.coach_id})}
+ coaches.sort((a,b)=>displayName(a).localeCompare(displayName(b),"de"));
+ for(const p of coaches)if(p.id)$("coach").add(new Option(displayName(p)||p.id,p.id));
+ $("status").textContent="Bitte Datum und Coach auswählen und auf „Suchen“ klicken.";
+}catch(error){$("status").textContent="Laden fehlgeschlagen: "+error.message;$("search").disabled=true}
 </script><script type="module" src="/portal-ui.js"></script></body></html>
