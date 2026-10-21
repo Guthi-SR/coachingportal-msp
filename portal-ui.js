@@ -105,7 +105,7 @@ if(nav){
   const main=links.find(x=>x.getAttribute("href")===(type==="referee"?"/schiedsrichter.html":"/coach-beobachter.html"));
   if(main)try{
     const{user}=await requireAdmin();
-    const people=(await cloudPeople(user.id,type)).sort((a,b)=>(a.name||a.last||"").localeCompare(b.name||b.last||"","de"));
+    const people=(await cloudPeople(user.id,type)).sort((a,b)=>{const surname=p=>String(p.last||p.name?.trim().split(/\s+/).at(-1)||"").trim();const first=type==="referee"?(surname(a).localeCompare(surname(b),"de",{sensitivity:"base"})):String(a.name||a.last||"").localeCompare(String(b.name||b.last||""),"de");return first||String(a.name||"").localeCompare(String(b.name||""),"de",{sensitivity:"base"});});
     const wrap=document.createElement("div");wrap.className="person-submenu";
     wrap.setAttribute("aria-label",type==="referee"?"Schiedsrichter-Untermenü":"Coaches-Untermenü");
     for(const p of people){
