@@ -192,13 +192,18 @@ async function loadDashboard(userId){
  el("dash-body").hidden=true;
  try{
   const [gameResult,docResult,coachResult]=await Promise.all([
-   supabase.from("portal_games").select("game_key,match_date,kickoff,home,away,referee_name,coach_name,coach_email,received_at,checked_at,sent_at,sent_manual_at").eq("owner_id",userId),
-   supabase.from("portal_observations").select("document_id").eq("owner_id",userId),
+   supabase.from("portal_games").select("game_key,match_date,kickoff,home,away,referee_name,coach_name,coach_email,pdf_id,is_test,received_at,checked_at,sent_at,sent_manual_at").eq("owner_id",userId),
+   supabase.from("portal_observations").select("document_id,game_key").eq("owner_id",userId),
    supabase.from("portal_people").select("person_id").eq("owner_id",userId).eq("kind","coach")
   ]);
   if(loadId!==dashboardLoadId||el("dashboard").hidden)return;
   for(const result of [gameResult,docResult,coachResult])if(result.error)throw result.error;
-  const games=gameResult.data||[],docs=docResult.data||[],coaches=coachResult.data||[];
+  const allGames=gameResult.data||[];
+  const testGames=allGames.filter(g=>g.is_test);
+  const testKeys=new Set(testGames.map(g=>g.game_key)),testPdfs=new Set(testGames.map(g=>g.pdf_id).filter(Boolean));
+  const games=allGames.filter(g=>!g.is_test);
+  const docs=(docResult.data||[]).filter(d=>!testKeys.has(d.game_key)&&!testPdfs.has(d.document_id));
+  const coaches=coachResult.data||[];
   const today=dashboardDate(),valid=g=>Number.isFinite(dayNumber(g.match_date));
   const past=games.filter(g=>valid(g)&&deltaDate(g.match_date,today)<0);
   const red=games.filter(g=>valid(g)&&gameSignal(g,today)==="red");
