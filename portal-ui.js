@@ -110,13 +110,11 @@ if(nav){
     const firstName=p=>String(p.first||p.name?.trim().split(/\s+/)[0]||"").trim();
     const lastName=p=>String(p.last||p.name?.trim().split(/\s+/).at(-1)||"").trim();
     const personSort=(a,b)=>{
-      if(type==="referee"){
-        const mode=localStorage.getItem("msp-referee-sort-mode")==="first"?"first":"last";
-        const primary=mode==="first"?firstName:lastName;
-        const secondary=mode==="first"?lastName:firstName;
-        return cmp(primary(a),primary(b))||cmp(secondary(a),secondary(b))||cmp(a.name,b.name);
-      }
-      return cmp(a.name||a.last,b.name||b.last)||cmp(a.name,b.name);
+      const key=type==="referee"?"msp-referee-sort-mode":"msp-coach-sort-mode";
+      const mode=localStorage.getItem(key)==="first"?"first":"last";
+      const primary=mode==="first"?firstName:lastName;
+      const secondary=mode==="first"?lastName:firstName;
+      return cmp(primary(a),primary(b))||cmp(secondary(a),secondary(b))||cmp(a.name,b.name);
     };
     const wrap=document.createElement("div");wrap.className="person-submenu";
     wrap.setAttribute("aria-label",type==="referee"?"Schiedsrichter-Untermenü":"Coaches-Untermenü");
@@ -132,7 +130,7 @@ if(nav){
     };
     renderSubmenu();
     main.insertAdjacentElement("afterend",wrap);
-    if(type==="referee")window.addEventListener("msp-referee-sort-change",renderSubmenu);
+    window.addEventListener(type==="referee"?"msp-referee-sort-change":"msp-coach-sort-change",renderSubmenu);
   }catch(e){console.warn("Untermenü:",e.message)}
  }
 }
