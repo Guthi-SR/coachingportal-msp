@@ -13,7 +13,7 @@ input,button{box-sizing:border-box;width:100%;padding:13px;border-radius:8px;fon
 input{border:1px solid #b9c8d7}
 button{margin-top:16px;border:0;background:#142b46;color:white;cursor:pointer}
 button.secondary{background:#45627f}
-#dashboard{display:block}#status{margin-top:20px;line-height:1.5} [hidden]{display:none!important}
+#dashboard{display:grid}#status{margin-top:20px;line-height:1.5} [hidden]{display:none!important}
 .portal-shell{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 90px)}.portal-sidebar{background:#fff;border-right:1px solid #dce5ee;padding:22px 14px;display:flex;flex-direction:column;gap:4px}.portal-sidebar strong{padding:10px 12px}.portal-sidebar a{display:block;padding:12px;color:#142b46;text-decoration:none;border-radius:8px}.portal-sidebar a:hover{background:#f0f4f9}.portal-sidebar a[aria-current="page"]{background:#e8f0f8;font-weight:700}.portal-content{min-width:0}.portal-content main{max-width:1050px;margin:auto;padding:22px}@media(max-width:650px){.portal-shell{grid-template-columns:190px minmax(0,1fr)}.portal-sidebar{padding:12px 6px}.portal-sidebar a{padding:10px 6px;font-size:13px}.portal-content main{padding:12px}}
 /* Dashboard: desktop and mobile */
 body.dashboard-active > main{max-width:none;margin:0;padding:0}
@@ -60,6 +60,16 @@ body.dashboard-active .dash-page{border:0;border-radius:0;min-width:0;max-width:
 .dash-empty{padding:15px 12px;color:#617589;font-size:13px;border:1px dashed #dce5ee;border-radius:9px}
 .dash-mail-off{font-size:12px;font-weight:650;color:#715417;background:#fff6dc;border:1px solid #e7d29b;padding:6px 10px;border-radius:8px}
 .dash-message{background:#fff;border:1px solid #dce5ee;border-radius:12px;padding:18px;line-height:1.5}
+
+.dash-mail-entry{align-items:center}
+.dash-mail-entry button{width:auto;margin:0;padding:8px 12px;flex-shrink:0;font-size:12px}
+.dash-mail-dialog{width:min(92vw,640px);max-height:90dvh;overflow-y:auto;padding:22px;border:1px solid #c2cfdd;border-radius:14px;box-shadow:0 15px 55px #142b4640;color:#142b46}
+.dash-mail-dialog::backdrop{background:#142b467c}
+.dash-mail-dialog h3{margin-top:0}
+.dash-mail-dialog label{margin-top:14px;font-size:13px}
+.dash-mail-dialog input,.dash-mail-dialog textarea{width:100%;font:14px/1.5 system-ui,sans-serif;box-sizing:border-box;border:1px solid #bdcddd;border-radius:8px;padding:9px;background:#f8fafc;color:#142b46}
+.dash-mail-dialog textarea{resize:vertical;white-space:pre-wrap}
+.dash-mail-dialog button{width:100%;margin-top:18px}
 @media(max-width:1050px){.dash-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.dash-columns{grid-template-columns:1fr}}
 @media(max-width:767px){body.dashboard-active .dash-page{padding:15px 12px!important;width:100%!important}body.dashboard-active > main{max-width:100%!important;width:100%!important;margin:0!important;padding:0!important}.dash-stats{gap:9px}.dash-stat{padding:14px}.dash-stat strong{font-size:28px}.dash-traffic{grid-template-columns:1fr}.dash-traffic-card{flex-direction:row;align-items:center;justify-content:space-between}.dash-block{padding:15px}.dash-item{flex-wrap:wrap}.dash-top{padding:0 0 5px}}
 </style>
@@ -94,6 +104,15 @@ body.dashboard-active .dash-page{border:0;border-radius:0;min-width:0;max-width:
    <div id="dash-mails" class="dash-items"></div>
   </div>
  </div>
+
+ <dialog id="coach-mail-preview" class="dash-mail-dialog" aria-labelledby="coach-mail-title">
+  <h3 id="coach-mail-title">Entwurf der Coach-Infomail</h3>
+  <p class="dash-help">Dies ist ausschließlich eine Vorschau. Es wird keine Nachricht versendet.</p>
+  <label for="coach-mail-to">Empfänger</label><input id="coach-mail-to" readonly>
+  <label for="coach-mail-subject">Betreff</label><input id="coach-mail-subject" readonly>
+  <label for="coach-mail-text">Nachricht</label><textarea id="coach-mail-text" rows="13" readonly></textarea>
+  <button type="button" id="coach-mail-close">Schließen · nicht versenden</button>
+ </dialog>
 </section></div><section id="login-section">
 <h2>Anmeldung</h2>
 <div id="auth-form">
@@ -147,6 +166,24 @@ const gameSignal=(g,today)=>{
   if(diff>=0&&diff<=5)return "yellow";
   return "";
 };
+function showCoachMailDraft(g){
+ const first=String(g.coach_name||"").trim().split(/\s+/)[0];
+ const greeting=first?"Hallo "+first+",":"Hallo,";
+ const match=(g.home||"Heim")+" – "+(g.away||"Gast");
+ el("coach-mail-to").value=g.coach_email||"Keine Coach-E-Mail-Adresse hinterlegt";
+ el("coach-mail-subject").value="Information zum Coaching am "+asDate(g.match_date)+" – "+match;
+ el("coach-mail-text").value=greeting+"\n\n"+
+   "zur Information: Du bist als Coach für folgendes Spiel eingeplant:\n\n"+
+   "Spiel: "+match+"\n"+
+   "Datum: "+asDate(g.match_date)+"\n"+
+   "Anstoß: "+(g.kickoff||"noch offen")+" Uhr\n"+
+   "Schiedsrichter: "+(g.referee_name||"noch nicht hinterlegt")+"\n\n"+
+   "Bitte berücksichtige den Termin bei deiner Planung.\n\n"+
+   "Vielen Dank für deine Unterstützung!\n\n"+
+   "Viele Grüße\nDaniel";
+ el("coach-mail-preview").showModal();
+}
+el("coach-mail-close").addEventListener("click",()=>el("coach-mail-preview").close());
 let dashboardLoadId=0;
 async function loadDashboard(userId){
  const loadId=++dashboardLoadId;
@@ -189,8 +226,14 @@ async function loadDashboard(userId){
   const prepare=next.filter(g=>deltaDate(g.match_date,today)<=5);
   for(const g of prepare.slice(0,12)){
     const diff=deltaDate(g.match_date,today);
-    const message="Info-Mail vormerken: "+(diff===5?"heute":diff===0?"Spiel ist heute":"Spiel in "+diff+" Tag"+(diff===1?"":"en"))+(g.coach_email?" · E-Mail-Adresse vorhanden":" · Coach-E-Mail fehlt");
-    addItem(mails,g,message,"Nicht versendet",g.coach_email?"info":"yellow");
+    const row=document.createElement("div");row.className="dash-item dash-mail-entry";
+    const info=document.createElement("div"),title=document.createElement("strong"),sub=document.createElement("small");
+    title.textContent=(g.home||"Heim")+" – "+(g.away||"Gast");
+    sub.textContent=asDate(g.match_date)+" · "+(g.coach_name||"Coach nicht zugeordnet")+" · "+(diff===5?"Vorabinfo wäre heute fällig":diff===0?"Spiel ist heute":"Spiel in "+diff+" Tag"+(diff===1?"":"en"))+" · "+(g.coach_email?"Mailadresse vorhanden":"Coach-E-Mail fehlt");
+    info.append(title,sub);
+    const button=document.createElement("button");button.type="button";button.textContent="Entwurf ansehen";
+    button.addEventListener("click",()=>showCoachMailDraft(g));
+    row.append(info,button);mails.append(row);
   }
   if(!prepare.length)appendEmpty(mails,"Keine Spiele in den nächsten fünf Tagen. Der automatische E-Mail-Versand bleibt ausgeschaltet.");
   el("dash-loading").hidden=true;
