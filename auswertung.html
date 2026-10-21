@@ -115,6 +115,7 @@ async function exportExcel(){
   book.subject="Coachingspiele und Kilometer im gewählten Zeitraum";
   book.created=new Date();
   book.calcProperties.fullCalcOnLoad=true;
+  const sumSheet=book.addWorksheet("Übersicht",{views:[{state:"frozen",ySplit:2}]});
   const detail=book.addWorksheet("Details");
   detail.columns=[
    {header:"Datum",key:"date",width:17},
@@ -149,7 +150,6 @@ async function exportExcel(){
     if(i%2===0)cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFF3F6FA"}};
    });
   }
-  const sumSheet=book.addWorksheet("Übersicht",{views:[{state:"frozen",ySplit:2}]});
   sumSheet.columns=[{width:29},{width:40},{width:20}];
   sumSheet.mergeCells("A1:C1");
   const title=sumSheet.getCell("A1");title.value="Coaching-Auswertung";title.font={name:"Aptos Display",size:18,bold:true,color:{argb:"FFFFFFFF"}};
