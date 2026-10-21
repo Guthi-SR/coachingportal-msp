@@ -4,7 +4,7 @@
 <main><section><h2>Spiele und Bogenstatus</h2><p id="status" role="status">Spiele und Bögen werden geladen …</p>
 <div class="legend"><span><i class="dot green"></i>Grün: Bogen versendet</span><span><i class="dot yellow"></i>Gelb: Spiel in den nächsten 5 Tagen</span><span><i class="dot red"></i>Rot: 5 Tage nach Spiel noch kein Bogen eingegangen</span></div>
 <div class="game-filters" role="group" aria-label="Spiele filtern"><button type="button" class="active" data-game-filter="all" aria-pressed="true">Alle Spiele</button><button type="button" data-game-filter="future" aria-pressed="false">Zukünftige Spiele</button><button type="button" data-game-filter="without" aria-pressed="false">Spiele ohne Bogen</button></div><div class="game-sort"><label for="referee-filter">Schiedsrichter filtern:</label><select id="referee-filter"><option value="">Alle Schiedsrichter</option></select><label for="game-sort-field">Sortieren nach:</label><select id="game-sort-field"><option value="date">Datum</option><option value="referee">Schiedsrichter</option><option value="coach">Coach / Beobachter</option></select><button type="button" id="game-sort-direction" aria-label="Sortierreihenfolge ändern">Neueste zuerst ↓</button></div><p id="filter-count" class="small"></p>
-<div class="scroll"><table><thead><tr><th>Datum</th><th>Uhrzeit</th><th>Spielkennung</th><th>Heim</th><th>Gast</th><th>Liga</th><th>Spielstätte</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Bogen</th><th>Eingegangen</th><th>Geprüft</th><th>Versand</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div class="scroll"><table><thead><tr><th>Datum</th><th>Uhrzeit</th><th>Spielkennung</th><th>Heim</th><th>Gast</th><th>Liga</th><th>Spielstätte</th><th>Kilometer</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Bogen</th><th>Eingegangen</th><th>Geprüft</th><th>Versand</th></tr></thead><tbody id="rows"></tbody></table></div>
 <p><a href="/spiele-anlegen.html">Neues Spiel anlegen</a> · <a href="/beobachtungsboegen.html">Alle Beobachtungsbögen</a></p>
 <p class="small">Automatische E-Mails benötigen die serverseitige Absender-Konfiguration. Status und Zuordnungen werden zusätzlich im Portal gespeichert. Bereits vorhandene lokale Datensätze bleiben erhalten.</p></section></main></div>
 <dialog id="manual"><form method="dialog" id="manual-form"><h2>Bogen bereits versendet</h2><p>Hier kannst du einen Versand dokumentieren, der außerhalb des Portals stattgefunden hat. Es wird keine E-Mail versendet.</p><label>Versanddatum <input type="date" id="manual-date" required></label><label>Notiz zum Versandweg oder Grund <textarea id="manual-note" required placeholder="Beispiel: am 12.10.2026 per E-Mail von meiner bisherigen Adresse verschickt"></textarea></label><p id="manual-error" role="status"></p><div class="actions"><button type="button" id="cancel-manual">Abbrechen</button><button type="submit" class="primary">Als bereits versendet speichern</button></div></form></dialog>
@@ -58,8 +58,20 @@ function render(){
  const visible=games.filter(g=>(!refereeFilter||g.referee_id===refereeFilter)&&(gameFilter==="future"?g.match_date>=today:gameFilter==="without"?!hasBogen(g):true)).sort(compareGames);
  $("filter-count").textContent=visible.length+" von "+games.length+" Spielen angezeigt.";
  for(const g of visible){
-  const row=document.createElement("tr");const cls=gameColor(g);if(cls)row.className=cls;
+  const row=document.createElement("tr");const cls=g.is_test?"":gameColor(g);if(cls)row.className=cls;
   for(const v of [dateDE(g.match_date),g.kickoff,g.game_key,g.home,g.away,g.league,g.venue])cell(row,v);
+  if(g.is_test){const t=row.children[2],flag=document.createElement("span");flag.textContent=" TEST";flag.style.cssText="font-weight:700;color:#9d2936;white-space:nowrap";t.append(flag);}
+  const kmTd=document.createElement("td"),km=document.createElement("input");km.type="text";km.inputMode="decimal";km.maxLength=40;
+  km.value=g.kilometers_text||"";km.placeholder="z. B. 42,5";km.style.width="115px";km.setAttribute("aria-label","Kilometer für Spiel "+g.game_key);
+  km.addEventListener("change",async()=>{
+    const old=g.kilometers_text||"",next=km.value.trim();
+    if(next===old)return;
+    km.disabled=true;
+    try{Object.assign(g,await updateGame(userId,g.game_key,{kilometers_text:next||null}));status.textContent="Kilometer gespeichert.";km.value=g.kilometers_text||""}
+    catch(error){km.value=old;status.textContent="Kilometer konnten nicht gespeichert werden: "+error.message}
+    finally{km.disabled=false}
+  });
+  kmTd.append(km);row.append(kmTd);
   for(const type of ["referee","coach"]){
    const td=document.createElement("td"),select=document.createElement("select"),people=type==="referee"?refs:coaches;
    select.setAttribute("aria-label",(type==="referee"?"Schiedsrichter":"Coach")+" für "+g.game_key);
@@ -79,16 +91,16 @@ function render(){
    td.append(input);row.append(td)
   }
   const sendCell=document.createElement("td");const sent=!!(g.sent_at||g.sent_manual_at);
-  const label=document.createElement("div");label.textContent=sent?"✓ Versendet":g.received_at?"Bogen eingegangen":"Noch nicht versendet";label.className="small";sendCell.append(label);
+  const label=document.createElement("div");label.textContent=g.is_test?"Testspiel – kein Versand":sent?"✓ Versendet":g.received_at?"Bogen eingegangen":"Noch nicht versendet";label.className="small";sendCell.append(label);
   const manual=document.createElement("button");manual.type="button";manual.textContent=g.sent_manual_at?"Versandnotiz ändern":"Bereits versendet";manual.onclick=()=>{
    selected=g;$("manual-date").value=g.sent_manual_at?String(g.sent_manual_at).slice(0,10):currentIso();$("manual-note").value=g.manual_note||"";$("manual-error").textContent="";$("manual").showModal()
   };sendCell.append(manual);
-  if(doc&&!sent){
+  if(doc&&!sent&&!g.is_test){
    const send=document.createElement("button");send.type="button";send.className="primary";send.textContent="Bogen versenden";send.disabled=!g.referee_email;
    send.title=g.referee_email?"Bogen per E-Mail versenden":"E-Mail-Adresse beim Schiedsrichter fehlt";
    send.onclick=()=>openMail(g,"bogen_versendet");sendCell.append(send)
   }
-  if(cls==="red"){
+  if(cls==="red"&&!g.is_test){
    const remind=document.createElement("button");remind.type="button";remind.textContent="Erinnerung versenden";
    remind.disabled=!g.coach_email;remind.title=g.coach_email?"Erinnerung an Coach senden":"E-Mail-Adresse beim Coach fehlt";
    remind.onclick=()=>openMail(g,"coach_erinnerung");sendCell.append(remind)
