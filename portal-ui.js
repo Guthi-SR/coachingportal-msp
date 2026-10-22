@@ -101,6 +101,13 @@ if(nav){
    if(location.pathname==="/auswertung.html")evaluation.setAttribute("aria-current","page");
    gameLink.insertAdjacentElement("afterend",evaluation);
  }
+ const planGameLink=[...nav.querySelectorAll("a")].find(a=>a.getAttribute("href")==="/spiele.html");
+ if(planGameLink&&!nav.querySelector('a[href="/coachingplanung.html"]')){
+  const planning=document.createElement("a");
+  planning.href="/coachingplanung.html";planning.textContent="Coachingplanung";
+  if(location.pathname==="/coachingplanung.html")planning.setAttribute("aria-current","page");
+  planGameLink.insertAdjacentElement("afterend",planning);
+ }
  const links=[...nav.querySelectorAll("a")];
  const capture=links.find(x=>x.getAttribute("href")==="/beobachtungsbogen-erfassen.html");
  if(capture&&!links.some(x=>x.getAttribute("href")==="/beobachtungsboegen.html")){
