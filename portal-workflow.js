@@ -182,9 +182,9 @@ export function reminderBody(game){
 export function sendBody(game){
  return "Hallo "+(game.referee_name?.split(" ")[0]||"")+",\n\nanbei erhältst du den Beobachtungsbogen zu deinem Spiel "+game.home+" – "+game.away+" vom "+dateDE(game.match_date)+".\n\nViele Grüße\nDaniel";
 }
-export async function sendMail(gameKey,kind,subject,body){
+export async function sendMail(gameKey,kind,subject,body,options={}){
  const{data:{session}}=await sb.auth.getSession();if(!session?.access_token)throw Error("Bitte erneut anmelden.");
- const response=await fetch("/api/portal-mail",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+session.access_token},body:JSON.stringify({gameKey,kind,subject,body})});
+ const response=await fetch("/api/portal-mail",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+session.access_token},body:JSON.stringify({gameKey,kind,subject,body,...options})});
  const data=await response.json().catch(()=>({}));
  if(!response.ok)throw Error(data.error||"Versand nicht möglich.");return data;
 }
