@@ -16,6 +16,47 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 .badge{background:#edf2f7;padding:4px 8px;border-radius:5px;font-size:12px}
 @media(max-width:900px){.filters{grid-template-columns:repeat(2,minmax(140px,1fr))}.filters button{grid-column:1/-1}}
 @media(max-width:700px){.shell{grid-template-columns:145px minmax(0,1fr)}nav{padding:8px}nav a{font-size:13px;padding:8px}main{padding:12px}.filters{grid-template-columns:1fr}}
+
+/* Auswertung: vollständige Coach-Liste mit zweistufiger Detailansicht */
+.filters{grid-template-columns:repeat(2,minmax(180px,220px)) minmax(200px,240px) auto}
+#overview td:nth-child(2),#overview th:nth-child(2){text-align:center}
+#overview td:nth-child(3),#overview th:nth-child(3){text-align:right}
+#overview td:nth-child(4),#overview th:nth-child(4){text-align:right}
+#overview .selected{background:#eaf2fa}
+#overview .coach-name{font-weight:650}
+#overview .detail-btn{padding:9px 13px;min-height:42px}
+#overview .detail-btn[aria-expanded="true"]{background:#e8f0f8;color:#142b46}
+#overview .zero{color:#77889a}
+.overview-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.overview-heading h3{margin:0}
+#range-label{color:#5e7488;font-size:14px}
+#sort-direction{white-space:nowrap}
+.tablebox{max-width:100%}
+#overview{width:100%;min-width:540px}
+#details-result{scroll-margin-top:18px}
+@media(max-width:767px){
+ main{padding:12px!important}
+ .box{padding:15px;margin:12px 0}
+ .filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .filters .sort-field{grid-column:1/-1}
+ .filters #sort-direction{grid-column:1/-1}
+ .filters input,.filters select,.filters button{min-width:0;max-width:100%;font-size:15px}
+ #overview{min-width:0}
+ #overview thead{display:none}
+ #overview, #overview tbody, #overview tr, #overview td{display:block;width:100%;box-sizing:border-box}
+ #overview tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;padding:13px 4px;border-bottom:1px solid #e1e8f0}
+ #overview tr:last-child{border-bottom:0}
+ #overview td{border:0;padding:0;text-align:left!important}
+ #overview td:nth-child(1){grid-column:1/-1;font-size:16px}
+ #overview td:nth-child(2):before{content:"Spiele: ";color:#607589;font-weight:500}
+ #overview td:nth-child(3):before{content:"Kilometer: ";color:#607589;font-weight:500}
+ #overview td:nth-child(4){grid-column:1/-1}
+ #overview td:nth-child(4) button{width:100%;min-height:44px}
+ .details-table{min-width:0}
+ .details-table td,.details-table th{padding:10px 5px;font-size:13px}
+ .summary{min-width:0}
+ .overview-heading{align-items:flex-start}
+}
 </style></head><body>
 <header><h1>Coachingportal MSP</h1></header>
 <div class="shell"><nav aria-label="Hauptmenü"><strong>Menü</strong>
@@ -23,25 +64,36 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 <a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav>
 <main><h2>Auswertung der Coaches</h2>
 <div class="box">
+<div class="overview-heading"><h3>Zeitraum und Sortierung</h3><span id="range-label"></span></div>
 <form id="search-form" class="filters">
 <label for="from">Datum von<input id="from" type="date"></label>
 <label for="to">Datum bis<input id="to" type="date"></label>
-<label for="coach">Coach<select id="coach" required><option value="">Coach auswählen</option></select></label>
-<button type="submit" id="search">Suchen</button>
+<label class="sort-field" for="sort-mode">Alphabetisch sortieren nach
+<select id="sort-mode"><option value="last">Nachname (A–Z)</option><option value="first">Vorname (A–Z)</option></select></label>
+<button id="sort-direction" type="button" class="secondary" aria-label="Sortierreihenfolge umkehren">A–Z ↓</button>
 </form>
-<p class="hint">Ohne Datum wird der gesamte Zeitraum ausgewertet. Testspiele sind ausgeschlossen.</p>
-<p id="status" role="status" aria-live="polite">Coaches und Spiele werden geladen …</p>
+<p class="hint">Standardzeitraum: 01.07. der laufenden Saison bis heute. Testspiele werden nicht mitgezählt.</p>
+<p id="status" role="status" aria-live="polite">Auswertung wird geladen …</p>
 </div>
-<div class="box" id="results" hidden>
-<h3>Suchergebnis</h3>
+<div class="box" id="overview-box">
+<div class="overview-heading"><h3>Alle Coaches</h3><span id="overview-total" class="hint"></span></div>
+<div class="tablebox">
+<table id="overview" aria-label="Alle Coaches mit Spielanzahl und Kilometern">
+<thead><tr><th>Coach / Beobachter</th><th>Anzahl Spiele</th><th>Kilometer gesamt</th><th>Einzelaufstellung</th></tr></thead>
+<tbody id="overview-rows"></tbody>
+</table></div>
+</div>
+<div class="box" id="details-result" hidden>
+<h3 id="details-heading">Einzelaufstellung</h3>
+<p class="hint" id="details-subtitle"></p>
 <div class="tablebox"><table class="summary">
 <thead><tr><th>Coach</th><th>Anzahl Spiele</th><th>Kilometer gesamt</th></tr></thead>
 <tbody><tr><td id="coach-name"></td><td id="game-count"></td><td id="km-total"></td></tr></tbody></table></div>
-<p style="display:flex;gap:10px;flex-wrap:wrap"><button class="secondary" id="toggle-details" type="button" aria-expanded="false" aria-controls="details">Details anzeigen</button><button id="export-excel" type="button" disabled>Excel exportieren (.xlsx)</button></p>
-<div id="details" hidden>
-<h3>Einzelne Coachings</h3>
-<div class="tablebox"><table class="details-table"><thead><tr><th>Datum</th><th>Coaching</th><th>Kilometer</th></tr></thead><tbody id="detail-rows"></tbody></table></div>
-</div>
+<p><button id="export-excel" type="button" disabled>Excel exportieren (.xlsx)</button></p>
+<h3>Details der Coachings</h3>
+<div class="tablebox"><table class="details-table">
+<thead><tr><th>Datum</th><th>Coaching</th><th>Kilometer</th></tr></thead>
+<tbody id="detail-rows"></tbody></table></div>
 <p class="hint" id="km-note"></p>
 </div>
 </main></div>
@@ -49,8 +101,19 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 import{requireAdmin,sb,dateDE}from"/portal-workflow.js";
 import{cloudPeople}from"/portal-people.js";
 const $=id=>document.getElementById(id);
-let games=[],coaches=[],lastResult=null,excelLibraryPromise=null;
+let games=[],coaches=[],lastResult=null,excelLibraryPromise=null,selectedCoachId=null,sortMode="last",sortDir="asc";
+const berlinToday=()=>new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Berlin",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+const today=berlinToday(),year=Number(today.slice(0,4)),seasonYear=year-(today.slice(5)<"07-01"?1:0);
+const defaultFrom=seasonYear+"-07-01";
+$("from").value=defaultFrom;$("to").value=today;
 function displayName(p){return String(p?.name||[p?.first,p?.last].filter(Boolean).join(" ")||"").trim()}
+function firstName(p){return String(p?.first||displayName(p).split(/\s+/)[0]||"").trim()}
+function lastName(p){return String(p?.last||displayName(p).split(/\s+/).at(-1)||"").trim()}
+function compareNames(a,b){
+ const cmp=(x,y)=>String(x||"").localeCompare(String(y||""),"de",{sensitivity:"base"});
+ const primary=sortMode==="first"?firstName:lastName,secondary=sortMode==="first"?lastName:firstName;
+ return (sortDir==="asc"?1:-1)*(cmp(primary(a),primary(b))||cmp(secondary(a),secondary(b))||cmp(displayName(a),displayName(b)))||cmp(a.id,b.id);
+}
 function distance(s){
  const input=String(s??"").trim().replace(/\s*km\s*$/i,"").trim();
  if(!/^\d+(?:[,.]\d+)?$/.test(input))return null;
@@ -58,36 +121,101 @@ function distance(s){
  return Number.isFinite(value)?value:null;
 }
 function labelKm(value){return value.toLocaleString("de-DE",{maximumFractionDigits:2})+" km"}
-function showResult(e){
- e.preventDefault();
- const id=$("coach").value,from=$("from").value,to=$("to").value;
- if(!id){$("status").textContent="Bitte zuerst einen Coach auswählen.";return}
- if(from&&to&&from>to){$("status").textContent="Das Enddatum muss nach dem Anfangsdatum liegen.";return}
- const p=coaches.find(x=>x.id===id),name=displayName(p);
- const filtered=games.filter(g=>!g.is_test&&(String(g.coach_id||"")===id||(!g.coach_id&&String(g.coach_name||"").trim().toLocaleLowerCase("de")===name.toLocaleLowerCase("de")))&&(!from||g.match_date>=from)&&(!to||g.match_date<=to)).sort((a,b)=>String(a.match_date).localeCompare(String(b.match_date))||String(a.kickoff||"").localeCompare(String(b.kickoff||"")));
- const kms=filtered.map(g=>distance(g.kilometers_text)),sum=kms.reduce((acc,k)=>acc+(k??0),0);
- lastResult={name,from,to,games:[...filtered],sum,missing:filtered.filter(g=>g.kilometers_text&&distance(g.kilometers_text)===null).length};
- $("export-excel").disabled=false;
- $("coach-name").textContent=name;
- $("game-count").textContent=filtered.length;
- $("km-total").textContent=labelKm(sum);
+function effectiveRange(){
+ const from=$("from").value||defaultFrom,to=$("to").value||berlinToday();
+ return{from,to};
+}
+function matchingGames(p,from,to){
+ const name=displayName(p).toLocaleLowerCase("de");
+ return games.filter(g=>!g.is_test&&g.match_date>=from&&g.match_date<=to
+  &&(String(g.coach_id||"")===String(p.id)||(!g.coach_id&&String(g.coach_name||"").trim().toLocaleLowerCase("de")===name)))
+  .sort((a,b)=>String(a.match_date).localeCompare(String(b.match_date))||String(a.kickoff||"").localeCompare(String(b.kickoff||"")));
+}
+function summarize(p,from,to){
+ const rows=matchingGames(p,from,to);
+ return{name:displayName(p),from,to,games:rows,
+  sum:rows.reduce((s,g)=>s+(distance(g.kilometers_text)??0),0),
+  missing:rows.filter(g=>String(g.kilometers_text||"").trim()&&distance(g.kilometers_text)===null).length};
+}
+function clearDetails(){
+ selectedCoachId=null;lastResult=null;
+ $("details-result").hidden=true;
+ $("export-excel").disabled=true;
+}
+function showCoachDetails(id){
+ if(selectedCoachId===id){clearDetails();renderOverview();return}
+ const person=coaches.find(p=>String(p.id)===id);if(!person)return;
+ const {from,to}=effectiveRange();
+ const current=summarize(person,from,to);
+ selectedCoachId=id;lastResult=current;
+ $("coach-name").textContent=current.name;
+ $("game-count").textContent=current.games.length;
+ $("km-total").textContent=labelKm(current.sum);
+ $("details-heading").textContent="Einzelaufstellung: "+current.name;
+ $("details-subtitle").textContent="Zeitraum "+dateDE(from)+" bis "+dateDE(to);
  const tbody=$("detail-rows");tbody.replaceChildren();
- for(const g of filtered){
+ for(const game of current.games){
   const tr=document.createElement("tr");
-  const values=[dateDE(g.match_date),[g.home,g.away].filter(Boolean).join(" – ")||"Coaching",g.kilometers_text?g.kilometers_text:"–"];
-  for(const v of values){const td=document.createElement("td");td.textContent=v;tr.append(td)}
+  for(const val of [dateDE(game.match_date),[game.home,game.away].filter(Boolean).join(" – ")||"Coaching",game.kilometers_text||"–"]){
+   const td=document.createElement("td");td.textContent=val;tr.append(td);
+  }
   tbody.append(tr);
  }
- if(!filtered.length){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=3;td.textContent="Für diesen Coach wurden im Zeitraum keine Spiele gefunden.";tr.append(td);tbody.append(tr)}
- const missing=filtered.filter(g=>g.kilometers_text&&distance(g.kilometers_text)===null).length;
- $("km-note").textContent=missing?missing+" Kilometerangabe(n) sind nicht numerisch und wurden nicht zur Summe addiert. Bitte in „Spiele“ korrigieren.":"";
- $("details").hidden=true;$("toggle-details").textContent="Details anzeigen";$("toggle-details").setAttribute("aria-expanded","false");
- $("results").hidden=false;
- $("status").textContent=filtered.length+" Coaching-Spiele im gewählten Zeitraum gefunden.";
+ if(!current.games.length){
+  const row=document.createElement("tr"),td=document.createElement("td");td.colSpan=3;td.textContent="Keine Spiele im gewählten Zeitraum.";row.append(td);tbody.append(row);
+ }
+ $("km-note").textContent=current.missing?current.missing+" Kilometerangabe(n) sind nicht numerisch und wurden nicht zur Summe addiert.":"";
+ $("details-result").hidden=false;
+ $("export-excel").disabled=false;
+ renderOverview();
+ $("details-result").scrollIntoView({behavior:"smooth",block:"start"});
 }
-$("search-form").addEventListener("submit",showResult);
-for(const input of ["from","to","coach"])$(input).addEventListener("change",()=>{
-  lastResult=null;$("export-excel").disabled=true;$("results").hidden=true;
+function renderOverview(){
+ const {from,to}=effectiveRange();
+ if(from>to){
+  $("status").textContent="Das Enddatum muss am oder nach dem Anfangsdatum liegen.";
+  $("overview-rows").replaceChildren();$("overview-total").textContent="";
+  clearDetails();return;
+ }
+ $("range-label").textContent=dateDE(from)+" – "+dateDE(to);
+ const tbody=$("overview-rows");tbody.replaceChildren();
+ const ordered=[...coaches].sort(compareNames);
+ let totalGames=0,totalKm=0;
+ for(const coach of ordered){
+  const result=summarize(coach,from,to);
+  totalGames+=result.games.length;totalKm+=result.sum;
+  const tr=document.createElement("tr");
+  if(String(coach.id)===selectedCoachId)tr.className="selected";
+  const name=document.createElement("td");name.textContent=result.name||"Unbenannt";name.className="coach-name";
+  const count=document.createElement("td");count.textContent=String(result.games.length);
+  if(!result.games.length)count.className="zero";
+  const km=document.createElement("td");km.textContent=labelKm(result.sum);
+  const action=document.createElement("td"),btn=document.createElement("button");
+  btn.className="detail-btn";btn.type="button";
+  const opened=String(coach.id)===selectedCoachId;
+  btn.textContent=opened?"Details schließen":"Details";
+  btn.setAttribute("aria-expanded",String(opened));
+  btn.setAttribute("aria-controls","details-result");
+  btn.addEventListener("click",()=>showCoachDetails(String(coach.id)));
+  action.append(btn);tr.append(name,count,km,action);tbody.append(tr);
+ }
+ if(!ordered.length){
+  const row=document.createElement("tr"),cell=document.createElement("td");cell.colSpan=4;cell.textContent="Noch keine Coaches angelegt.";row.append(cell);tbody.append(row);
+ }
+ $("overview-total").textContent=ordered.length+" Coaches · "+totalGames+" Spiele · "+labelKm(totalKm);
+ $("status").textContent="Zeitraum: "+dateDE(from)+" bis "+dateDE(to)+". "+ordered.length+" Coaches angezeigt.";
+}
+$("search-form").addEventListener("submit",e=>e.preventDefault());
+for(const id of ["from","to"])$(id).addEventListener("change",()=>{
+ if(!$(id).value)$(id).value=id==="from"?defaultFrom:berlinToday();
+ clearDetails();renderOverview();
+});
+$("sort-mode").addEventListener("change",()=>{sortMode=$("sort-mode").value;renderOverview()});
+$("sort-direction").addEventListener("click",()=>{
+ sortDir=sortDir==="asc"?"desc":"asc";
+ $("sort-direction").textContent=sortDir==="asc"?"A–Z ↓":"Z–A ↑";
+ $("sort-direction").setAttribute("aria-label",sortDir==="asc"?"Aufsteigend alphabetisch":"Absteigend alphabetisch");
+ renderOverview();
 });
 function loadExcelLibrary(){
  if(window.ExcelJS)return Promise.resolve(window.ExcelJS);
@@ -195,12 +323,6 @@ async function exportExcel(){
  }
 }
 $("export-excel").addEventListener("click",exportExcel);
-$("toggle-details").addEventListener("click",()=>{
- const expanded=$("details").hidden;
- $("details").hidden=!expanded;
- $("toggle-details").textContent=expanded?"Details schließen":"Details anzeigen";
- $("toggle-details").setAttribute("aria-expanded",String(expanded));
-});
 try{
  const{user}=await requireAdmin();
  const [list,gameResult]=await Promise.all([
@@ -210,9 +332,13 @@ try{
  if(gameResult.error)throw gameResult.error;
  games=gameResult.data||[];
  coaches=[...list];
- for(const g of games){if(g.coach_id&&!coaches.some(p=>p.id===g.coach_id))coaches.push({id:g.coach_id,name:g.coach_name||g.coach_id})}
- coaches.sort((a,b)=>displayName(a).localeCompare(displayName(b),"de"));
- for(const p of coaches)if(p.id)$("coach").add(new Option(displayName(p)||p.id,p.id));
- $("status").textContent="Bitte Datum und Coach auswählen und auf „Suchen“ klicken.";
-}catch(error){$("status").textContent="Laden fehlgeschlagen: "+error.message;$("search").disabled=true}
+ for(const game of games){
+  if(game.coach_id&&!coaches.some(p=>String(p.id)===String(game.coach_id))){
+   coaches.push({id:String(game.coach_id),name:game.coach_name||String(game.coach_id)});
+  }
+ }
+ renderOverview();
+}catch(error){
+ $("status").textContent="Auswertung konnte nicht geladen werden: "+error.message;
+}
 </script><script type="module" src="/portal-ui.js"></script></body></html>
