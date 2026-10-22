@@ -323,7 +323,7 @@ function renderRefereeEvaluation(){
   tr.append(td);rows.append(tr);
  }
  const total=refEvaluation.reduce((n,item)=>n+item.games.length,0);
- $("ref-total").textContent=refEvaluation.length+" Schiedsrichter · "+total+" Spiele";
+ $("ref-total").textContent=refEvaluation.length+" Schiedsrichter · "+total+" Spiele · "+labelKm(refEvaluation.reduce((s,item)=>s+item.sum,0));
  $("ref-range").textContent="Zeitraum: "+dateDE(from)+" bis "+dateDE(to)+(refScope==="all"?" · alle Schiedsrichter":" · individuell ausgewählt");
  $("ref-export").disabled=!valid||!refEvaluation.length;
  $("ref-picker").hidden=refScope!=="selected";
@@ -550,7 +550,14 @@ try{
  coaches=[...list];
  referees=[...refList];
  for(const game of games){
-  if(game.referee_id&&!referees.some(p=>String(p.id)===String(game.referee_id)))referees.push({id:String(game.referee_id),name:game.referee_name||String(game.referee_id)});
+  if(game.referee_id&&!referees.some(p=>String(p.id)===String(game.referee_id))){
+   referees.push({id:String(game.referee_id),name:game.referee_name||String(game.referee_id)});
+  }else if(!game.referee_id&&game.referee_name){
+   const name=String(game.referee_name).trim();
+   if(name&&!referees.some(p=>displayName(p).toLocaleLowerCase("de")===name.toLocaleLowerCase("de"))){
+    referees.push({id:"name:"+name.toLocaleLowerCase("de"),name});
+   }
+  }
  }
  drawRefChoices();
  for(const game of games){
