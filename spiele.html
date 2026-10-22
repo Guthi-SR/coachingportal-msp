@@ -1,9 +1,70 @@
 <!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Spiele – Coachingportal MSP</title>
-<style>body{margin:0;background:#f3f6fa;color:#142b46;font:15px system-ui,sans-serif}header{background:#142b46;color:#fff;padding:22px}.shell{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 88px)}nav{padding:22px 14px;background:#fff;border-right:1px solid #dce5ee}nav a{display:block;padding:12px;border-radius:8px;color:#142b46;text-decoration:none}nav a[aria-current]{background:#e8f0f8;font-weight:700}main{padding:24px;min-width:0}section{background:#fff;padding:22px;border:1px solid #dce5ee;border-radius:12px}.scroll{overflow-x:auto}table{min-width:1150px;border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #dce5ee;padding:11px 10px;text-align:left;vertical-align:middle}th{font-size:13px}td select{min-width:125px;max-width:170px}select,input,textarea{font:inherit;border:1px solid #bccad7;border-radius:7px;padding:8px;box-sizing:border-box}input[type=checkbox]{width:20px;height:20px;cursor:pointer}button{font:inherit;border-radius:7px;padding:8px 12px;cursor:pointer;border:1px solid #9eafc2;background:#f7f9fb;color:#142b46}button.primary{background:#142b46;color:#fff;border-color:#142b46}button:disabled{opacity:.5;cursor:not-allowed}td button{margin:3px}.green{background:#e0f3e6}.yellow{background:#fff1be}.red{background:#fbdede}.legend{display:flex;flex-wrap:wrap;gap:18px;padding:8px 0 18px}.dot{display:inline-block;width:13px;height:13px;border-radius:4px;margin-right:5px;vertical-align:-1px;border:1px solid #bbc}.dot.green{background:#b0dfbd}.dot.yellow{background:#ffe48a}.dot.red{background:#f6aaaa}dialog{border:1px solid #bfd0e0;border-radius:13px;box-shadow:0 18px 64px #142b4640;width:min(92vw,650px);max-height:85vh;overflow:auto;padding:24px;color:#142b46}dialog::backdrop{background:#142b4680}dialog label{display:block;font-weight:600;margin-top:12px}dialog input,dialog textarea{width:100%;margin-top:6px}dialog textarea{min-height:160px;resize:vertical}dialog .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.small{color:#5b7185;font-size:13px}a{color:#142b46}@media(max-width:680px){.shell{grid-template-columns:145px minmax(0,1fr)}nav{padding:8px 5px}nav a{padding:9px 6px;font-size:13px}main{padding:10px}section{padding:12px}}.game-filters{display:flex;flex-wrap:wrap;gap:9px;margin:4px 0 10px}.game-filters button.active{background:#142b46;color:#fff;border-color:#142b46}.game-sort{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:10px 0 12px}.game-sort label{font-weight:600}.game-sort select{max-width:210px;min-width:150px}.game-sort button{min-width:140px}</style></head><body>
+<style>body{margin:0;background:#f3f6fa;color:#142b46;font:15px system-ui,sans-serif}header{background:#142b46;color:#fff;padding:22px}.shell{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 88px)}nav{padding:22px 14px;background:#fff;border-right:1px solid #dce5ee}nav a{display:block;padding:12px;border-radius:8px;color:#142b46;text-decoration:none}nav a[aria-current]{background:#e8f0f8;font-weight:700}main{padding:24px;min-width:0}section{background:#fff;padding:22px;border:1px solid #dce5ee;border-radius:12px}.scroll{overflow-x:auto}table{min-width:1150px;border-collapse:collapse;width:100%}th,td{border-bottom:1px solid #dce5ee;padding:11px 10px;text-align:left;vertical-align:middle}th{font-size:13px}td select{min-width:125px;max-width:170px}select,input,textarea{font:inherit;border:1px solid #bccad7;border-radius:7px;padding:8px;box-sizing:border-box}input[type=checkbox]{width:20px;height:20px;cursor:pointer}button{font:inherit;border-radius:7px;padding:8px 12px;cursor:pointer;border:1px solid #9eafc2;background:#f7f9fb;color:#142b46}button.primary{background:#142b46;color:#fff;border-color:#142b46}button:disabled{opacity:.5;cursor:not-allowed}td button{margin:3px}.green{background:#e0f3e6}.yellow{background:#fff1be}.red{background:#fbdede}.legend{display:flex;flex-wrap:wrap;gap:18px;padding:8px 0 18px}.dot{display:inline-block;width:13px;height:13px;border-radius:4px;margin-right:5px;vertical-align:-1px;border:1px solid #bbc}.dot.green{background:#b0dfbd}.dot.yellow{background:#ffe48a}.dot.red{background:#f6aaaa}dialog{border:1px solid #bfd0e0;border-radius:13px;box-shadow:0 18px 64px #142b4640;width:min(92vw,650px);max-height:85vh;overflow:auto;padding:24px;color:#142b46}dialog::backdrop{background:#142b4680}dialog label{display:block;font-weight:600;margin-top:12px}dialog input,dialog textarea{width:100%;margin-top:6px}dialog textarea{min-height:160px;resize:vertical}dialog .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.small{color:#5b7185;font-size:13px}a{color:#142b46}@media(max-width:680px){.shell{grid-template-columns:145px minmax(0,1fr)}nav{padding:8px 5px}nav a{padding:9px 6px;font-size:13px}main{padding:10px}section{padding:12px}}.game-filters{display:flex;flex-wrap:wrap;gap:9px;margin:4px 0 10px}.game-filters button.active{background:#142b46;color:#fff;border-color:#142b46}.game-sort{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:10px 0 12px}.game-sort label{font-weight:600}.game-sort select{max-width:210px;min-width:150px}.game-sort button{min-width:140px}
+/* Dedicated phone layout: compact cards instead of a sideways-scrolling table. */
+.mobile-game-list,.mobile-list-hint{display:none}
+@media(max-width:767px){
+  body{font-size:15px}
+  #status,#filter-count{line-height:1.45}
+  section>h2{font-size:20px;line-height:1.25;margin:3px 0 12px}
+  .scroll{display:none!important}
+  .mobile-game-list{display:grid;gap:13px;min-width:0;width:100%;margin:12px 0}
+  .mobile-list-hint{display:block;color:#5b7185;font-size:13px;margin:12px 0}
+  .legend{gap:8px;font-size:12px;padding:0 0 12px}
+  .legend span{display:flex;align-items:center;line-height:1.35;gap:1px}
+  .game-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+  .game-filters button{min-width:0;min-height:44px;font-size:13px;padding:9px 7px;line-height:1.2}
+  .game-filters button:last-child{grid-column:1/-1}
+  .game-sort{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;padding:11px;border-radius:12px;background:#f3f6fa;margin:8px 0 12px}
+  .game-sort select,.game-sort button{width:100%;max-width:none;min-width:0;min-height:44px;font-size:15px}
+  .game-sort label{font-size:13px;margin-top:3px}
+  .mobile-game-card{min-width:0;border:1px solid #d4dfe9;border-radius:14px;background:#fff;box-shadow:0 3px 12px #142b460d;overflow:hidden}
+  .mobile-game-card.red{background:#fff;border-left:5px solid #c84949}
+  .mobile-game-card.yellow{background:#fff;border-left:5px solid #d8a11a}
+  .mobile-game-card.green{background:#fff;border-left:5px solid #41976b}
+  .mobile-game-card.test{border-left:5px solid #8b6fb5}
+  .mobile-card-main{padding:15px 14px 12px;display:grid;gap:10px}
+  .mobile-card-top{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+  .mobile-card-date{font-size:13px;font-weight:700;color:#314e69}
+  .mobile-card-pill{font-size:12px;font-weight:700;border-radius:100px;padding:5px 9px;background:#eaf0f6;color:#38516b}
+  .mobile-game-card.red .mobile-card-pill{background:#fbe2e2;color:#8b2323}
+  .mobile-game-card.yellow .mobile-card-pill{background:#fff1c1;color:#735007}
+  .mobile-game-card.green .mobile-card-pill{background:#e0f3e6;color:#206445}
+  .mobile-game-card.test .mobile-card-pill{background:#efe8f9;color:#644c84}
+  .mobile-card-teams{display:grid;gap:2px;font-weight:750;font-size:17px;line-height:1.25;overflow-wrap:anywhere}
+  .mobile-vs{font-size:11px;font-weight:550;letter-spacing:.04em;text-transform:uppercase;color:#697b8e;margin:1px 0}
+  .mobile-card-league{font-size:13px;color:#55708a;overflow-wrap:anywhere}
+  .mobile-card-info{display:grid;grid-template-columns:1fr 1fr;gap:10px;border-top:1px solid #e4eaf0;padding-top:12px}
+  .mobile-info{display:grid;align-content:start;gap:4px;min-width:0}
+  .mobile-info small,.mobile-detail-field small{font-size:12px;font-weight:600;color:#607589}
+  .mobile-info strong{font-size:14px;line-height:1.3;font-weight:650;overflow-wrap:anywhere}
+  .mobile-km-input{width:100%;min-width:0;min-height:44px;font-size:16px;font-weight:700}
+  .mobile-quick-pdf{font-size:13px;font-weight:650;text-decoration:none;color:#194c78;display:inline-flex;align-items:center;min-height:34px}
+  .mobile-game-card details{border-top:1px solid #e4eaf0}
+  .mobile-game-card summary{list-style:none;padding:13px 15px;font-weight:750;font-size:14px;color:#17446b;background:#f6f9fc;cursor:pointer;min-height:44px;display:flex;justify-content:space-between;align-items:center}
+  .mobile-game-card summary::-webkit-details-marker{display:none}
+  .mobile-game-card summary::after{content:"⌄";font-size:20px;line-height:1;transition:transform .16s}
+  .mobile-game-card details[open] summary::after{transform:rotate(180deg)}
+  .mobile-card-details{display:grid;gap:14px;padding:15px;min-width:0}
+  .mobile-detail-field{display:grid;gap:5px;min-width:0;overflow-wrap:anywhere}
+  .mobile-detail-field>label{font-size:13px;font-weight:700;color:#526d84}
+  .mobile-detail-field select{width:100%;min-width:0;max-width:100%;min-height:44px;font-size:16px;background:#fff}
+  .mobile-detail-field .mobile-detail-value{font-size:14px;line-height:1.4}
+  .mobile-checks{display:grid;gap:12px;padding:11px 12px;border-radius:9px;background:#f4f7fa}
+  .mobile-checks label{display:flex;gap:10px;align-items:center;font-size:14px;font-weight:600;min-height:35px}
+  .mobile-checks input{flex:none;accent-color:#142b46}
+  .mobile-actions{display:grid;gap:8px}
+  .mobile-actions button,.mobile-actions a{min-height:44px;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px 13px;white-space:normal;font-weight:650}
+  .mobile-actions button.danger{color:#a22836;background:#fff5f5;border-color:#d9a7af}
+  .mobile-card-empty{color:#61788f;padding:16px;border-radius:12px;background:#fff;border:1px solid #dce5ee}
+  dialog{box-sizing:border-box;max-width:calc(100vw - 24px);padding:18px}
+  dialog .actions{flex-wrap:wrap}
+  dialog .actions button{min-height:44px;flex:1 1 135px}
+}</style></head><body>
 <header><h1>Coachingportal MSP</h1></header><div class="shell"><nav aria-label="Hauptmenü"><strong>Menü</strong><a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html" aria-current="page">Spiele</a><a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav>
 <main><section><h2>Spiele und Bogenstatus</h2><p id="status" role="status">Spiele und Bögen werden geladen …</p>
 <div class="legend"><span><i class="dot green"></i>Grün: Bogen versendet</span><span><i class="dot yellow"></i>Gelb: Spiel in den nächsten 5 Tagen</span><span><i class="dot red"></i>Rot: 5 Tage nach Spiel noch kein Bogen eingegangen</span></div>
 <div class="game-filters" role="group" aria-label="Spiele filtern"><button type="button" class="active" data-game-filter="all" aria-pressed="true">Alle Spiele</button><button type="button" data-game-filter="future" aria-pressed="false">Zukünftige Spiele</button><button type="button" data-game-filter="without" aria-pressed="false">Spiele ohne Bogen</button></div><div class="game-sort"><label for="referee-filter">Schiedsrichter filtern:</label><select id="referee-filter"><option value="">Alle Schiedsrichter</option></select><label for="game-sort-field">Sortieren nach:</label><select id="game-sort-field"><option value="date">Datum</option><option value="referee">Schiedsrichter</option><option value="coach">Coach / Beobachter</option></select><button type="button" id="game-sort-direction" aria-label="Sortierreihenfolge ändern">Neueste zuerst ↓</button></div><p id="filter-count" class="small"></p>
+<p class="mobile-list-hint">Tippe bei einem Spiel auf „Details &amp; Bearbeiten“, um weitere Angaben und Aktionen zu öffnen.</p><div id="mobile-game-list" class="mobile-game-list" aria-label="Spiele als Karten"></div>
 <div class="scroll"><table><thead><tr><th>Datum</th><th>Uhrzeit</th><th>Spielkennung</th><th>Heim</th><th>Gast</th><th>Liga</th><th>Spielstätte</th><th>Kilometer</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Bogen</th><th>Eingegangen</th><th>Geprüft</th><th>Versand</th><th>Aktion</th></tr></thead><tbody id="rows"></tbody></table></div>
 <p><a href="/spiele-anlegen.html">Neues Spiel anlegen</a> · <a href="/beobachtungsboegen.html">Alle Beobachtungsbögen</a></p>
 <p class="small">Automatische E-Mails benötigen die serverseitige Absender-Konfiguration. Status und Zuordnungen werden zusätzlich im Portal gespeichert. Bereits vorhandene lokale Datensätze bleiben erhalten.</p></section></main></div>
@@ -52,8 +113,134 @@ function updateSortDirectionLabel(){
  direction.textContent=sortKey==="date"?(sortDir==="asc"?"Älteste zuerst ↑":"Neueste zuerst ↓"):(sortDir==="asc"?"A bis Z ↑":"Z bis A ↓");
  direction.setAttribute("aria-label","Sortierreihenfolge: "+direction.textContent+". Zum Umkehren klicken.");
 }
+async function deleteGame(g,del){
+    const attached=docs.filter(d=>d.game_key===g.game_key||(g.pdf_id&&d.document_id===g.pdf_id));
+    if(!confirm("Spiel "+g.home+" – "+g.away+" vom "+dateDE(g.match_date)+" wirklich löschen?"))return;
+    if((attached.length||g.pdf_id)&&!confirm("ZWEITE BESTÄTIGUNG: Es ist mindestens ein Bogen hinterlegt. Spiel wirklich löschen? Die zugehörigen PDF-Bögen bleiben in der internen Ablage erhalten und werden vom Spiel gelöst."))return;
+    del.disabled=true;
+    status.textContent="Spiel wird gelöscht …";
+    try{
+      for(const d of attached){
+        const{error:e}=await sb.rpc("portal_unlink_observation",{p_document_id:d.document_id});
+        if(e)throw e;
+      }
+      const{data:deleted,error}=await sb.from("portal_games").delete().eq("owner_id",userId).eq("game_key",g.game_key).select("game_key");
+      if(error)throw error;
+      if(!deleted?.length)throw Error("Spiel konnte nicht gelöscht werden.");
+      const key="msp-games-draft-"+userId;
+      try{const local=JSON.parse(localStorage.getItem(key)||"[]");localStorage.setItem(key,JSON.stringify(local.filter(x=>String(x.id)!==g.game_key)))}catch{}
+      for(const d of attached)d.game_key=null;
+      games=games.filter(x=>x.game_key!==g.game_key);
+      render();status.textContent="Spiel gelöscht. Zugehörige Bögen bleiben intern gespeichert.";
+    }catch(e){status.textContent="Löschen fehlgeschlagen: "+e.message;del.disabled=false;}
+}
+
+
+const openCardKeys=new Set();
+function mobileElement(tag,klass,value){
+ const el=document.createElement(tag);
+ if(klass)el.className=klass;
+ if(value!==undefined&&value!==null)el.textContent=String(value);
+ return el;
+}
+function mobileInfo(label,value){
+ const wrap=mobileElement("div","mobile-info");
+ wrap.append(mobileElement("small","",label),mobileElement("strong","",value||"–"));
+ return wrap;
+}
+function mobileField(label,value){
+ const wrap=mobileElement("div","mobile-detail-field");
+ wrap.append(mobileElement("small","",label),mobileElement("div","mobile-detail-value",value||"–"));
+ return wrap;
+}
+function mobileGameCard(g){
+ const color=g.is_test?"test":gameColor(g);
+ const card=mobileElement("article","mobile-game-card "+(color||""));
+ const top=mobileElement("div","mobile-card-top");
+ const date=dateDE(g.match_date)+(g.kickoff?" · "+g.kickoff+" Uhr":"");
+ top.append(mobileElement("span","mobile-card-date",date));
+ const state=g.is_test?"Testspiel":color==="red"?"Bogen überfällig":color==="yellow"?"Spiel demnächst":color==="green"?"Bogen versendet":g.checked_at?"Bogen geprüft":g.received_at?"Bogen eingegangen":"Offen";
+ top.append(mobileElement("span","mobile-card-pill",state));
+ const teams=mobileElement("div","mobile-card-teams");
+ teams.append(mobileElement("div","",g.home||"Heimmannschaft offen"),mobileElement("span","mobile-vs","gegen"),mobileElement("div","",g.away||"Gastmannschaft offen"));
+ const main=mobileElement("div","mobile-card-main");
+ main.append(top,teams,mobileElement("div","mobile-card-league",g.league||"Spielklasse nicht hinterlegt"));
+ const quick=mobileElement("div","mobile-card-info");
+ quick.append(mobileInfo("Schiedsrichter",gamePersonName(g,"referee")),mobileInfo("Coach / Beobachter",gamePersonName(g,"coach")));
+ const kmBox=mobileElement("div","mobile-info"),kmLabel=mobileElement("small","","Kilometer");
+ const km=document.createElement("input");km.type="text";km.inputMode="decimal";km.maxLength=40;km.className="mobile-km-input";
+ km.placeholder="z. B. 42,5";km.value=g.kilometers_text||"";km.setAttribute("aria-label","Kilometer für Spiel "+g.game_key);
+ km.addEventListener("change",async()=>{
+  const old=g.kilometers_text||"",next=km.value.trim();if(old===next)return;
+  km.disabled=true;
+  try{Object.assign(g,await updateGame(userId,g.game_key,{kilometers_text:next||null}));km.value=g.kilometers_text||"";status.textContent="Kilometer gespeichert."}
+  catch(error){km.value=old;status.textContent="Kilometer konnten nicht gespeichert werden: "+error.message}
+  finally{km.disabled=false}
+ });
+ kmBox.append(kmLabel,km);
+ const doc=docs.find(d=>d.document_id===g.pdf_id||d.game_key===g.game_key);
+ const bogenBox=mobileElement("div","mobile-info");
+ bogenBox.append(mobileElement("small","","Beobachtungsbogen"));
+ if(doc){
+  const link=mobileElement("a","mobile-quick-pdf","PDF ansehen ↗");
+  link.href="/beobachtungsbogen-ansehen.html?pdf="+encodeURIComponent(doc.document_id);
+  link.target="_blank";link.rel="noopener noreferrer";bogenBox.append(link);
+ }else{bogenBox.append(mobileElement("strong","","Noch kein PDF"))}
+ quick.append(kmBox,bogenBox);main.append(quick);card.append(main);
+ const details=document.createElement("details"),summary=document.createElement("summary");
+ summary.textContent="Details & Bearbeiten";details.append(summary);
+ if(openCardKeys.has(g.game_key))details.open=true;
+ details.addEventListener("toggle",()=>{if(details.open)openCardKeys.add(g.game_key);else openCardKeys.delete(g.game_key)});
+ const inner=mobileElement("div","mobile-card-details");
+ inner.append(mobileField("Spielkennung",g.game_key),mobileField("Spielstätte",g.venue||"Nicht hinterlegt"));
+ for(const type of ["referee","coach"]){
+  const isRef=type==="referee";
+  const holder=mobileElement("div","mobile-detail-field"),label=document.createElement("label"),sel=document.createElement("select");
+  const id="card-"+type+"-"+String(g.game_key).replace(/[^a-zA-Z0-9_-]/g,"-");
+  label.htmlFor=id;label.textContent=isRef?"Schiedsrichter zuordnen":"Coach / Beobachter zuordnen";sel.id=id;
+  sel.add(new Option("Bitte auswählen",""));
+  for(const p of isRef?refs:coaches)sel.add(new Option(fullName(p),p.id));
+  sel.value=g[type+"_id"]||"";
+  sel.addEventListener("change",()=>assignment(g,type,sel.value));
+  holder.append(label,sel);inner.append(holder);
+ }
+ const checks=mobileElement("div","mobile-checks");
+ for(const [field,label] of [["received_at","Bogen eingegangen"],["checked_at","Bogen geprüft"]]){
+  const checkLabel=document.createElement("label"),input=document.createElement("input");input.type="checkbox";input.checked=!!g[field];
+  if(field==="checked_at"&&!g.received_at)input.disabled=true;
+  input.setAttribute("aria-label",label+" für "+g.game_key);
+  input.addEventListener("change",()=>change(g,field==="received_at"?{received_at:input.checked?new Date().toISOString():null,...(!input.checked?{checked_at:null}:{})}:{checked_at:input.checked?new Date().toISOString():null}));
+  checkLabel.append(input,document.createTextNode(label));checks.append(checkLabel);
+ }
+ inner.append(checks);
+ const actions=mobileElement("div","mobile-actions");
+ if(!g.is_test){
+  const manual=mobileElement("button","",g.sent_manual_at?"Versandnotiz ändern":"Bereits versendet");
+  manual.type="button";manual.onclick=()=>{
+   selected=g;$("manual-date").value=g.sent_manual_at?String(g.sent_manual_at).slice(0,10):currentIso();
+   $("manual-note").value=g.manual_note||"";$("manual-error").textContent="";$("manual").showModal();
+  };actions.append(manual);
+  if(doc&&!g.sent_at&&!g.sent_manual_at){
+   const send=mobileElement("button","primary","Bogen versenden");send.type="button";send.disabled=!g.referee_email;
+   send.title=g.referee_email?"Bogen an Schiedsrichter senden":"E-Mail-Adresse beim Schiedsrichter fehlt";
+   send.onclick=()=>openMail(g,"bogen_versendet");actions.append(send);
+  }
+  if(color==="red"){
+   const reminder=mobileElement("button","","Coach erinnern");reminder.type="button";reminder.disabled=!g.coach_email;
+   reminder.title=g.coach_email?"Erinnerung versenden":"E-Mail-Adresse beim Coach fehlt";
+   reminder.onclick=()=>openMail(g,"coach_erinnerung");actions.append(reminder);
+  }
+ }else{
+  actions.append(mobileElement("span","small","Testspiel: Kein E-Mail-Versand, keine Statistik."));
+ }
+ const del=mobileElement("button","danger","Spiel löschen");del.type="button";
+ del.onclick=()=>deleteGame(g,del);actions.append(del);
+ inner.append(actions);details.append(inner);card.append(details);
+ return card;
+}
+
 function render(){
- const tbody=$("rows");tbody.replaceChildren();
+ const tbody=$("rows");tbody.replaceChildren();const mobileList=$("mobile-game-list");mobileList.replaceChildren();
  const today=currentIso();
  const visible=games.filter(g=>(!refereeFilter||g.referee_id===refereeFilter)&&(gameFilter==="future"?g.match_date>=today:gameFilter==="without"?!hasBogen(g):true)).sort(compareGames);
  $("filter-count").textContent=visible.length+" von "+games.length+" Spielen angezeigt.";
@@ -109,29 +296,10 @@ function render(){
   const actionCell=document.createElement("td"),del=document.createElement("button");
   del.type="button";del.textContent="Spiel löschen";
   del.setAttribute("aria-label","Spiel "+g.game_key+" löschen");
-  del.onclick=async()=>{
-    const attached=docs.filter(d=>d.game_key===g.game_key||(g.pdf_id&&d.document_id===g.pdf_id));
-    if(!confirm("Spiel "+g.home+" – "+g.away+" vom "+dateDE(g.match_date)+" wirklich löschen?"))return;
-    if((attached.length||g.pdf_id)&&!confirm("ZWEITE BESTÄTIGUNG: Es ist mindestens ein Bogen hinterlegt. Spiel wirklich löschen? Die zugehörigen PDF-Bögen bleiben in der internen Ablage erhalten und werden vom Spiel gelöst."))return;
-    del.disabled=true;
-    status.textContent="Spiel wird gelöscht …";
-    try{
-      for(const d of attached){
-        const{error:e}=await sb.rpc("portal_unlink_observation",{p_document_id:d.document_id});
-        if(e)throw e;
-      }
-      const{data:deleted,error}=await sb.from("portal_games").delete().eq("owner_id",userId).eq("game_key",g.game_key).select("game_key");
-      if(error)throw error;
-      if(!deleted?.length)throw Error("Spiel konnte nicht gelöscht werden.");
-      const key="msp-games-draft-"+userId;
-      try{const local=JSON.parse(localStorage.getItem(key)||"[]");localStorage.setItem(key,JSON.stringify(local.filter(x=>String(x.id)!==g.game_key)))}catch{}
-      for(const d of attached)d.game_key=null;
-      games=games.filter(x=>x.game_key!==g.game_key);
-      render();status.textContent="Spiel gelöscht. Zugehörige Bögen bleiben intern gespeichert.";
-    }catch(e){status.textContent="Löschen fehlgeschlagen: "+e.message;del.disabled=false;}
-  };
-  actionCell.append(del);row.append(actionCell);tbody.append(row)
+  del.onclick=()=>deleteGame(g,del);
+  actionCell.append(del);row.append(actionCell);tbody.append(row);mobileList.append(mobileGameCard(g))
  }
+ if(!visible.length)mobileList.append(mobileElement("p","mobile-card-empty","Keine Spiele für diesen Filter gefunden."));
  status.textContent=games.length?games.length+" Spiel(e) vorhanden.":"Noch keine Spiele vorhanden.";
 }
 function openMail(g,kind){
