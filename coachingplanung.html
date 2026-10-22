@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="de">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Coachingplanung – Coachingportal MSP</title>
+<style>
+:root{font-family:system-ui,-apple-system,sans-serif;color:#142b46;background:#f3f6fa}
+*{box-sizing:border-box}body{margin:0}header{background:#142b46;color:#fff;padding:20px}header h1{margin:0;font-size:23px}
+.shell{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 66px)}
+nav{background:#fff;border-right:1px solid #dce5ee;padding:18px 12px}nav a{display:block;padding:11px;border-radius:8px;text-decoration:none;color:#142b46}nav a[aria-current="page"]{background:#e8f0f8;font-weight:700}
+main{padding:24px;min-width:0;max-width:1300px;width:100%}
+h2{margin:0 0 12px;font-size:26px}h3{margin:0 0 10px;font-size:18px}
+.panel{background:white;border:1px solid #d9e3ed;border-radius:13px;padding:18px;margin:13px 0}
+.intro{color:#546b7e;line-height:1.5;margin:0 0 16px}.muted{color:#607789;font-size:13px}
+button,.button-link{border:1px solid #a5b6c5;border-radius:8px;background:#f7f9fc;color:#142b46;font:inherit;padding:10px 12px;min-height:43px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;text-align:center}
+button.primary,.button-link.primary{background:#142b46;color:#fff;border-color:#142b46}
+button:disabled{opacity:.5;cursor:default}
+input,select{font:inherit;border-radius:8px;border:1px solid #afbfce;padding:11px;background:#fff;color:inherit;max-width:100%}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.control-group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#match-list{display:grid;gap:8px;max-height:365px;overflow:auto;margin-top:12px}
+.match{width:100%;display:grid;grid-template-columns:85px minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;padding:13px;background:#fff;min-width:0}
+.match.active{background:#e9f2fc;border-color:#205884;box-shadow:inset 3px 0 #205884}
+.match strong{display:block;overflow-wrap:anywhere}.match small{display:block;margin-top:4px;color:#607789;font-size:12px}
+.pill{display:inline-block;border-radius:100px;padding:5px 9px;font-size:12px;font-weight:750;background:#edf1f6;color:#3c5068;white-space:nowrap}
+.pill.voreingeteilt{background:#ffedc2;color:#76500c}.pill.eingeteilt{background:#e0edff;color:#244e8b}.pill.bestaetigt{background:#def4e3;color:#235e35}
+.game-title{font-size:21px;font-weight:750;overflow-wrap:anywhere}
+.game-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:13px 0}
+.game-meta>div{background:#f6f9fc;border:1px solid #e3ebf2;border-radius:9px;padding:10px;min-width:0;overflow-wrap:anywhere}
+.game-meta small{display:block;color:#607589;font-size:12px;margin-bottom:4px}
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.field-grid label{display:grid;gap:5px;font-weight:650;font-size:13px}
+.field-grid input,.field-grid select{width:100%;min-width:0;font-weight:400;font-size:15px}
+#candidate-list{display:grid;gap:9px;margin:13px 0}
+.candidate{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:13px;border:1px solid #dce5ee;border-radius:11px;background:#fbfcfe}
+.candidate.assigned{border-color:#3b7c57;background:#f1fbf4}
+.candidate-main{min-width:0}
+.candidate strong{display:block;font-size:16px}.candidate small{color:#607589}
+.candidate-note{font-size:12px;color:#5e7488;line-height:1.4;margin-top:5px;overflow-wrap:anywhere}
+.candidate-actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center;justify-content:flex-end}
+.candidate-actions button{font-size:13px}
+.map-link{font-size:12px;color:#184d80;text-decoration:underline}
+#planning-status{margin:13px 0;color:#34516d;line-height:1.45;min-height:20px}
+.warning{padding:11px;background:#fff6e5;border:1px solid #f1dcaf;border-radius:8px;color:#71500f;font-size:13px;line-height:1.5;margin:12px 0}
+.check{display:flex;gap:9px;align-items:flex-start;font-size:14px;line-height:1.5;margin:12px 0}
+.check input{margin-top:2px;width:19px;height:19px;flex:none;accent-color:#142b46}
+#route-progress{min-height:20px}
+@media(max-width:767px){
+ .shell{display:block!important}main{padding:12px!important}
+ .panel{padding:13px}.game-title{font-size:18px}
+ .field-grid{grid-template-columns:1fr}
+ .match{grid-template-columns:65px minmax(0,1fr);padding:11px}
+ .match .pill{grid-column:2;justify-self:start}
+ .candidate{grid-template-columns:minmax(0,1fr)}
+ .candidate-actions{justify-content:flex-start}.candidate-actions button{flex:1 1 auto}
+ .game-meta{grid-template-columns:1fr 1fr}
+ .control-group button{flex:1 1 auto}
+}
+[hidden]{display:none!important}
+</style>
+</head>
+<body><header><h1>Coachingportal MSP</h1></header>
+<div class="shell">
+<nav aria-label="Hauptmenü"><strong>Menü</strong>
+<a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a>
+<a href="/spiele.html">Spiele</a><a href="/coachingplanung.html" aria-current="page">Coachingplanung</a>
+<a href="/auswertung.html">Auswertung</a><a href="/beobachtungsboegen.html">Beobachtungsbögen</a>
+<a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter.html">Coach-Beobachter</a>
+</nav>
+<main>
+<h2>Coachingplanung</h2>
+<p class="intro">Plane Coachings unverbindlich vor, vergleiche Coach-Adressen nach einfacher Fahrstrecke und ändere den Einteilungsstatus. Alle Änderungen sind nur für Administratoren freigeschaltet. Ohne Bestätigung wird nichts versendet.</p>
+<div class="panel">
+ <div class="controls">
+  <h3>Spiele auswählen</h3>
+  <div class="control-group"><a class="button-link primary" href="/spiele-anlegen.html?return=planung">+ Spiel anlegen</a>
+   <label class="check" style="margin:0"><input id="all-games" type="checkbox"> Auch vergangene Spiele</label>
+   <button id="reload" type="button">Aktualisieren</button></div>
+ </div>
+ <div id="match-list" aria-label="Spiele"></div>
+ <p id="list-status" role="status" class="muted">Spiele werden geladen …</p>
+</div>
+<div class="panel" id="game-editor" hidden>
+ <h3>Ausgewähltes Spiel</h3>
+ <div id="game-title" class="game-title"></div>
+ <div id="game-metadata" class="game-meta"></div>
+ <div class="field-grid">
+  <label for="status-select">Status der Coach-Einteilung
+   <select id="status-select">
+    <option value="offen">Offen</option>
+    <option value="voreingeteilt">Voreingeteilt</option>
+    <option value="eingeteilt">Eingeteilt</option>
+    <option value="bestaetigt">Vom Coach bestätigt</option>
+   </select>
+  </label>
+  <label for="destination">Navigationsziel / Sportplatz-Adresse
+   <input type="text" id="destination" maxlength="240" placeholder="Straße, Hausnummer, PLZ, Ort">
+  </label>
+ </div>
+ <div class="controls" style="justify-content:flex-start;margin-top:10px">
+  <button id="save-destination" type="button">Navigationsziel speichern</button>
+  <button id="unassign" type="button">Coach-Zuordnung entfernen</button>
+ </div>
+ <p id="distance-current" class="muted"></p>
+ <p class="muted">Für die Vorschläge wird die einfache Fahrt angezeigt. Beim Status „Eingeteilt“ wird die Gesamtfahrt (hin und zurück) übernommen, sofern eine geprüfte Route vorliegt und das Kilometerfeld noch nicht manuell ausgefüllt wurde.</p>
+</div>
+<div class="panel" id="recommendations" hidden>
+ <div class="controls"><h3>Coach-Vorschläge nach Entfernung</h3><button id="calculate-all" type="button">Alle Strecken berechnen</button></div>
+ <div class="warning">Die Kilometer sind eine Routen-Schätzung. Prüfe die gefundene Sportstätte auf der Karte. Die Angaben stammen von OpenStreetMap/Nominatim und OSRM (externe Dienste, keine garantierte Verfügbarkeit).</div>
+ <label class="check"><input id="route-consent" type="checkbox"> Ich möchte die Berechnung starten und bin einverstanden, dass dafür die Wohnadresse des Coaches und die Spielstätte an externe Kartendienste übertragen werden.</label>
+ <p id="route-progress" class="muted"></p>
+ <div id="candidate-list"></div>
+</div>
+<p id="planning-status" role="status" aria-live="polite"></p>
+</main></div>
+<script type="module">
+import{sb,requireAdmin,dateDE,updateGame,updatePlanningStatus}from"/portal-workflow.js";
+import{cloudPeople}from"/portal-people.js";
+const $=id=>document.getElementById(id);
+let ownerId="",games=[],coaches=[],selectedKey="",pendingAll=false,runId=0;
+const results=new Map();
+const statusNames={offen:"Offen",voreingeteilt:"Voreingeteilt",eingeteilt:"Eingeteilt",bestaetigt:"Bestätigt"};
+const collator=new Intl.Collator("de",{sensitivity:"base"});
+const today=()=>new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Berlin",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+const coachName=p=>String(p?.name||[p?.first,p?.last].filter(Boolean).join(" ")||"Unbenannt").trim();
+const addr=p=>[[p.street,p.houseNumber].filter(Boolean).join(" "),[p.zip,p.city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+const venue=g=>String(g.venue_route_address||g.venue||"").trim();
+const selected=()=>games.find(g=>g.game_key===selectedKey);
+const routeKey=(g,p)=>[g.game_key,p.id,venue(g),addr(p)].join("|");
+const kmVal=n=>Number(n).toLocaleString("de-DE",{maximumFractionDigits:1})+" km";
+const errorText=e=>String(e?.message||e||"Unbekannter Fehler");
+function note(text){$("planning-status").textContent=text}
+function elem(tag,css,txt){const x=document.createElement(tag);if(css)x.className=css;if(txt!==undefined)x.textContent=txt;return x}
+function clearResults(key){for(const k of [...results.keys()])if(k.startsWith(key+"|"))results.delete(k)}
+function orderedCoaches(g){
+ return [...coaches].sort((a,b)=>{
+  const ar=results.get(routeKey(g,a))?.oneWayKm,br=results.get(routeKey(g,b))?.oneWayKm;
+  return (ar==null?1:0)-(br==null?1:0) || (ar!=null&&br!=null?ar-br:0)||collator.compare(coachName(a),coachName(b));
+ });
+}
+function drawList(){
+ const list=$("match-list");list.replaceChildren();
+ const all=$("all-games").checked;
+ const shown=games.filter(g=>all||g.match_date>=today()).sort((a,b)=>String(a.match_date).localeCompare(String(b.match_date))||String(a.kickoff||"").localeCompare(String(b.kickoff||"")));
+ for(const g of shown){
+  const b=elem("button","match"+(g.game_key===selectedKey?" active":""));b.type="button";
+  const d=elem("strong","",dateDE(g.match_date));const meta=elem("div","");
+  meta.append(elem("strong","",(g.home||"Heim")+" – "+(g.away||"Gast")),elem("small","",g.league||""));
+  const pill=elem("span","pill "+(g.planning_status||"offen"),statusNames[g.planning_status]||"Offen");
+  b.append(d,meta,pill);b.addEventListener("click",()=>{selectedKey=g.game_key;drawList();drawEditor()});list.append(b);
+ }
+ $("list-status").textContent=shown.length+" Spiele angezeigt."+(all?"":" Vergangene Spiele sind ausgeblendet.");
+ if(!shown.length){list.append(elem("div","muted","Keine kommenden Spiele. Du kannst ein neues Spiel anlegen oder vergangene Spiele einblenden."));}
+}
+function currentRoute(g){
+ const coach=coaches.find(p=>String(p.id)===String(g.coach_id));
+ const found=coach&&results.get(routeKey(g,coach));
+ return found||null;
+}
+function drawEditor(){
+ const g=selected(),visible=!!g;
+ $("game-editor").hidden=!visible;$("recommendations").hidden=!visible;
+ if(!g)return;
+ $("game-title").textContent=(g.home||"Heim")+" – "+(g.away||"Gast");
+ const meta=$("game-metadata");meta.replaceChildren();
+ const data=[["Datum / Anstoß",dateDE(g.match_date)+(g.kickoff?" · "+g.kickoff+" Uhr":"")],
+  ["Spielstätte",g.venue||"Nicht hinterlegt"],["Schiedsrichter",g.referee_name||"Nicht zugeordnet"],
+  ["Coach",g.coach_name||"Noch nicht zugeordnet"]];
+ for(const [a,b] of data){const div=elem("div","");div.append(elem("small","",a),elem("strong","",b));meta.append(div)}
+ $("status-select").value=g.planning_status||"offen";
+ $("destination").value=g.venue_route_address||"";
+ $("unassign").disabled=!g.coach_id;
+ const source=g.kilometers_source==="route"?"automatisch berechnet":"manuell / noch nicht hinterlegt";
+ $("distance-current").textContent="Einfache Fahrt: "+(g.planned_one_way_km==null?"noch nicht bestätigt":kmVal(g.planned_one_way_km))+
+ " · Gesamtfahrt im Spiel: "+(g.kilometers_text||"nicht eingetragen")+" km ("+source+")";
+ drawCandidates();
+}
+async function changeStatus(next){
+ const g=selected();if(!g)return;
+ if(next!=="offen"&&!g.coach_id){note("Bitte zuerst einen Coach auswählen.");drawEditor();return}
+ $("status-select").disabled=true;
+ try{
+  const updated=await updatePlanningStatus(ownerId,g,next);
+  Object.assign(g,updated);
+  drawList();drawEditor();
+  note("Status gespeichert: "+statusNames[next]+". "+(next==="eingeteilt"||next==="bestaetigt"?"Kilometer wurden nur übernommen, wenn eine bestätigte Route vorlag und das Feld frei war.":""));
+ }catch(e){note("Status konnte nicht gespeichert werden: "+errorText(e));drawEditor()}
+ finally{$("status-select").disabled=false}
+}
+$("status-select").addEventListener("change",()=>changeStatus($("status-select").value));
+$("save-destination").addEventListener("click",async()=>{
+ const g=selected();if(!g)return;
+ const dest=$("destination").value.trim();
+ if(dest===String(g.venue_route_address||""))return;
+ if(g.kilometers_source==="route"&&!confirm("Das Navigationsziel wurde geändert. Die bisher automatisch berechneten Kilometer werden gelöscht, damit keine falsche Fahrtstrecke stehen bleibt. Fortfahren?")){drawEditor();return}
+ $("save-destination").disabled=true;
+ try{
+  const patch={venue_route_address:dest||null,planned_one_way_km:null,route_origin:null,route_destination:null,route_checked_at:null};
+  if(g.kilometers_source==="route"){patch.kilometers_text=null;patch.kilometers_source="manual"}
+  Object.assign(g,await updateGame(ownerId,g.game_key,patch));
+  clearResults(g.game_key);drawEditor();note("Navigationsziel gespeichert. Die Strecken können jetzt neu berechnet werden.");
+ }catch(e){note("Fehler: "+errorText(e))}
+ finally{$("save-destination").disabled=false}
+});
+$("unassign").addEventListener("click",async()=>{
+ const g=selected();if(!g?.coach_id)return;
+ if(g.pdf_id||g.received_at){note("Bei diesem Spiel ist bereits ein Bogen eingegangen. Bitte die Zuordnung in der Spieleverwaltung prüfen.");return}
+ if(!confirm("Coach-Zuordnung bei "+g.home+" – "+g.away+" entfernen und Status auf „Offen“ setzen?"))return;
+ try{
+  const patch={coach_id:null,coach_name:null,coach_first_name:null,coach_email:null,planning_status:"offen",planned_one_way_km:null,route_origin:null,route_destination:null,route_checked_at:null};
+  if(g.kilometers_source==="route"){patch.kilometers_text=null;patch.kilometers_source="manual"}
+  Object.assign(g,await updateGame(ownerId,g.game_key,patch));drawList();drawEditor();note("Coach-Zuordnung entfernt.");
+ }catch(e){note("Zuordnung konnte nicht entfernt werden: "+errorText(e))}
+});
+function externalMapsLink(r){
+ const link=document.createElement("a");link.className="map-link";
+ link.textContent="Ziel auf Karte prüfen ↗";link.target="_blank";link.rel="noopener noreferrer";
+ const coords=r.coordinates.destination;
+ link.href="https://www.openstreetmap.org/?mlat="+encodeURIComponent(coords[0])+"&mlon="+encodeURIComponent(coords[1])+"#map=16/"+encodeURIComponent(coords[0])+"/"+encodeURIComponent(coords[1]);
+ return link;
+}
+function drawCandidates(){
+ const g=selected(),list=$("candidate-list");list.replaceChildren();if(!g)return;
+ for(const p of orderedCoaches(g)){
+  const active=String(g.coach_id||"")===String(p.id),r=results.get(routeKey(g,p));
+  const card=elem("div","candidate"+(active?" assigned":""));
+  const desc=elem("div","candidate-main");
+  desc.append(elem("strong","",coachName(p)+(active?" · Zugeordnet":"")),
+   elem("small","",[(p.zip||""),(p.city||"")].filter(Boolean).join(" ")||"Keine Ortsangabe"));
+  const route=elem("div","candidate-note",r?.oneWayKm!=null?
+    "Einfache Fahrt: "+kmVal(r.oneWayKm)+" · Hin und zurück: "+kmVal(r.roundTripKm):
+    r?.error?"Entfernung konnte nicht ermittelt werden: "+r.error:"Entfernung noch nicht berechnet");
+  desc.append(route);
+  if(r?.destinationResult){
+   const wrap=elem("div","candidate-note","Gefundenes Ziel: "+r.destinationResult+" · ");
+   wrap.append(externalMapsLink(r));desc.append(wrap);
+  }
+  const actions=elem("div","candidate-actions"),calc=elem("button","",r?.oneWayKm!=null?"Neu berechnen":"Route berechnen");
+  calc.type="button";calc.disabled=pendingAll;
+  calc.addEventListener("click",async()=>{await calculate(g,p,calc)});
+  const assign=elem("button","primary",active?"Bereits zugeordnet":"Coach voreinteilen");
+  assign.type="button";assign.disabled=active;
+  assign.addEventListener("click",()=>assignCoach(g,p));
+  actions.append(calc,assign);card.append(desc,actions);list.append(card);
+ }
+ if(!coaches.length)list.append(elem("p","muted","Es sind noch keine Coaches angelegt."));
+}
+async function calculate(g,p,button){
+ if(!$("route-consent").checked){note("Bitte erst der einmaligen Datenübertragung an die Kartendienste zustimmen.");return}
+ if(!g.venue_route_address&&$("destination").value.trim()&&$("destination").value.trim()!==(g.venue||"")){
+  note("Bitte zuerst das Navigationsziel speichern.");return
+ }
+ const requestKey=routeKey(g,p),oldKey=selectedKey;
+ if(button)button.disabled=true;
+ try{
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session?.access_token)throw Error("Bitte neu anmelden.");
+  const response=await fetch("/api/coach-route",{method:"POST",headers:{"content-type":"application/json",Authorization:"Bearer "+session.access_token},
+   body:JSON.stringify({gameKey:g.game_key,coachId:String(p.id)})});
+  const data=await response.json().catch(()=>({error:"Dienst hat keine gültige Antwort geliefert."}));
+  if(!response.ok)throw Error(data.error||"Routenberechnung fehlgeschlagen.");
+  results.set(requestKey,data);
+  note("Route für "+coachName(p)+" gefunden: "+kmVal(data.oneWayKm)+" einfache Fahrt. Bitte Ziel auf Karte prüfen.");
+ }catch(e){
+  results.set(requestKey,{error:errorText(e)});note("Route für "+coachName(p)+": "+errorText(e));
+ }finally{if(oldKey===selectedKey)drawCandidates();if(button)button.disabled=false}
+}
+async function assignCoach(g,p){
+ if(g.pdf_id||g.received_at){note("Für dieses Spiel ist bereits ein Bogen eingegangen. Bitte die bestehende Zuordnung prüfen.");return}
+ if(g.coach_id&&String(g.coach_id)!==String(p.id)&&!confirm("Der bereits zugeteilte Coach wird ersetzt. Fortfahren?"))return;
+ const r=results.get(routeKey(g,p));
+ let confirmed=false;
+ if(r?.oneWayKm!=null){
+  confirmed=confirm("Ist das ermittelte Kartenziel korrekt?\n\n"+r.destinationResult+"\n\nEinfache Fahrt: "+kmVal(r.oneWayKm)+"\n\nOK = Route bestätigen und Coach voreinteilen. Abbrechen = Coach nur ohne bestätigte Route voreinteilen.");
+ }
+ const patch={coach_id:String(p.id),coach_name:coachName(p),coach_first_name:p.first||coachName(p).split(" ")[0]||null,coach_email:p.mail||p.email||null,
+  planning_status:"voreingeteilt",planned_one_way_km:confirmed?r.oneWayKm:null,
+  route_origin:confirmed?r.origin:null,route_destination:confirmed?r.destination:null,route_checked_at:confirmed?new Date().toISOString():null};
+ if(g.kilometers_source==="route"){patch.kilometers_text=null;patch.kilometers_source="manual"}
+ try{Object.assign(g,await updateGame(ownerId,g.game_key,patch));drawList();drawEditor();
+  note(coachName(p)+" ist voreingeteilt."+(confirmed?" Einfache Strecke gespeichert. Bei „Eingeteilt“ wird die Gesamtfahrt übernommen, sofern das Kilometerfeld frei ist.":" Ohne bestätigte Route bleibt das Kilometerfeld unverändert."));
+ }catch(e){note("Einteilung fehlgeschlagen: "+errorText(e))}
+}
+$("calculate-all").addEventListener("click",async()=>{
+ if(pendingAll){runId++;pendingAll=false;$("calculate-all").textContent="Alle Strecken berechnen";return}
+ const g=selected();if(!g)return;
+ if(!$("route-consent").checked){note("Bitte erst der Adressübertragung an die externen Kartendienste zustimmen.");return}
+ pendingAll=true;const token=++runId;
+ $("calculate-all").textContent="Berechnung abbrechen";
+ const people=[...coaches];
+ for(let i=0;i<people.length;i++){
+  if(token!==runId)break;
+  $("route-progress").textContent="Berechnung "+(i+1)+" von "+people.length+": "+coachName(people[i]);
+  const r=results.get(routeKey(g,people[i]));
+  if(r?.oneWayKm!=null)continue;
+  await calculate(g,people[i],null);
+  if(token!==runId)break;
+  await new Promise(resolve=>setTimeout(resolve,1350));
+ }
+ if(token===runId)$("route-progress").textContent="Streckenabfrage abgeschlossen. Coaches sind nach Entfernung sortiert; unbekannte Strecken folgen darunter.";
+ pendingAll=false;$("calculate-all").textContent="Alle Strecken berechnen";drawCandidates();
+});
+$("all-games").addEventListener("change",drawList);
+$("reload").addEventListener("click",reload);
+async function reload(){
+ $("reload").disabled=true;runId++;pendingAll=false;
+ try{
+  const{data,error}=await sb.from("portal_games").select("*").eq("owner_id",ownerId).order("match_date",{ascending:true});
+  if(error)throw error;
+  games=data||[];
+  if(!games.some(g=>g.game_key===selectedKey))selectedKey="";
+  drawList();drawEditor();note("Spiele aktualisiert.");
+ }catch(e){note("Spiele konnten nicht geladen werden: "+errorText(e))}
+ finally{$("reload").disabled=false}
+}
+try{
+ const{user}=await requireAdmin();
+ ownerId=user.id;
+ coaches=(await cloudPeople(ownerId,"coach")).sort((a,b)=>collator.compare(coachName(a),coachName(b)));
+ await reload();
+}catch(e){$("list-status").textContent="Zugriff oder Daten konnten nicht geladen werden: "+errorText(e);note("Bitte als Administrator anmelden.")}
+</script><script type="module" src="/portal-ui.js"></script>
+</body></html>
