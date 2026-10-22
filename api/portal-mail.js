@@ -32,7 +32,7 @@ export default async function handler(req,res){
   if(g.is_test===true&&!["admin","assigned"].includes(testRecipient))return json(res,400,{error:"Ungültiger Testempfänger."});
   const assignedRecipient=kind==="bogen_versendet"?g.referee_email:g.coach_email;
   const isTest=g.is_test===true;
-  const recipient=isTest&&testRecipient==="admin"?profile.email:assignedRecipient;
+  const recipient=isTest&&testRecipient==="admin"?(profile.email||user.email):assignedRecipient;
   if(!mailValid(recipient))return json(res,422,{error:"Beim zugeordneten Empfänger fehlt eine gültige E-Mail-Adresse in den Stammdaten."});
   if(!mailConfigured())return json(res,503,{error:"STRATO-Mailversand noch nicht eingerichtet. Bitte STRATO_SMTP_USER und STRATO_SMTP_PASSWORD in Vercel hinterlegen."});
   const attachments=[];
