@@ -1,9 +1,9 @@
 import {sb,requireAdmin} from "/portal-workflow.js";
 const localKey=(userId,kind)=>(kind==="coach"?"msp-coach-draft-":"msp-admin-draft-")+userId;
 export async function cloudPeople(userId,kind){
- const {data,error}=await sb.from("portal_people").select("person_id,details").eq("owner_id",userId).eq("kind",kind);
+ const {data,error}=await sb.from("portal_people").select("person_id,details,created_at").eq("owner_id",userId).eq("kind",kind);
  if(error)throw error;
- const people=(data||[]).map(x=>({...x.details,id:x.person_id}));
+ const people=(data||[]).map(x=>({...x.details,id:x.person_id,createdAt:x.created_at}));
  const key=localKey(userId,kind);
  let local={refs:[],docs:[]};try{local=JSON.parse(localStorage.getItem(key)||"{}")||local}catch{}
  const stored=Array.isArray(local.refs)?local.refs:[];
