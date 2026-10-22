@@ -95,7 +95,7 @@ if(!modes.has(sortMode))sortMode="last-asc";
 $("coach-sort").value=sortMode;
 const compare=new Intl.Collator("de",{sensitivity:"base",numeric:true});
 function nameFields(r){
- const parts=String(r.name||"").trim().split(/\\s+/).filter(Boolean);
+ const parts=String(r.name||"").trim().split(/\s+/).filter(Boolean);
  return {first:String(r.first||parts[0]||"").trim(),last:String(r.last||parts.at(-1)||"").trim()};
 }
 function compareCoaches(a,b){
