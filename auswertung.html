@@ -58,30 +58,16 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
  .overview-heading{align-items:flex-start}
 }
 
-/* Schiedsrichter: Zeitraum gemeinsam mit Coaches, freie Mehrfachauswahl */
-.ref-intro{margin:4px 0 12px;color:#536b80}
-.ref-mode{display:flex;flex-wrap:wrap;gap:10px 20px;margin:12px 0 16px}
-.ref-mode label{display:flex;align-items:center;gap:8px;font-weight:650;cursor:pointer}
-.ref-mode input,.ref-check input{width:19px;height:19px;flex:none;accent-color:#142b46}
-.ref-picker{padding:12px;border-radius:12px;border:1px solid #dce5ee;background:#f7fafd;margin:10px 0 16px}
-.ref-picker>label{display:block;font-weight:650;margin-bottom:8px}
-.ref-picker input[type="search"]{display:block;width:100%;padding:10px;border:1px solid #afbfce;border-radius:8px;font:inherit}
-.ref-choices{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-top:12px;max-height:260px;overflow-y:auto}
-.ref-check{display:flex;gap:8px;align-items:center;min-height:44px;padding:7px 9px;border:1px solid #dce5ee;border-radius:8px;background:white;cursor:pointer;overflow-wrap:anywhere}
-.ref-summary{margin:6px 0 14px;color:#536b80;font-size:14px}
-.ref-result-table{width:100%;min-width:440px}
-.ref-result-table th:nth-child(n+2),.ref-result-table td:nth-child(n+2){text-align:right}
-.ref-result-table td:first-child{font-weight:650}
-.ref-action{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
-#ref-status{font-size:14px;color:#536b80}
-@media(max-width:767px){
- .ref-choices{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px;max-height:230px}
- .ref-check{font-size:13px;min-width:0}
- .ref-result-table{min-width:0}
- .ref-result-table th,.ref-result-table td{padding:10px 5px;font-size:13px}
- .ref-action button{width:100%}
-}
-@media(max-width:400px){.ref-choices{grid-template-columns:1fr}}
+/* Coach-Mehrfachauswahl für Excel */
+.coach-batch-selection{border:1px solid #dce5ee;background:#f5f8fc;border-radius:10px;padding:12px 14px;margin:14px 0}
+.coach-batch-tools{display:flex;gap:12px 24px;align-items:center;flex-wrap:wrap}
+.coach-batch-tools label{display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:650;min-height:44px}
+.coach-batch-tools input,.coach-select-checkbox{width:19px;height:19px;accent-color:#142b46;flex:none}
+.coach-batch-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0 3px}
+.coach-batch-actions button{min-height:44px}
+.coach-select-checkbox{margin:0 10px 0 0;vertical-align:middle}
+#coach-selection-count,#coach-export-status{font-size:13px;color:#51677d}
+@media(max-width:767px){.coach-batch-tools{display:grid;gap:2px}.coach-batch-actions button{width:100%}}
 </style></head><body>
 <header><h1>Coachingportal MSP</h1></header>
 <div class="shell"><nav aria-label="Hauptmenü"><strong>Menü</strong>
@@ -102,6 +88,18 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 </div>
 <div class="box" id="overview-box">
 <div class="overview-heading"><h3>Alle Coaches</h3><span id="overview-total" class="hint"></span></div>
+<div class="coach-batch-selection">
+ <div class="coach-batch-tools" role="group" aria-label="Coaches für Excel-Auswertung auswählen">
+  <label><input type="radio" name="coach-scope" value="all" checked> Alle Coaches</label>
+  <label><input type="radio" name="coach-scope" value="selected"> Einzelne oder mehrere Coaches</label>
+ </div>
+ <p class="hint" id="coach-selection-hint">Alle Coaches werden in die gemeinsame Excel-Datei übernommen.</p>
+ <div class="coach-batch-actions">
+  <button type="button" id="export-coaches" disabled>Auswahl als Excel exportieren (.xlsx)</button>
+  <span id="coach-selection-count"></span>
+  <span id="coach-export-status" role="status" aria-live="polite"></span>
+ </div>
+</div>
 <div class="tablebox">
 <table id="overview" aria-label="Alle Coaches mit Spielanzahl und Kilometern">
 <thead><tr><th>Coach / Beobachter</th><th>Anzahl Spiele</th><th>Kilometer gesamt</th><th>Einzelaufstellung</th></tr></thead>
@@ -122,40 +120,13 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 <p class="hint" id="km-note"></p>
 </div>
 
-<section class="box" id="referee-evaluation">
- <h2>Schiedsrichter-Auswertung</h2>
- <p class="ref-intro">Hier kannst du für denselben Zeitraum wie oben einen, mehrere oder alle Schiedsrichter auswerten und als Excel-Datei exportieren. Testspiele zählen nicht mit.</p>
- <fieldset style="border:0;padding:0;margin:0">
-  <legend style="font-weight:700;margin-bottom:7px">Schiedsrichter auswählen</legend>
-  <div class="ref-mode" role="radiogroup" aria-label="Schiedsrichter-Auswahl">
-   <label><input type="radio" name="ref-mode" value="all" checked> Alle Schiedsrichter</label>
-   <label><input type="radio" name="ref-mode" value="selected"> Einzelne oder mehrere auswählen</label>
-  </div>
- </fieldset>
- <div id="ref-picker" class="ref-picker" hidden>
-  <label for="ref-search">Schiedsrichter suchen</label>
-  <input id="ref-search" type="search" placeholder="Name eingeben …" autocomplete="off">
-  <div class="ref-choices" id="ref-choices" aria-label="Schiedsrichter für Auswertung"></div>
-  <p id="ref-selected-count" class="hint"></p>
- </div>
- <div class="overview-heading"><h3>Übersicht</h3><span id="ref-total" class="hint"></span></div>
- <p id="ref-range" class="ref-summary"></p>
- <div class="tablebox">
-  <table class="ref-result-table"><thead><tr><th>Schiedsrichter</th><th>Anzahl Spiele</th><th>Km im Spiel</th></tr></thead><tbody id="ref-rows"></tbody></table>
- </div>
- <p class="hint">Die Kilometer stammen aus dem jeweiligen Spieleintrag. Sie sind keine gesondert erfassten Fahrtkilometer des Schiedsrichters.</p>
- <div class="ref-action">
-  <button type="button" id="ref-export" disabled>Schiedsrichter-Auswertung als Excel (.xlsx)</button>
-  <span id="ref-status" role="status" aria-live="polite"></span>
- </div>
-</section>
 </main></div>
 <script type="module">
 import{requireAdmin,sb,dateDE}from"/portal-workflow.js";
 import{cloudPeople}from"/portal-people.js";
 const $=id=>document.getElementById(id);
-let games=[],coaches=[],referees=[],lastResult=null,excelLibraryPromise=null,selectedCoachId=null,sortMode="last",sortDir="asc";
-let refScope="all",selectedRefs=new Set(),refEvaluation=[];
+let games=[],coaches=[],lastResult=null,excelLibraryPromise=null,selectedCoachId=null,sortMode="last",sortDir="asc";
+let coachScope="all",selectedCoachIds=new Set();
 const berlinToday=()=>new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Berlin",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const today=berlinToday(),year=Number(today.slice(0,4)),seasonYear=year-(today.slice(5)<"07-01"?1:0);
 const defaultFrom=seasonYear+"-07-01";
@@ -229,7 +200,7 @@ function renderOverview(){
  if(from>to){
   $("status").textContent="Das Enddatum muss am oder nach dem Anfangsdatum liegen.";
   $("overview-rows").replaceChildren();$("overview-total").textContent="";
-  clearDetails();return;
+  clearDetails();updateCoachExportStatus();return;
  }
  $("range-label").textContent=dateDE(from)+" – "+dateDE(to);
  const tbody=$("overview-rows");tbody.replaceChildren();
@@ -240,7 +211,18 @@ function renderOverview(){
   totalGames+=result.games.length;totalKm+=result.sum;
   const tr=document.createElement("tr");
   if(String(coach.id)===selectedCoachId)tr.className="selected";
-  const name=document.createElement("td");name.textContent=result.name||"Unbenannt";name.className="coach-name";
+  const name=document.createElement("td");name.className="coach-name";
+  if(coachScope==="selected"){
+   const select=document.createElement("input");select.type="checkbox";
+   select.className="coach-select-checkbox";select.checked=selectedCoachIds.has(String(coach.id));
+   select.setAttribute("aria-label",(result.name||"Coach")+" für Excel auswählen");
+   select.addEventListener("change",()=>{
+    if(select.checked)selectedCoachIds.add(String(coach.id));else selectedCoachIds.delete(String(coach.id));
+    updateCoachExportStatus();
+   });
+   name.append(select);
+  }
+  name.append(document.createTextNode(result.name||"Unbenannt"));
   const count=document.createElement("td");count.textContent=String(result.games.length);
   if(!result.games.length)count.className="zero";
   const km=document.createElement("td");km.textContent=labelKm(result.sum);
@@ -257,116 +239,71 @@ function renderOverview(){
   const row=document.createElement("tr"),cell=document.createElement("td");cell.colSpan=4;cell.textContent="Noch keine Coaches angelegt.";row.append(cell);tbody.append(row);
  }
  $("overview-total").textContent=ordered.length+" Coaches · "+totalGames+" Spiele · "+labelKm(totalKm);
+ updateCoachExportStatus();
  $("status").textContent="Zeitraum: "+dateDE(from)+" bis "+dateDE(to)+". "+ordered.length+" Coaches angezeigt.";
 }
 $("search-form").addEventListener("submit",e=>e.preventDefault());
 for(const id of ["from","to"])$(id).addEventListener("change",()=>{
  if(!$(id).value)$(id).value=id==="from"?defaultFrom:berlinToday();
- clearDetails();renderOverview();renderRefereeEvaluation();
+ clearDetails();renderOverview();
 });
-$("sort-mode").addEventListener("change",()=>{sortMode=$("sort-mode").value;renderOverview();renderRefereeEvaluation()});
+$("sort-mode").addEventListener("change",()=>{sortMode=$("sort-mode").value;renderOverview()});
 $("sort-direction").addEventListener("click",()=>{
  sortDir=sortDir==="asc"?"desc":"asc";
  $("sort-direction").textContent=sortDir==="asc"?"A–Z ↓":"Z–A ↑";
  $("sort-direction").setAttribute("aria-label",sortDir==="asc"?"Aufsteigend alphabetisch":"Absteigend alphabetisch");
- renderOverview();renderRefereeEvaluation();
+ renderOverview();
 });
 
-function refereeGames(ref,from,to){
- const id=String(ref.id||""),name=displayName(ref).toLocaleLowerCase("de");
- return games.filter(g=>!g.is_test&&g.match_date>=from&&g.match_date<=to
-  &&(String(g.referee_id||"")===id||(!g.referee_id&&String(g.referee_name||"").trim().toLocaleLowerCase("de")===name)))
-  .sort((a,b)=>String(a.match_date).localeCompare(String(b.match_date))||String(a.kickoff||"").localeCompare(String(b.kickoff||"")));
+function getBatchCoaches(){
+ return [...coaches].filter(p=>coachScope==="all"||selectedCoachIds.has(String(p.id))).sort(compareNames);
 }
-function getSelectedReferees(){
- return [...referees].filter(r=>refScope==="all"||selectedRefs.has(String(r.id))).sort(compareNames);
+function updateCoachExportStatus(){
+ const list=getBatchCoaches(),{from,to}=effectiveRange();
+ $("export-coaches").disabled=from>to||!list.length;
+ $("coach-selection-count").textContent=list.length+" von "+coaches.length+" Coaches für den Export";
+ $("coach-selection-hint").textContent=coachScope==="all"
+  ?"Alle Coaches werden in die gemeinsame Excel-Datei übernommen."
+  :"Hake in der Liste einen oder mehrere Coaches an. Nur diese werden exportiert.";
 }
-function drawRefChoices(){
- const needle=$("ref-search").value.trim().toLocaleLowerCase("de");
- const holder=$("ref-choices");holder.replaceChildren();
- for(const ref of [...referees].sort(compareNames)){
-  const name=displayName(ref);
-  if(needle&&!name.toLocaleLowerCase("de").includes(needle))continue;
-  const label=document.createElement("label");label.className="ref-check";
-  const input=document.createElement("input");
-  input.type="checkbox";input.checked=selectedRefs.has(String(ref.id));input.value=String(ref.id);
-  input.addEventListener("change",()=>{
-   if(input.checked)selectedRefs.add(String(ref.id));else selectedRefs.delete(String(ref.id));
-   renderRefereeEvaluation();
-  });
-  label.append(input,document.createTextNode(name||"Unbenannt"));holder.append(label);
- }
- if(!holder.children.length){
-  const p=document.createElement("p");p.className="hint";p.textContent="Keine passenden Schiedsrichter gefunden.";holder.append(p);
- }
- $("ref-selected-count").textContent=selectedRefs.size+" Schiedsrichter ausgewählt.";
+for(const mode of document.querySelectorAll('input[name="coach-scope"]')){
+ mode.addEventListener("change",()=>{if(mode.checked){coachScope=mode.value;renderOverview();}});
 }
-function renderRefereeEvaluation(){
+async function exportBatchCoaches(){
  const {from,to}=effectiveRange();
- const valid=from<=to;
- const list=valid?getSelectedReferees():[];
- const rows=$("ref-rows");rows.replaceChildren();
- refEvaluation=list.map(person=>{
-  const matches=refereeGames(person,from,to);
-  return {person,name:displayName(person),games:matches,sum:matches.reduce((s,g)=>s+(distance(g.kilometers_text)??0),0)};
- });
- for(const item of refEvaluation){
-  const tr=document.createElement("tr");
-  for(const value of [item.name||"Unbenannt",String(item.games.length),labelKm(item.sum)]){
-   const td=document.createElement("td");td.textContent=value;tr.append(td);
-  }
-  rows.append(tr);
- }
- if(!refEvaluation.length){
-  const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=3;
-  td.textContent=!valid?"Enddatum muss am oder nach dem Anfangsdatum liegen.":refScope==="selected"?"Bitte mindestens einen Schiedsrichter anhaken.":"Noch keine Schiedsrichter erfasst.";
-  tr.append(td);rows.append(tr);
- }
- const total=refEvaluation.reduce((n,item)=>n+item.games.length,0);
- $("ref-total").textContent=refEvaluation.length+" Schiedsrichter · "+total+" Spiele · "+labelKm(refEvaluation.reduce((s,item)=>s+item.sum,0));
- $("ref-range").textContent="Zeitraum: "+dateDE(from)+" bis "+dateDE(to)+(refScope==="all"?" · alle Schiedsrichter":" · individuell ausgewählt");
- $("ref-export").disabled=!valid||!refEvaluation.length;
- $("ref-picker").hidden=refScope!=="selected";
- $("ref-selected-count").textContent=selectedRefs.size+" Schiedsrichter ausgewählt.";
-}
-for(const mode of document.querySelectorAll('input[name="ref-mode"]')){
- mode.addEventListener("change",()=>{if(!mode.checked)return;refScope=mode.value;renderRefereeEvaluation()});
-}
-$("ref-search").addEventListener("input",drawRefChoices);
-async function exportReferees(){
- const snapshot=refEvaluation.map(item=>({...item,games:[...item.games]}));
- if(!snapshot.length)return;
- const {from,to}=effectiveRange();
- const button=$("ref-export");
+ if(from>to){$("coach-export-status").textContent="Bitte einen gültigen Zeitraum wählen.";return}
+ const snapshot=getBatchCoaches().map(person=>({...summarize(person,from,to),person}));
+ if(!snapshot.length){$("coach-export-status").textContent="Bitte mindestens einen Coach auswählen.";return}
+ const button=$("export-coaches");
  button.disabled=true;const previous=button.textContent;button.textContent="Excel wird erstellt …";
  try{
   const ExcelJS=await loadExcelLibrary();
   const book=new ExcelJS.Workbook();
   book.creator="Coachingportal MSP";
-  book.title="Schiedsrichter-Auswertung";
-  book.subject="Schiedsrichter-Spiele im gewählten Zeitraum";
+  book.title="Coach-Auswertung";
+  book.subject="Coach-Spiele im gewählten Zeitraum";
   book.created=new Date();book.calcProperties.fullCalcOnLoad=true;
   const overview=book.addWorksheet("Übersicht");
   overview.columns=[{width:35},{width:19},{width:21},{width:32}];
   overview.mergeCells("A1:C1");
-  overview.getCell("A1").value="Schiedsrichter-Auswertung";
+  overview.getCell("A1").value="Coach-Auswertung";
   overview.getCell("A1").font={name:"Aptos Display",size:18,bold:true,color:{argb:"FFFFFFFF"}};
   overview.getCell("A1").fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};
   overview.getCell("A1").alignment={vertical:"middle"};overview.getRow(1).height=38;
   overview.getCell("A3").value="Zeitraum";
   overview.getCell("B3").value=dateDE(from)+" – "+dateDE(to);
   overview.getCell("A4").value="Auswahl";
-  overview.getCell("B4").value=refScope==="all"?"Alle Schiedsrichter":snapshot.length+" ausgewählte Schiedsrichter";
+  overview.getCell("B4").value=coachScope==="all"?"Alle Coach":snapshot.length+" ausgewählte Coach";
   overview.getCell("A5").value="Testspiele ausgeschlossen";
   overview.getCell("B5").value="Ja";
   const details=book.addWorksheet("Einzelspiele");
   details.columns=[
    {header:"Datum",key:"date",width:16},
-   {header:"Schiedsrichter",key:"name",width:33},
+   {header:"Coach",key:"name",width:33},
    {header:"Begegnung",key:"game",width:55},
    {header:"Spielklasse",key:"league",width:31},
    {header:"Km im Spiel",key:"km",width:18},
-   {header:"Schiedsrichter-ID",key:"refid",width:22}
+   {header:"Coach-ID",key:"refid",width:22}
   ];
   let detailCount=0;
   for(const item of snapshot){
@@ -389,7 +326,7 @@ async function exportReferees(){
   details.getColumn(6).hidden=true;
   details.views=[{state:"frozen",ySplit:1}];
   details.autoFilter={from:"A1",to:"F"+Math.max(1,detailCount+1)};
-  const headers=["Schiedsrichter","Anzahl Spiele","Km im Spiel","Interne ID"];
+  const headers=["Coach","Anzahl Spiele","Km im Spiel","Interne ID"];
   for(let col=1;col<=headers.length;col++)overview.getRow(7).getCell(col).value=headers[col-1];
   const endRow=Math.max(2,detailCount+1);
   for(const [i,item] of snapshot.entries()){
@@ -423,14 +360,15 @@ async function exportReferees(){
   const blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
   const url=URL.createObjectURL(blob),a=document.createElement("a");
   a.href=url;
-  a.download="Schiedsrichter_Auswertung_"+from+"_bis_"+to+"_"+(refScope==="all"?"alle":snapshot.length+"_ausgewaehlt")+".xlsx";
+  a.download="Coach_Auswertung_"+from+"_bis_"+to+"_"+(coachScope==="all"?"alle":snapshot.length+"_ausgewaehlt")+".xlsx";
   document.body.append(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),60000);
-  $("ref-status").textContent="Excel-Auswertung erstellt.";
- }catch(error){$("ref-status").textContent="Excel-Export fehlgeschlagen: "+error.message}
- finally{button.textContent=previous;button.disabled=!refEvaluation.length}
+  $("coach-export-status").textContent="Excel-Auswertung erstellt.";
+ }catch(error){$("coach-export-status").textContent="Excel-Export fehlgeschlagen: "+error.message}
+ finally{button.textContent=previous;button.disabled=!getBatchCoaches().length}
 }
-$("ref-export").addEventListener("click",exportReferees);
+$("export-coaches").addEventListener("click",exportBatchCoaches);
+
 
 function loadExcelLibrary(){
  if(window.ExcelJS)return Promise.resolve(window.ExcelJS);
@@ -540,32 +478,19 @@ async function exportExcel(){
 $("export-excel").addEventListener("click",exportExcel);
 try{
  const{user}=await requireAdmin();
- const [list,refList,gameResult]=await Promise.all([
+ const [list,gameResult]=await Promise.all([
   cloudPeople(user.id,"coach"),
-  cloudPeople(user.id,"referee"),
-  sb.from("portal_games").select("game_key,match_date,kickoff,home,away,league,coach_id,coach_name,referee_id,referee_name,is_test,kilometers_text").eq("owner_id",user.id)
+  sb.from("portal_games").select("game_key,match_date,kickoff,home,away,league,coach_id,coach_name,is_test,kilometers_text").eq("owner_id",user.id)
  ]);
  if(gameResult.error)throw gameResult.error;
  games=gameResult.data||[];
  coaches=[...list];
- referees=[...refList];
- for(const game of games){
-  if(game.referee_id&&!referees.some(p=>String(p.id)===String(game.referee_id))){
-   referees.push({id:String(game.referee_id),name:game.referee_name||String(game.referee_id)});
-  }else if(!game.referee_id&&game.referee_name){
-   const name=String(game.referee_name).trim();
-   if(name&&!referees.some(p=>displayName(p).toLocaleLowerCase("de")===name.toLocaleLowerCase("de"))){
-    referees.push({id:"name:"+name.toLocaleLowerCase("de"),name});
-   }
-  }
- }
- drawRefChoices();
  for(const game of games){
   if(game.coach_id&&!coaches.some(p=>String(p.id)===String(game.coach_id))){
    coaches.push({id:String(game.coach_id),name:game.coach_name||String(game.coach_id)});
   }
  }
- renderOverview();renderRefereeEvaluation();
+ renderOverview();
 }catch(error){
  $("status").textContent="Auswertung konnte nicht geladen werden: "+error.message;
 }
