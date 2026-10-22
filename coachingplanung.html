@@ -72,6 +72,14 @@ input,select{font:inherit;border-radius:8px;border:1px solid #afbfce;padding:11p
  <div class="controls">
   <h3>Spiele auswählen</h3>
   <div class="control-group"><a class="button-link primary" href="/spiele-anlegen.html?return=planung">+ Spiel anlegen</a>
+   <label for="planning-filter" style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:14px">Einteilungsstatus
+    <select id="planning-filter" aria-label="Spiele nach Einteilungsstatus filtern">
+     <option value="alle">Alle Status</option>
+     <option value="offen">Offen</option>
+     <option value="voreingeteilt">Voreingeteilt</option>
+     <option value="eingeteilt">Eingeteilt</option>
+     <option value="bestaetigt">Vom Coach bestätigt</option>
+    </select></label>
    <label class="check" style="margin:0"><input id="all-games" type="checkbox"> Auch vergangene Spiele</label>
    <button id="reload" type="button">Aktualisieren</button></div>
  </div>
@@ -118,6 +126,8 @@ const $=id=>document.getElementById(id);
 let ownerId="",games=[],coaches=[],selectedKey="",pendingAll=false,runId=0;
 const results=new Map();
 const statusNames={offen:"Offen",voreingeteilt:"Voreingeteilt",eingeteilt:"Eingeteilt",bestaetigt:"Bestätigt"};
+const dashboardFilter=new URLSearchParams(location.search).get("status")||"alle";
+$("planning-filter").value=Object.hasOwn(statusNames,dashboardFilter)?dashboardFilter:"alle";
 const collator=new Intl.Collator("de",{sensitivity:"base"});
 const today=()=>new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Berlin",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const coachName=p=>String(p?.name||[p?.first,p?.last].filter(Boolean).join(" ")||"Unbenannt").trim();
@@ -138,8 +148,8 @@ function orderedCoaches(g){
 }
 function drawList(){
  const list=$("match-list");list.replaceChildren();
- const all=$("all-games").checked;
- const shown=games.filter(g=>all||g.match_date>=today()).sort((a,b)=>String(a.match_date).localeCompare(String(b.match_date))||String(a.kickoff||"").localeCompare(String(b.kickoff||"")));
+ const all=$("all-games").checked,filter=$("planning-filter").value;
+ const shown=games.filter(g=>(all||g.match_date>=today())&&(filter==="alle"||(!g.is_test&&(g.planning_status||"offen")===filter))).sort((a,b)=>String(a.match_date).localeCompare(String(b.match_date))||String(a.kickoff||"").localeCompare(String(b.kickoff||"")));
  for(const g of shown){
   const b=elem("button","match"+(g.game_key===selectedKey?" active":""));b.type="button";
   const d=elem("strong","",dateDE(g.match_date));const meta=elem("div","");
@@ -147,8 +157,8 @@ function drawList(){
   const pill=elem("span","pill "+(g.planning_status||"offen"),statusNames[g.planning_status]||"Offen");
   b.append(d,meta,pill);b.addEventListener("click",()=>{selectedKey=g.game_key;drawList();drawEditor()});list.append(b);
  }
- $("list-status").textContent=shown.length+" Spiele angezeigt."+(all?"":" Vergangene Spiele sind ausgeblendet.");
- if(!shown.length){list.append(elem("div","muted","Keine kommenden Spiele. Du kannst ein neues Spiel anlegen oder vergangene Spiele einblenden."));}
+ $("list-status").textContent=shown.length+" Spiele angezeigt."+(filter==="alle"?"":" Status: "+statusNames[filter]+", ohne Testspiele.")+(all?"":" Vergangene Spiele sind ausgeblendet.");
+ if(!shown.length){list.append(elem("div","muted",filter==="alle"?"Keine kommenden Spiele. Du kannst ein neues Spiel anlegen oder vergangene Spiele einblenden.":"Keine Spiele mit diesem Status im gewählten Zeitraum. Ändere den Filter oder blende vergangene Spiele ein."));}
 }
 function currentRoute(g){
  const coach=coaches.find(p=>String(p.id)===String(g.coach_id));
@@ -317,6 +327,13 @@ $("calculate-all").addEventListener("click",async()=>{
  }
  if(token===runId)$("route-progress").textContent="Streckenabfrage abgeschlossen. Coaches sind nach Entfernung sortiert; unbekannte Strecken folgen darunter.";
  pendingAll=false;$("calculate-all").textContent="Alle Strecken berechnen";drawCandidates();
+});
+$("planning-filter").addEventListener("change",()=>{
+ const filter=$("planning-filter").value;
+ const url=new URL(location.href);
+ if(filter==="alle")url.searchParams.delete("status");else url.searchParams.set("status",filter);
+ history.replaceState(null,"",url);
+ drawList();
 });
 $("all-games").addEventListener("change",drawList);
 $("reload").addEventListener("click",reload);
