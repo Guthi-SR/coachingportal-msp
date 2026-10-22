@@ -65,13 +65,13 @@
 <div class="legend"><span><i class="dot green"></i>Grün: Bogen versendet</span><span><i class="dot yellow"></i>Gelb: Spiel in den nächsten 5 Tagen</span><span><i class="dot red"></i>Rot: 5 Tage nach Spiel noch kein Bogen eingegangen</span></div>
 <div class="game-filters" role="group" aria-label="Spiele filtern"><button type="button" class="active" data-game-filter="all" aria-pressed="true">Alle Spiele</button><button type="button" data-game-filter="future" aria-pressed="false">Zukünftige Spiele</button><button type="button" data-game-filter="without" aria-pressed="false">Spiele ohne Bogen</button></div><div class="game-sort"><label for="referee-filter">Schiedsrichter filtern:</label><select id="referee-filter"><option value="">Alle Schiedsrichter</option></select><label for="coach-filter">Coach / Beobachter filtern:</label><select id="coach-filter"><option value="">Alle Coaches / Beobachter</option></select><label for="game-sort-field">Sortieren nach:</label><select id="game-sort-field"><option value="date">Datum</option><option value="referee">Schiedsrichter</option><option value="coach">Coach / Beobachter</option></select><button type="button" id="game-sort-direction" aria-label="Sortierreihenfolge ändern">Neueste zuerst ↓</button></div><p id="filter-count" class="small"></p>
 <p class="mobile-list-hint">Tippe bei einem Spiel auf „Details &amp; Bearbeiten“, um weitere Angaben und Aktionen zu öffnen.</p><div id="mobile-game-list" class="mobile-game-list" aria-label="Spiele als Karten"></div>
-<div class="scroll"><table><thead><tr><th>Datum</th><th>Uhrzeit</th><th>Spielkennung</th><th>Heim</th><th>Gast</th><th>Liga</th><th>Spielstätte</th><th>Kilometer</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Bogen</th><th>Eingegangen</th><th>Geprüft</th><th>Versand</th><th>Aktion</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div class="scroll"><table><thead><tr><th>Datum</th><th>Uhrzeit</th><th>Spielkennung</th><th>Heim</th><th>Gast</th><th>Liga</th><th>Spielstätte</th><th>Kilometer</th><th>Einteilung</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Bogen</th><th>Eingegangen</th><th>Geprüft</th><th>Versand</th><th>Aktion</th></tr></thead><tbody id="rows"></tbody></table></div>
 <p><a href="/spiele-anlegen.html">Neues Spiel anlegen</a> · <a href="/beobachtungsboegen.html">Alle Beobachtungsbögen</a></p>
 <p class="small">Automatische E-Mails benötigen die serverseitige Absender-Konfiguration. Status und Zuordnungen werden zusätzlich im Portal gespeichert. Bereits vorhandene lokale Datensätze bleiben erhalten.</p></section></main></div>
 <dialog id="manual"><form method="dialog" id="manual-form"><h2>Bogen bereits versendet</h2><p>Hier kannst du einen Versand dokumentieren, der außerhalb des Portals stattgefunden hat. Es wird keine E-Mail versendet.</p><label>Versanddatum <input type="date" id="manual-date" required></label><label>Notiz zum Versandweg oder Grund <textarea id="manual-note" required placeholder="Beispiel: am 12.10.2026 per E-Mail von meiner bisherigen Adresse verschickt"></textarea></label><p id="manual-error" role="status"></p><div class="actions"><button type="button" id="cancel-manual">Abbrechen</button><button type="submit" class="primary">Als bereits versendet speichern</button></div></form></dialog>
 <dialog id="mail"><form method="dialog" id="mail-form"><h2 id="mail-head">E-Mail versenden</h2><label>Empfänger <input id="mail-recipient" readonly></label><label>Betreff <input id="mail-subject" required></label><label>Nachricht <textarea id="mail-body" required rows="12"></textarea></label><p class="small" id="attachment-info"></p><p class="small">Die persönliche Signatur wird später ergänzt. Vor dem Versand können Text und Betreff geändert werden.</p><p id="mail-error" role="status"></p><div class="actions"><button type="button" id="cancel-mail">Abbrechen</button><button type="submit" id="mail-submit" class="primary">E-Mail jetzt senden</button></div></form></dialog>
 <script type="module">import {cloudPeople} from "/portal-people.js";
-import{sb,requireAdmin,localGames,localPeople,syncGames,syncObservations,associateUniqueObservations,updateGame,gameColor,dateDE,reminderBody,sendBody,sendMail}from"/portal-workflow.js";
+import{sb,requireAdmin,localGames,localPeople,syncGames,syncObservations,associateUniqueObservations,updateGame,updatePlanningStatus,gameColor,dateDE,reminderBody,sendBody,sendMail}from"/portal-workflow.js";
 const $=id=>document.getElementById(id),status=$("status");let userId="",games=[],docs=[],refs=[],coaches=[],selected=null,mailKind="",gameFilter="all",refereeFilter="",coachFilter="",sortKey="date",sortDir="desc";
 const currentIso=()=>{const t=new Date();return [t.getFullYear(),String(t.getMonth()+1).padStart(2,"0"),String(t.getDate()).padStart(2,"0")].join("-")};
 function person(people,id){return people.find(x=>x.id===id||x.name===id)}
@@ -85,9 +85,32 @@ async function assignment(g,type,val){
  const people=type==="referee"?refs:coaches;
  const p=person(people,val);
  const name=fullName(p);
- const patch=type==="referee"?{referee_id:val||null,referee_name:name||null,referee_email:p?.mail||p?.email||null}:{coach_id:val||null,coach_name:name||null,coach_first_name:p?.first||name.split(" ")[0]||null,coach_email:p?.mail||p?.email||null};
+ const patch=type==="referee"?{referee_id:val||null,referee_name:name||null,referee_email:p?.mail||p?.email||null}:
+ {coach_id:val||null,coach_name:name||null,coach_first_name:p?.first||name.split(" ")[0]||null,coach_email:p?.mail||p?.email||null};
+ if(type==="coach"&&String(g.coach_id||"")!==String(val||"")){
+  patch.planning_status=val?"voreingeteilt":"offen";
+  patch.planned_one_way_km=null;patch.route_origin=null;patch.route_destination=null;patch.route_checked_at=null;
+  if(g.kilometers_source==="route"){patch.kilometers_text=null;patch.kilometers_source="manual"}
+ }
  try{Object.assign(g,await updateGame(userId,g.game_key,patch));render();status.textContent="Zuordnung in Supabase gespeichert."}
  catch(e){status.textContent="Speichern fehlgeschlagen: "+e.message;render()}
+}
+
+
+const planningNames={offen:"Offen",voreingeteilt:"Voreingeteilt",eingeteilt:"Eingeteilt",bestaetigt:"Vom Coach bestätigt"};
+function planningSelect(g){
+ const select=document.createElement("select");
+ select.setAttribute("aria-label","Coachingstatus für Spiel "+g.game_key);
+ for(const [key,label] of Object.entries(planningNames))select.add(new Option(label,key));
+ select.value=g.planning_status||"offen";
+ select.addEventListener("change",async()=>{
+  const next=select.value;select.disabled=true;
+  try{
+   Object.assign(g,await updatePlanningStatus(userId,g,next));
+   render();status.textContent="Einteilungsstatus gespeichert: "+planningNames[next]+".";
+  }catch(e){status.textContent="Status konnte nicht gespeichert werden: "+e.message;select.disabled=false;select.value=g.planning_status||"offen"}
+ });
+ return select;
 }
 
 function hasBogen(g){return !!(g.pdf_id||docs.some(d=>d.game_key===g.game_key))}
@@ -173,7 +196,7 @@ function mobileGameCard(g){
  km.addEventListener("change",async()=>{
   const old=g.kilometers_text||"",next=km.value.trim();if(old===next)return;
   km.disabled=true;
-  try{Object.assign(g,await updateGame(userId,g.game_key,{kilometers_text:next||null}));km.value=g.kilometers_text||"";status.textContent="Kilometer gespeichert."}
+  try{Object.assign(g,await updateGame(userId,g.game_key,{kilometers_text:next||null,kilometers_source:"manual"}));km.value=g.kilometers_text||"";status.textContent="Kilometer gespeichert."}
   catch(error){km.value=old;status.textContent="Kilometer konnten nicht gespeichert werden: "+error.message}
   finally{km.disabled=false}
  });
@@ -186,13 +209,16 @@ function mobileGameCard(g){
   link.href="/beobachtungsbogen-ansehen.html?pdf="+encodeURIComponent(doc.document_id);
   link.target="_blank";link.rel="noopener noreferrer";bogenBox.append(link);
  }else{bogenBox.append(mobileElement("strong","","Noch kein PDF"))}
- quick.append(kmBox,bogenBox);main.append(quick);card.append(main);
+ quick.append(kmBox,bogenBox);
+ quick.append(mobileInfo("Einteilungsstatus",planningNames[g.planning_status]||"Offen"));
+ main.append(quick);card.append(main);
  const details=document.createElement("details"),summary=document.createElement("summary");
  summary.textContent="Details & Bearbeiten";details.append(summary);
  if(openCardKeys.has(g.game_key))details.open=true;
  details.addEventListener("toggle",()=>{if(details.open)openCardKeys.add(g.game_key);else openCardKeys.delete(g.game_key)});
  const inner=mobileElement("div","mobile-card-details");
  inner.append(mobileField("Spielkennung",g.game_key),mobileField("Spielstätte",g.venue||"Nicht hinterlegt"));
+ const planField=mobileElement("div","mobile-detail-field");planField.append(mobileElement("label","","Einteilungsstatus"),planningSelect(g));inner.append(planField);
  for(const type of ["referee","coach"]){
   const isRef=type==="referee";
   const holder=mobileElement("div","mobile-detail-field"),label=document.createElement("label"),sel=document.createElement("select");
@@ -254,11 +280,12 @@ function render(){
     const old=g.kilometers_text||"",next=km.value.trim();
     if(next===old)return;
     km.disabled=true;
-    try{Object.assign(g,await updateGame(userId,g.game_key,{kilometers_text:next||null}));status.textContent="Kilometer gespeichert.";km.value=g.kilometers_text||""}
+    try{Object.assign(g,await updateGame(userId,g.game_key,{kilometers_text:next||null,kilometers_source:"manual"}));status.textContent="Kilometer gespeichert.";km.value=g.kilometers_text||""}
     catch(error){km.value=old;status.textContent="Kilometer konnten nicht gespeichert werden: "+error.message}
     finally{km.disabled=false}
   });
   kmTd.append(km);row.append(kmTd);
+  const planningCell=document.createElement("td");planningCell.append(planningSelect(g));row.append(planningCell);
   for(const type of ["referee","coach"]){
    const td=document.createElement("td"),select=document.createElement("select"),people=type==="referee"?refs:coaches;
    select.setAttribute("aria-label",(type==="referee"?"Schiedsrichter":"Coach")+" für "+g.game_key);
