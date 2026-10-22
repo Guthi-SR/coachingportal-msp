@@ -45,6 +45,15 @@ body.dashboard-active .dash-page{border:0;border-radius:0;min-width:0;max-width:
 .dash-traffic-card.yellow{background:#fff8dc;border-color:#efd997}
 .dash-traffic-card.red{background:#fff0ee;border-color:#f0bab6}
 .dash-help{font-size:13px;line-height:1.55;color:#617589;margin:14px 0 0}
+/* Planung ist ein eigener Workflow und bleibt optisch vom Bogen-Ampelsystem getrennt. */
+.dash-plan-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.dash-plan-card{display:flex;flex-direction:column;gap:8px;min-width:0;min-height:130px;padding:16px;border:1px solid #dce5ee;border-radius:11px;background:#fbfcfe;color:#142b46;text-decoration:none}
+.dash-plan-card:hover,.dash-plan-card:focus-visible{border-color:#92aec8;background:#f3f8fd}
+.dash-plan-card span{font-size:14px;font-weight:650;line-height:1.3}
+.dash-plan-card strong{font-size:34px;line-height:1.1}
+.dash-plan-card small{font-size:12px;color:#60758b;line-height:1.4}
+@media(max-width:1050px){.dash-plan-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:420px){.dash-plan-grid{gap:9px}.dash-plan-card{padding:12px;min-height:125px}.dash-plan-card strong{font-size:28px}}
 .dash-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
 .dash-columns .dash-block{margin:0 0 18px}
 .dash-items{display:flex;flex-direction:column;gap:9px}
@@ -87,6 +96,15 @@ body.dashboard-active .dash-page{border:0;border-radius:0;min-width:0;max-width:
    <a class="dash-stat" href="/spiele.html"><span>Eingang offen</span><strong id="dash-missing">–</strong><small>Vergangene Spiele ohne Bogeneingang</small></a>
    <a class="dash-stat" href="/spiele.html"><span>Zur Prüfung</span><strong id="dash-review">–</strong><small>Eingegangen, noch nicht geprüft</small></a>
    <a class="dash-stat" href="/spiele.html"><span>Erledigt / versendet</span><strong id="dash-done">–</strong><small>Bogen bereits versendet</small></a>
+  </div>
+  <div class="dash-block" id="dash-planning">
+   <div class="dash-heading"><div><h3>Coachingplanung · Einteilungsstatus</h3><p>Kommende reguläre Spiele · ohne Testspiele</p></div><a href="/coachingplanung.html">Coachingplanung öffnen →</a></div>
+   <div class="dash-plan-grid" aria-label="Einteilungsstatus der anstehenden Coachingspiele">
+    <a class="dash-plan-card" href="/coachingplanung.html?status=offen"><span>Offen</span><strong id="dash-plan-open">–</strong><small>Noch keine Einteilung festgelegt</small></a>
+    <a class="dash-plan-card" href="/coachingplanung.html?status=voreingeteilt"><span>Voreingeteilt</span><strong id="dash-plan-preassigned">–</strong><small>Coach vorläufig vorgesehen</small></a>
+    <a class="dash-plan-card" href="/coachingplanung.html?status=eingeteilt"><span>Eingeteilt</span><strong id="dash-plan-assigned">–</strong><small>Einteilung noch nicht bestätigt</small></a>
+    <a class="dash-plan-card" href="/coachingplanung.html?status=bestaetigt"><span>Vom Coach bestätigt</span><strong id="dash-plan-confirmed">–</strong><small>Deine Bestätigung ist hinterlegt</small></a>
+   </div>
   </div>
   <div class="dash-block"><div class="dash-heading"><div><h3>Ampelsystem</h3><p>Nach dem Status der Spiele und Beobachtungsbögen</p></div><a href="/spiele.html">Alle Spiele →</a></div>
    <div class="dash-traffic">
@@ -192,7 +210,7 @@ async function loadDashboard(userId){
  el("dash-body").hidden=true;
  try{
   const [gameResult,docResult,coachResult]=await Promise.all([
-   supabase.from("portal_games").select("game_key,match_date,kickoff,home,away,referee_name,coach_name,coach_email,pdf_id,is_test,received_at,checked_at,sent_at,sent_manual_at").eq("owner_id",userId),
+   supabase.from("portal_games").select("game_key,match_date,kickoff,home,away,referee_name,coach_name,coach_email,planning_status,pdf_id,is_test,received_at,checked_at,sent_at,sent_manual_at").eq("owner_id",userId),
    supabase.from("portal_observations").select("document_id,game_key").eq("owner_id",userId),
    supabase.from("portal_people").select("person_id").eq("owner_id",userId).eq("kind","coach")
   ]);
@@ -210,6 +228,17 @@ async function loadDashboard(userId){
   const yellow=games.filter(g=>valid(g)&&gameSignal(g,today)==="yellow");
   const green=games.filter(g=>gameSignal(g,today)==="green");
   const reviews=games.filter(g=>g.received_at&&!g.checked_at);
+  // The coaching-planning tiles count only upcoming, non-test games.
+  const planningGames=games.filter(g=>valid(g)&&deltaDate(g.match_date,today)>=0);
+  const planningCounts={offen:0,voreingeteilt:0,eingeteilt:0,bestaetigt:0};
+  for(const g of planningGames){
+   const status=Object.hasOwn(planningCounts,g.planning_status)?g.planning_status:"offen";
+   planningCounts[status]++;
+  }
+  number("dash-plan-open")(planningCounts.offen);
+  number("dash-plan-preassigned")(planningCounts.voreingeteilt);
+  number("dash-plan-assigned")(planningCounts.eingeteilt);
+  number("dash-plan-confirmed")(planningCounts.bestaetigt);
   number("dash-games")(games.length);
   number("dash-coaches")(coaches.length);
   number("dash-docs")(docs.length);
