@@ -281,7 +281,7 @@ async function exportBatchCoaches(){
   const book=new ExcelJS.Workbook();
   book.creator="Coachingportal MSP";
   book.title="Coach-Auswertung";
-  book.subject="Coach-Spiele im gewählten Zeitraum";
+  book.subject="Coaching-Spiele im gewählten Zeitraum";
   book.created=new Date();book.calcProperties.fullCalcOnLoad=true;
   const overview=book.addWorksheet("Übersicht");
   overview.columns=[{width:35},{width:19},{width:21},{width:32}];
@@ -293,7 +293,7 @@ async function exportBatchCoaches(){
   overview.getCell("A3").value="Zeitraum";
   overview.getCell("B3").value=dateDE(from)+" – "+dateDE(to);
   overview.getCell("A4").value="Auswahl";
-  overview.getCell("B4").value=coachScope==="all"?"Alle Coach":snapshot.length+" ausgewählte Coach";
+  overview.getCell("B4").value=coachScope==="all"?"Alle Coaches":snapshot.length+" ausgewählte Coaches";
   overview.getCell("A5").value="Testspiele ausgeschlossen";
   overview.getCell("B5").value="Ja";
   const details=book.addWorksheet("Einzelspiele");
@@ -303,7 +303,7 @@ async function exportBatchCoaches(){
    {header:"Begegnung",key:"game",width:55},
    {header:"Spielklasse",key:"league",width:31},
    {header:"Km im Spiel",key:"km",width:18},
-   {header:"Coach-ID",key:"refid",width:22}
+   {header:"Coach-ID",key:"coachid",width:22}
   ];
   let detailCount=0;
   for(const item of snapshot){
@@ -316,7 +316,7 @@ async function exportBatchCoaches(){
      game:[game.home,game.away].filter(Boolean).join(" – ")||"Coaching",
      league:game.league||"",
      km:km===null?(raw||null):km,
-     refid:String(item.person.id)
+     coachid:String(item.person.id)
     });
     detailCount++;
    }
@@ -360,12 +360,12 @@ async function exportBatchCoaches(){
   const blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
   const url=URL.createObjectURL(blob),a=document.createElement("a");
   a.href=url;
-  a.download="Coach_Auswertung_"+from+"_bis_"+to+"_"+(coachScope==="all"?"alle":snapshot.length+"_ausgewaehlt")+".xlsx";
+  a.download="Coaches_Auswertung_"+from+"_bis_"+to+"_"+(coachScope==="all"?"alle":snapshot.length+"_ausgewaehlt")+".xlsx";
   document.body.append(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),60000);
   $("coach-export-status").textContent="Excel-Auswertung erstellt.";
  }catch(error){$("coach-export-status").textContent="Excel-Export fehlgeschlagen: "+error.message}
- finally{button.textContent=previous;button.disabled=!getBatchCoaches().length}
+ finally{button.textContent=previous;updateCoachExportStatus()}
 }
 $("export-coaches").addEventListener("click",exportBatchCoaches);
 
