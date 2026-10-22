@@ -43,6 +43,24 @@ export async function updateGame(ownerId,gameKey,patch){
  const {data,error}=await sb.from("portal_games").update({...patch,updated_at:new Date().toISOString()}).eq("owner_id",ownerId).eq("game_key",gameKey).select("*").single();
  if(error)throw error;return data;
 }
+/* Status is admin-controlled via RLS. Never overwrite handwritten mileage. */
+export async function updatePlanningStatus(ownerId,game,status){
+ const accepted=["offen","voreingeteilt","eingeteilt","bestaetigt"];
+ if(!accepted.includes(status))throw Error("Ungültiger Planungsstatus.");
+ if(status!=="offen"&&!game.coach_id)throw Error("Bitte zuerst einen Coach zuordnen.");
+ const patch={planning_status:status};
+ const canFill=(status==="eingeteilt"||status==="bestaetigt")&&game.coach_id
+  &&game.planned_one_way_km!=null&&Number.isFinite(Number(game.planned_one_way_km))
+  &&Number(game.planned_one_way_km)>=0&&game.route_checked_at
+  &&game.route_origin&&game.route_destination
+  &&(game.venue_route_address||game.venue)===game.route_destination;
+ if(canFill&&(!String(game.kilometers_text||"").trim()||game.kilometers_source==="route")){
+  const kilometers=Math.round(Number(game.planned_one_way_km)*20)/10;
+  patch.kilometers_text=kilometers.toLocaleString("de-DE",{maximumFractionDigits:1});
+  patch.kilometers_source="route";
+ }
+ return updateGame(ownerId,game.game_key,patch);
+}
 export function observationAssignments(ownerId){
  try{return(JSON.parse(localStorage.getItem("msp-observation-assignments-"+ownerId)||"[]")||[]).filter(x=>x.pdfStored===true)}
  catch{return[]}
