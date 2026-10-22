@@ -170,7 +170,7 @@ function drawEditor(){
  $("unassign").disabled=!g.coach_id;
  const source=g.kilometers_source==="route"?"automatisch berechnet":"manuell / noch nicht hinterlegt";
  $("distance-current").textContent="Einfache Fahrt: "+(g.planned_one_way_km==null?"noch nicht bestätigt":kmVal(g.planned_one_way_km))+
- " · Gesamtfahrt im Spiel: "+(g.kilometers_text||"nicht eingetragen")+" km ("+source+")";
+ " · Gesamtfahrt im Spiel: "+(g.kilometers_text?String(g.kilometers_text).replace(/\\s*km$/i,"")+" km":"nicht eingetragen")+" ("+source+")";
  drawCandidates();
 }
 async function changeStatus(next){
@@ -239,7 +239,14 @@ function drawCandidates(){
   const assign=elem("button","primary",active?"Bereits zugeordnet":"Coach voreinteilen");
   assign.type="button";assign.disabled=active;
   assign.addEventListener("click",()=>assignCoach(g,p));
-  actions.append(calc,assign);card.append(desc,actions);list.append(card);
+  actions.append(calc,assign);
+  if(active&&r?.oneWayKm!=null){
+   const approve=elem("button","", "Route fürs zugeteilte Spiel bestätigen");
+   approve.type="button";
+   approve.addEventListener("click",()=>approveAssignedRoute(g,p,r));
+   actions.append(approve);
+  }
+  card.append(desc,actions);list.append(card);
  }
  if(!coaches.length)list.append(elem("p","muted","Es sind noch keine Coaches angelegt."));
 }
@@ -262,6 +269,19 @@ async function calculate(g,p,button){
  }catch(e){
   results.set(requestKey,{error:errorText(e)});note("Route für "+coachName(p)+": "+errorText(e));
  }finally{if(oldKey===selectedKey)drawCandidates();if(button)button.disabled=false}
+}
+async function approveAssignedRoute(g,p,r){
+ if(String(g.coach_id)!==String(p.id))return;
+ if(!confirm("Ist das Karten-Ziel richtig?\\n\\n"+r.destinationResult+"\\n\\nEinfache Strecke: "+kmVal(r.oneWayKm)+"\\n\\nMit OK wird die Route beim bereits eingeteilten Coach gespeichert."))return;
+ try{
+  const patch={planned_one_way_km:r.oneWayKm,route_origin:r.origin,route_destination:r.destination,route_checked_at:new Date().toISOString()};
+  Object.assign(g,await updateGame(ownerId,g.game_key,patch));
+  if(["eingeteilt","bestaetigt"].includes(g.planning_status)){
+   Object.assign(g,await updatePlanningStatus(ownerId,g,g.planning_status));
+  }
+  drawEditor();drawList();
+  note("Route bestätigt: "+kmVal(r.oneWayKm)+" einfache Fahrt."+(g.kilometers_source==="route"?" Die Gesamtfahrt wurde automatisch eingetragen.":" Bereits eingetragene manuelle Kilometer bleiben erhalten."));
+ }catch(e){note("Route konnte nicht gespeichert werden: "+errorText(e))}
 }
 async function assignCoach(g,p){
  if(g.pdf_id||g.received_at){note("Für dieses Spiel ist bereits ein Bogen eingegangen. Bitte die bestehende Zuordnung prüfen.");return}
