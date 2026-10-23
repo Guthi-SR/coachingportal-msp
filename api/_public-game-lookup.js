@@ -71,7 +71,7 @@ function fixtureFromPage(html,id,url){
 // Team schedule pages usually contain the match ID even when the future
 // fixture has no standalone result page yet.
 function fixtureFromTeamPage(html,id,url){
-  if(!new URL(url).pathname.startsWith("/mannschaft/"))return null;
+  if(!/^\/(?:mannschaft|verein)\//.test(new URL(url).pathname))return null;
   const text=documentText(html).replace(/[\uE000-\uF8FF\u200B-\u200D]/g," ");
   const idMatches=[...text.matchAll(new RegExp("\\b"+id+"\\b","g"))];
   for(const hit of idMatches.slice(0,8)){
@@ -155,6 +155,12 @@ const staffelTeamSources={
  ],
  "310315":[
    {url:"https://www.fussball.de/mannschaft/-/team-id/016PBLOQOK000000VV0AG80NVV8OQVTB",league:"Kreisklasse Gruppe 3 Würzburg"}
+ ],
+ "310353":[
+   {url:"https://www.fussball.de/verein/tsv-1846-lohr-am-main-bayern/-/id/00ES8GNL08000018VV0AG08LVUPGND5I",league:"A-Klasse Gruppe 5 Würzburg"}
+ ],
+ "310148":[
+   {url:"https://www.fussball.de/verein/tsv-1846-lohr-am-main-bayern/-/id/00ES8GNL08000018VV0AG08LVUPGND5I",league:"Bezirksliga"}
  ],
  "310133":[
    {url:"https://www.fussball.de/mannschaft/-/team-id/016PDAD9VO000000VV0AG80NVV8OQVTB",league:"Kreisliga Rhön"}
