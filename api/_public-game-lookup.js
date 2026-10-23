@@ -190,7 +190,11 @@ async function lookupKnownStaffelSchedule(id,diagnostics){
  diagnostics.directSources=sources.length;
  diagnostics.directPages=0;diagnostics.directIdSeen=0;
  for(const candidate of sources){
-   const html=await read(candidate.url,1100000,3600);
+   const teamId=new URL(candidate.url).pathname.match(/\/team-id\/([A-Z0-9]+)/)?.[1];
+   const pages=[candidate.url];
+   if(teamId)pages.push("https://www.fussball.de/ajax.team.matchplan/-/mode/PAGE/team-id/"+teamId);
+   for(const page of pages){
+   const html=await read(page,1100000,3600);
    if(!html)continue;
    diagnostics.directPages++;
    if(!new RegExp("\\b"+id+"\\b").test(documentText(html)))continue;
@@ -201,6 +205,7 @@ async function lookupKnownStaffelSchedule(id,diagnostics){
      return {...fixture,league:candidate.league,...(venue?{venue:venue.venue,venueSourceUrl:venue.venueSourceUrl}:{}),
        source:"oeffentlicher-staffelspielplan",
        note:venue?"Spiel und Navi-Adresse automatisch aus öffentlichen FUSSBALL.DE- und BFV-Spielplänen übernommen. Angaben vor dem Speichern prüfen.":"Spiel automatisch aus öffentlichem Mannschaftsspielplan übernommen. Vollständige Spielstättenadresse noch nicht bestätigt."};
+   }
    }
  }
  return null;
