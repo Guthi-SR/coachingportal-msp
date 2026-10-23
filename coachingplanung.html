@@ -126,7 +126,8 @@ const $=id=>document.getElementById(id);
 let ownerId="",games=[],coaches=[],selectedKey="",pendingAll=false,runId=0;
 const autoRouteBusy=new Set();
 const consentKey=()=> "msp-route-consent-"+ownerId;
-$("route-consent").addEventListener("change",()=>{localStorage.setItem(consentKey(),$("route-consent").checked?"yes":"no");if($("route-consent").checked)void autoAssignedRoute(selected())});
+function saveRouteConsent(){if(!ownerId)return;try{localStorage.setItem(consentKey(),$("route-consent").checked?"yes":"no")}catch(e){note("Zustimmung konnte in diesem Browser nicht dauerhaft gespeichert werden.")}if($("route-consent").checked)void autoAssignedRoute(selected())}
+$("route-consent").addEventListener("change",saveRouteConsent);
 const results=new Map();
 const statusNames={offen:"Offen",voreingeteilt:"Voreingeteilt",eingeteilt:"Eingeteilt",bestaetigt:"Bestätigt"};
 const dashboardFilter=new URLSearchParams(location.search).get("status")||"alle";
@@ -171,7 +172,6 @@ function currentRoute(g){
 function drawEditor(){
  const g=selected(),visible=!!g;
  $("game-editor").hidden=!visible;$("recommendations").hidden=!visible;
- if(ownerId)$("route-consent").checked=localStorage.getItem(consentKey())==="yes";
  if(!g)return;
  $("game-title").textContent=(g.home||"Heim")+" – "+(g.away||"Gast");
  const meta=$("game-metadata");meta.replaceChildren();
