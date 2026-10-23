@@ -126,7 +126,7 @@ const $=id=>document.getElementById(id);
 let ownerId="",games=[],coaches=[],selectedKey="",pendingAll=false,runId=0;
 const autoRouteBusy=new Set();
 const consentKey=()=> "msp-route-consent-"+ownerId;
-function saveRouteConsent(){if(!ownerId)return;try{localStorage.setItem(consentKey(),$("route-consent").checked?"yes":"no")}catch(e){note("Zustimmung konnte in diesem Browser nicht dauerhaft gespeichert werden.")}if($("route-consent").checked)void autoAssignedRoute(selected())}
+function saveRouteConsent(){if(!ownerId)return;try{localStorage.setItem(consentKey(),$("route-consent").checked?"yes":"no")}catch(e){note("Zustimmung konnte in diesem Browser nicht dauerhaft gespeichert werden.")}if($("route-consent").checked)void backfillMissingRoutes()}
 $("route-consent").addEventListener("change",saveRouteConsent);
 const results=new Map();
 const statusNames={offen:"Offen",voreingeteilt:"Voreingeteilt",eingeteilt:"Eingeteilt",bestaetigt:"Bestätigt"};
@@ -379,6 +379,25 @@ $("planning-filter").addEventListener("change",()=>{
 });
 $("all-games").addEventListener("change",drawList);
 $("reload").addEventListener("click",reload);
+let backfillRunning=false;
+async function backfillMissingRoutes(){
+ if(backfillRunning||!ownerId||!$("route-consent").checked)return;
+ backfillRunning=true;
+ const pending=games.filter(g=>g.coach_id&&venue(g)&&g.planned_one_way_km==null&&!g.kilometers_text);
+ let done=0;
+ try{
+  for(const g of pending){
+   if(!$("route-consent").checked)break;
+   await autoAssignedRoute(g);
+   done++;
+   $("route-progress").textContent="Automatischer Kilometer-Nachlauf: "+done+" von "+pending.length+" geprüft.";
+   if(done<pending.length)await new Promise(resolve=>setTimeout(resolve,2500));
+  }
+ }finally{
+  backfillRunning=false;
+  if(pending.length)$("route-progress").textContent="Nachlauf: "+done+" von "+pending.length+" Spielen geprüft. Bei fehlenden Kilometern bitte die Adresse kontrollieren.";
+ }
+}
 async function reload(){
  $("reload").disabled=true;runId++;pendingAll=false;
  try{
@@ -386,7 +405,7 @@ async function reload(){
   if(error)throw error;
   games=data||[];
   if(!games.some(g=>g.game_key===selectedKey))selectedKey="";
-  drawList();drawEditor();void autoAssignedRoute(selected());note("Spiele aktualisiert.");
+  drawList();drawEditor();note("Spiele aktualisiert.");void backfillMissingRoutes();
  }catch(e){note("Spiele konnten nicht geladen werden: "+errorText(e))}
  finally{$("reload").disabled=false}
 }
