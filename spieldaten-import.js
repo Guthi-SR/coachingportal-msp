@@ -26,7 +26,7 @@ export function parseCopiedFixture(raw, requestedId=""){
   const d=dates.at(-1);
   const result={id:selected[0],home,away};
   if(d&&Number(d[4])<24&&Number(d[5])<60){result.date=toIso(d[1],d[2],d[3]);result.kickoff=d[4].padStart(2,"0")+":"+d[5]}
-  const competition=before.match(/\b(Landesliga(?:\s+\S+){0,2}|Bezirksliga(?:\s+\S+){0,2}|Kreisliga(?:\s+\S+){0,2}|Kreisklasse(?:\s+\S+){0,2}|A-Klasse(?:\s+\S+){0,2}|B-Klasse(?:\s+\S+){0,2}|Bayernliga(?:\s+\S+){0,2}|Regionalliga(?:\s+\S+){0,2})\s*(?:\||ME|FS|310\d{6}|\s*$)/i);
+  const competition=[...before.matchAll(/\b((?:Landesliga|Bezirksliga|Kreisliga|Kreisklasse|A-Klasse|B-Klasse|Bayernliga|Regionalliga)[^\n|]{0,48})\s*\|/gi)].at(-1);
   if(competition)result.league=clean(competition[1]);
   return result;
 }
