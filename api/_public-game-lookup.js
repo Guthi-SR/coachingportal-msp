@@ -200,7 +200,7 @@ async function lookupKnownStaffelSchedule(id,diagnostics){
      const venue=await directBfvVenue(fixture,candidate.url);
      return {...fixture,league:candidate.league,...(venue?{venue:venue.venue,venueSourceUrl:venue.venueSourceUrl}:{}),
        source:"oeffentlicher-staffelspielplan",
-       note:"Direkt aus dem öffentlich zugänglichen Mannschaftsspielplan gelesen – kein fest gespeichertes Einzelspiel. Spielstätte muss separat bestätigt werden."};
+       note:venue?"Spiel und Navi-Adresse automatisch aus öffentlichen FUSSBALL.DE- und BFV-Spielplänen übernommen. Angaben vor dem Speichern prüfen.":"Spiel automatisch aus öffentlichem Mannschaftsspielplan übernommen. Vollständige Spielstättenadresse noch nicht bestätigt."};
    }
  }
  return null;
