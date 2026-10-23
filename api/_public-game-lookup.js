@@ -68,6 +68,36 @@ function fixtureFromPage(html,id,url){
     "Spiel gefunden. Keine vollständige Spielstättenadresse nachweisbar – bitte als Navigationsadresse ergänzen. Kein offizieller Datenzugang."
  };
 }
+// Team schedule pages usually contain the match ID even when the future
+// fixture has no standalone result page yet.
+function fixtureFromTeamPage(html,id,url){
+  if(!new URL(url).pathname.startsWith("/mannschaft/"))return null;
+  const text=documentText(html).replace(/[\uE000-\uF8FF\u200B-\u200D]/g," ");
+  const idMatches=[...text.matchAll(new RegExp("\\b"+id+"\\b","g"))];
+  for(const hit of idMatches.slice(0,8)){
+    const pre=text.slice(Math.max(0,hit.index-230),hit.index);
+    const post=text.slice(hit.index+id.length,hit.index+240);
+    const dates=[...pre.matchAll(/\b(\d{1,2})\.(\d{1,2})\.(20\d\d|\d\d)\D{0,24}(\d{1,2}):(\d{2})\b/g)];
+    const day=dates.at(-1);
+    if(!day)continue;
+    const date=(day[3].length===2?"20"+day[3]:day[3])+"-"+day[2].padStart(2,"0")+"-"+day[1].padStart(2,"0");
+    const hh=Number(day[4]),mm=Number(day[5]);
+    if(hh>23||mm>59)continue;
+    const kickoff=day[4].padStart(2,"0")+":"+day[5];
+    // The scores column before kick-off is a literal colon, not a final result.
+    const match=post.match(/^[\s|]*([\p{L}(\[][^:]{2,105}?)\s*:\s*([\p{L}(\[][^:]{2,115}?)(?=\s+Zum Spiel|\s+(?:Sonntag|Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag),|\s*:\s*|$)/u);
+    if(!match)continue;
+    const club=t=>compact(t.replace(/[|]/g," ").replace(/\s+[^\p{L}\p{N}()\/.-]+$/gu,""));
+    const home=club(match[1]),away=club(match[2]);
+    if(home.length<3||away.length<3||home.length>95||away.length>95)continue;
+    // Never infer a pitch merely from the home club; fixtures can be relocated.
+    const league=pre.match(/\b(?:Kreisklasse|Kreisliga|Bezirksliga|Landesliga|Bayernliga|Regionalliga|A-Klasse|B-Klasse|C-Klasse|Freundschaftsspiel|Pokalspiel|Kreisoberliga)\b/gi)?.at(-1)||"";
+    return {found:true,id,home,away,date,kickoff,...(league?{league}:{}),
+      source:"oeffentlicher-mannschaftsspielplan",sourceUrl:url,
+      note:"Begegnung aus öffentlichem Mannschaftsspielplan erkannt. Die genaue Spielstättenadresse muss separat bestätigt werden."};
+  }
+  return null;
+}
 export async function lookupIndexedFixture(id){
  const query='site:fussball.de "'+id+'"';
  const deadline=Date.now()+8500;
@@ -87,6 +117,8 @@ export async function lookupIndexedFixture(id){
        continue;
      }
      const html=await read(url,650000,Math.min(2400,Math.max(500,deadline-Date.now())));
+     const teamGame=fixtureFromTeamPage(html,id,url);
+     if(teamGame)return teamGame;
      const index=html.indexOf(id);
      if(index<0)continue;
      const around=html.slice(Math.max(0,index-5500),index+5500);
