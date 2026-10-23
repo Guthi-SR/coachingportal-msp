@@ -249,10 +249,13 @@ function drawCandidates(){
   const actions=elem("div","candidate-actions"),calc=elem("button","",r?.oneWayKm!=null?"Neu berechnen":"Route berechnen");
   calc.type="button";calc.disabled=pendingAll;
   calc.addEventListener("click",async()=>{await calculate(g,p,calc)});
-  const assign=elem("button","primary",active?"Bereits zugeordnet":"Coach zuordnen");
+  const assign=elem("button","primary",active?"Bereits zugeordnet":"Coach voreinteilen");
   assign.type="button";assign.disabled=active;
-  assign.addEventListener("click",()=>assignCoach(g,p));
-  actions.append(calc,assign);
+  assign.addEventListener("click",()=>assignCoach(g,p,"voreingeteilt"));
+  const direct=elem("button","primary",active?"Coach ist zugeteilt":"Coach zuteilen");
+  direct.type="button";direct.disabled=active&&["eingeteilt","bestaetigt"].includes(g.planning_status);
+  direct.addEventListener("click",()=>assignCoach(g,p,"eingeteilt"));
+  actions.append(calc,assign,direct);
   if(active&&r?.oneWayKm!=null){
    const approve=elem("button","", "Route fürs zugeteilte Spiel bestätigen");
    approve.type="button";
@@ -325,19 +328,19 @@ async function approveAssignedRoute(g,p,r){
   note("Route bestätigt: "+kmVal(r.oneWayKm)+" einfache Fahrt."+(g.kilometers_source==="route"?" Die Gesamtfahrt wurde automatisch eingetragen.":" Bereits eingetragene manuelle Kilometer bleiben erhalten."));
  }catch(e){note("Route konnte nicht gespeichert werden: "+errorText(e))}
 }
-async function assignCoach(g,p){
+async function assignCoach(g,p,planningStatus="voreingeteilt"){
  if(g.pdf_id||g.received_at){note("Für dieses Spiel ist bereits ein Bogen eingegangen. Bitte die bestehende Zuordnung prüfen.");return}
  if(g.coach_id&&String(g.coach_id)!==String(p.id)&&!confirm("Der bereits zugeteilte Coach wird ersetzt. Fortfahren?"))return;
  const r=results.get(routeKey(g,p));
  const patch={coach_id:String(p.id),coach_name:coachName(p),coach_first_name:p.first||coachName(p).split(" ")[0]||null,coach_email:p.mail||p.email||null,
-  planning_status:"eingeteilt",planned_one_way_km:r?.oneWayKm??null,
+  planning_status:planningStatus,planned_one_way_km:r?.oneWayKm??null,
   route_origin:r?.origin||null,route_destination:r?.destination||null,route_checked_at:r?.oneWayKm!=null?new Date().toISOString():null};
  if(g.kilometers_source==="route"){patch.kilometers_text=null;patch.kilometers_source="manual"}
  try{
   Object.assign(g,await updateGame(ownerId,g.game_key,patch));
   drawList();drawEditor();
   void autoAssignedRoute(g);
-  note(coachName(p)+" wurde dem Spiel direkt zugeordnet. Die Kilometer werden automatisch berechnet.");
+  note(coachName(p)+(planningStatus==="eingeteilt"?" wurde dem Spiel zugeteilt.":" wurde für das Spiel voreingeteilt.")+" Die Zuordnung ist auch unter Spiele gespeichert. Die Kilometer werden automatisch berechnet.");
  }catch(e){note("Zuordnung fehlgeschlagen: "+errorText(e))}
 }
 $("calculate-all").addEventListener("click",async()=>{
