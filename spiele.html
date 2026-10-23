@@ -180,6 +180,13 @@ function mobileField(label,value){
  wrap.append(mobileElement("small","",label),mobileElement("div","mobile-detail-value",value||"–"));
  return wrap;
 }
+function testKmInfo(g){
+ if(!g.is_test)return "";
+ const distance=Number(g.planned_one_way_km);
+ if(g.planned_one_way_km==null||!Number.isFinite(distance)||distance<0)return "Testspiel: Noch keine bestätigte Strecke hinterlegt.";
+ const roundtrip=Math.round(distance*20)/10;
+ return "Testspiel – berechnete Strecke: "+distance.toLocaleString("de-DE",{maximumFractionDigits:1})+" km einfach / "+roundtrip.toLocaleString("de-DE",{maximumFractionDigits:1})+" km hin und zurück (nicht abrechnungsrelevant).";
+}
 function mobileGameCard(g){
  const color=g.is_test?"test":gameColor(g);
  const card=mobileElement("article","mobile-game-card "+(color||""));
@@ -204,7 +211,7 @@ function mobileGameCard(g){
   catch(error){km.value=old;status.textContent="Kilometer konnten nicht gespeichert werden: "+error.message}
   finally{km.disabled=false}
  });
- kmBox.append(kmLabel,km);
+ kmBox.append(kmLabel,km);if(g.is_test){const hint=mobileElement("small","",testKmInfo(g));kmBox.append(hint)}
  const doc=docs.find(d=>d.document_id===g.pdf_id||d.game_key===g.game_key);
  const bogenBox=mobileElement("div","mobile-info");
  bogenBox.append(mobileElement("small","","Beobachtungsbogen"));
@@ -291,7 +298,7 @@ function render(){
     catch(error){km.value=old;status.textContent="Kilometer konnten nicht gespeichert werden: "+error.message}
     finally{km.disabled=false}
   });
-  kmTd.append(km);row.append(kmTd);
+  kmTd.append(km);if(g.is_test){const hint=document.createElement("small");hint.style.cssText="display:block;font-size:11px;min-width:160px;margin-top:5px";hint.textContent=testKmInfo(g);kmTd.append(hint)}row.append(kmTd);
   const planningCell=document.createElement("td");planningCell.append(planningSelect(g));row.append(planningCell);
   for(const type of ["referee","coach"]){
    const td=document.createElement("td"),select=document.createElement("select"),people=type==="referee"?refs:coaches;
