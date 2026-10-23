@@ -176,7 +176,7 @@ function drawEditor(){
   ["Coach",g.coach_name||"Noch nicht zugeordnet"]];
  for(const [a,b] of data){const div=elem("div","");div.append(elem("small","",a),elem("strong","",b));meta.append(div)}
  $("status-select").value=g.planning_status||"offen";
- $("destination").value=g.venue_route_address||"";
+ $("destination").value=g.venue_route_address||g.venue||"";
  $("unassign").disabled=!g.coach_id;
  const source=g.kilometers_source==="route"?"automatisch berechnet":"manuell / noch nicht hinterlegt";
  $("distance-current").textContent="Einfache Fahrt: "+(g.planned_one_way_km==null?"noch nicht bestätigt":kmVal(g.planned_one_way_km))+
@@ -199,11 +199,11 @@ $("status-select").addEventListener("change",()=>changeStatus($("status-select")
 $("save-destination").addEventListener("click",async()=>{
  const g=selected();if(!g)return;
  const dest=$("destination").value.trim();
- if(dest===String(g.venue_route_address||""))return;
+ if(dest===String(g.venue_route_address||g.venue||""))return;
  if(g.kilometers_source==="route"&&!confirm("Das Navigationsziel wurde geändert. Die bisher automatisch berechneten Kilometer werden gelöscht, damit keine falsche Fahrtstrecke stehen bleibt. Fortfahren?")){drawEditor();return}
  $("save-destination").disabled=true;
  try{
-  const patch={venue_route_address:dest||null,planned_one_way_km:null,route_origin:null,route_destination:null,route_checked_at:null};
+  const patch={venue_route_address:dest&&dest!==String(g.venue||"").trim()?dest:null,planned_one_way_km:null,route_origin:null,route_destination:null,route_checked_at:null};
   if(g.kilometers_source==="route"){patch.kilometers_text=null;patch.kilometers_source="manual"}
   Object.assign(g,await updateGame(ownerId,g.game_key,patch));
   clearResults(g.game_key);drawEditor();note("Navigationsziel gespeichert. Die Strecken können jetzt neu berechnet werden.");
