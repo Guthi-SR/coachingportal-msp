@@ -98,39 +98,82 @@ function fixtureFromTeamPage(html,id,url){
   }
   return null;
 }
-export async function lookupIndexedFixture(id){
- const query='site:fussball.de "'+id+'"';
- const deadline=Date.now()+8500;
- const sources=[
-   "https://www.bing.com/search?format=rss&q="+encodeURIComponent(query),
-   "https://html.duckduckgo.com/html/?q="+encodeURIComponent(query)
+
+function footballNamesClose(a,b) {
+  const norm=x=>compact(x).toLocaleLowerCase("de").normalize("NFKD").replace(/[\u0300-\u036f]/g,"").replace(/[^\p{L}\p{N}]/gu,"");
+  const x=norm(a),y=norm(b);
+  return x.length>4&&y.length>4&&(x===y||x.includes(y)||y.includes(x));
+}
+function extractBfvVenue(html, fixture){
+ const txt=documentText(html);
+ const parts=[fixture.date.slice(8,10),fixture.date.slice(5,7),fixture.date.slice(0,4)];
+ const date=parts[0]+"."+parts[1]+"."+parts[2];
+ const rx=new RegExp(date.replaceAll(".","\\.")+"\\s*\\/\\s*"+fixture.kickoff+"\\s*Uhr","g");
+ for(const d of txt.matchAll(rx)){
+   const look=txt.slice(d.index,d.index+480);
+   const game=look.match(/^\S*[\s\S]{0,300}?Zum Spiel\s+([^|]{5,105})\s*\|\s*([^|]{4,125})\s*\|\s*(\d{5})\s+([A-Za-zÄÖÜäöüß -]{3,65})/i);
+   if(!game)continue;
+   const gameDescription=look.slice(0,look.indexOf("Zum Spiel"));
+   if(!gameDescription.includes(fixture.home)||!gameDescription.includes(fixture.away))continue;
+   if(!(/\d/.test(game[2]) && /^[A-Za-zÄÖÜäöüß /.-]+$/.test(game[2].replace(/\d+/g,""))))continue;
+   return compact(game[1])+" | "+compact(game[2])+" | "+game[3]+" "+compact(game[4]);
+ }
+ return "";
+}
+async function findFixtureVenue(fixture, deadline) {
+ // A BFV team page lists the specific game's ground, unlike a home club's generic address.
+ const terms=['site:bfv.de/mannschaften "'+fixture.home+'" "'+fixture.away+'"',
+              'site:bfv.de/mannschaften "'+fixture.home+'"'];
+ const endpoints=[
+   q=>"https://www.google.com/search?num=6&q="+encodeURIComponent(q),
+   q=>"https://www.bing.com/search?format=rss&q="+encodeURIComponent(q)
  ];
- for(const engine of sources){
-   if(Date.now()>deadline-1100)break;
-   const documents=indexedLinks(await read(engine,170000,Math.min(3200,Math.max(700,deadline-Date.now())))).slice(0,4);
-   for(const url of documents){
-     if(Date.now()>deadline-800)break;
-     const path=new URL(url).pathname;
-     if(path.startsWith("/spiel/")){
-       const result=fixtureFromPage(await read(url,650000,Math.min(2500,Math.max(500,deadline-Date.now()))),id,url);
-       if(result)return result;
-       continue;
-     }
-     const html=await read(url,650000,Math.min(2400,Math.max(500,deadline-Date.now())));
-     const teamGame=fixtureFromTeamPage(html,id,url);
-     if(teamGame)return teamGame;
-     const index=html.indexOf(id);
-     if(index<0)continue;
-     const around=html.slice(Math.max(0,index-5500),index+5500);
-     const links=[...around.matchAll(/(?:href|data-href)=["']([^"']*\/spiel\/[^"']{5,220})["']/gi)]
-       .map(x=>{try{return cleanUrl(new URL(decode(x[1]),url).href)}catch{return null}})
-       .filter(Boolean);
-     for(const gameUrl of [...new Set(links)].slice(0,2)){
-       if(Date.now()>deadline-600)break;
-       const found=fixtureFromPage(await read(gameUrl,650000,Math.min(2300,Math.max(500,deadline-Date.now()))),id,gameUrl);
-       if(found)return found;
+ for(const q of terms){
+   for(const getUrl of endpoints){
+     if(Date.now()+900>=deadline)return null;
+     const links=indexedLinks(await read(getUrl(q),180000,Math.min(2200,Math.max(500,deadline-Date.now()))))
+       .filter(url=>new URL(url).hostname.endsWith("bfv.de") && new URL(url).pathname.startsWith("/mannschaften/")).slice(0,3);
+     for(const url of links){
+       if(Date.now()+650>=deadline)return null;
+       const venue=extractBfvVenue(await read(url,650000,Math.min(2300,Math.max(600,deadline-Date.now()))),fixture);
+       if(venue)return {venue,venueSourceUrl:url};
      }
    }
  }
  return null;
+}
+export async function lookupIndexedFixture(id){
+  const deadline=Date.now()+15500;
+  const q='site:fussball.de/mannschaft "'+id+'"';
+  const engines=[
+    'https://www.google.com/search?num=10&q='+encodeURIComponent(q),
+    'https://www.bing.com/search?format=rss&q='+encodeURIComponent(q),
+    'https://html.duckduckgo.com/html/?q='+encodeURIComponent(q)
+  ];
+  let fixture=null;
+  for(const engine of engines){
+    if(Date.now()+1600>=deadline)break;
+    const results=indexedLinks(await read(engine,220000,Math.min(3200,Math.max(1000,deadline-Date.now())))).slice(0,6);
+    for(const url of results){
+      if(Date.now()+1200>=deadline)break;
+      const html=await read(url,750000,Math.min(3200,Math.max(700,deadline-Date.now())));
+      if(new URL(url).pathname.startsWith("/spiel/")){
+        fixture=fixtureFromPage(html,id,url);
+      }else {
+        fixture=fixtureFromTeamPage(html,id,url);
+      }
+      if(fixture)break;
+    }
+    if(fixture)break;
+  }
+  if(!fixture)return null;
+  // A verified match is returned even when the source has no reliably mapped pitch.
+  // Missing nav addresses are never filled with a club address.
+  const identified=await findFixtureVenue(fixture,deadline);
+  if(identified){
+    return {...fixture,venue:identified.venue,
+      sourceUrl:identified.venueSourceUrl,
+      note:"Spielkennung im FUSSBALL.DE-Spielplan gefunden; dieselbe Begegnung mit Datum und Navi-Adresse beim BFV abgeglichen. Vor dem Speichern prüfen."};
+  }
+  return fixture;
 }
