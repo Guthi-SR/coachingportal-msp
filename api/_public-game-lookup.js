@@ -212,7 +212,10 @@ async function gameSpecificBfvVenue(html,id,fixture){
  return {venue,venueSourceUrl:url};
 }
 async function lookupKnownStaffelSchedule(id,diagnostics){
- const sources=staffelTeamSources[id.slice(0,6)]||[];
+ const allSources=Object.values(staffelTeamSources).flat();
+ const unique=new Map(allSources.map(x=>[x.url,x]));
+ const first=staffelTeamSources[id.slice(0,6)]||[];
+ const sources=[...first,...[...unique.values()].filter(x=>!first.some(y=>y.url===x.url))];
  diagnostics.directSources=sources.length;
  diagnostics.directPages=0;diagnostics.directIdSeen=0;
  for(const candidate of sources){
@@ -228,7 +231,7 @@ async function lookupKnownStaffelSchedule(id,diagnostics){
    const fixture=fixtureFromTeamPage(html,id,candidate.url);
    if(fixture){
      const venue=await gameSpecificBfvVenue(html,id,fixture)||await directBfvVenue(fixture,candidate.url);
-     return {...fixture,league:candidate.league,...(venue?{venue:venue.venue,venueSourceUrl:venue.venueSourceUrl}:{}),
+     return {...fixture,league:fixture.league||(first.some(x=>x.url===candidate.url)?candidate.league:""),...(venue?{venue:venue.venue,venueSourceUrl:venue.venueSourceUrl}:{}),
        source:"oeffentlicher-staffelspielplan",
        note:venue?"Spiel und Navi-Adresse automatisch aus öffentlichen FUSSBALL.DE- und BFV-Spielplänen übernommen. Angaben vor dem Speichern prüfen.":"Spiel automatisch aus öffentlichem Mannschaftsspielplan übernommen. Vollständige Spielstättenadresse noch nicht bestätigt."};
    }
