@@ -85,7 +85,7 @@ function fixtureFromTeamPage(html,id,url){
     if(hh>23||mm>59)continue;
     const kickoff=day[4].padStart(2,"0")+":"+day[5];
     // The scores column before kick-off is a literal colon, not a final result.
-    const match=post.match(/^[\s|]*([^:]{3,120}?)\s*:\s*([^:]{3,120})/u);
+    const match=post.match(/^[\s|]*(.{3,105}?)\s*:\s*(.{3,115}?)\s*(?::\s*)?Zum Spiel\b/i);
     if(!match)continue;
     const club=t=>compact(t.split(/[\uE000-\uF8FF]/)[0].replace(/[|]/g," ").replace(/\s+[^\p{L}\p{N}()\/.-]+$/gu,""));
     const home=club(match[1]),away=club(match[2]);
@@ -144,7 +144,8 @@ async function findFixtureVenue(fixture, deadline) {
  }
  return null;
 }
-export async function lookupIndexedFixture(id){
+export async function lookupIndexedFixture(id,diagnostics={}){
+  diagnostics.engines=0;diagnostics.links=0;diagnostics.pages=0;diagnostics.idSeen=0;
   const deadline=Date.now()+13500;
   const q='site:fussball.de/mannschaft "'+id+'"';
   const engines=[
@@ -155,10 +156,13 @@ export async function lookupIndexedFixture(id){
   let fixture=null;
   for(const engine of engines){
     if(Date.now()+1600>=deadline)break;
+    diagnostics.engines++;
     const results=indexedLinks(await read(engine,220000,Math.min(3200,Math.max(1000,deadline-Date.now())))).slice(0,6);
+    diagnostics.links+=results.length;
     for(const url of results){
       if(Date.now()+1200>=deadline)break;
       const html=await read(url,750000,Math.min(3200,Math.max(700,deadline-Date.now())));
+      if(html){diagnostics.pages++;if(html.includes(id))diagnostics.idSeen++}
       if(new URL(url).pathname.startsWith("/spiel/")){
         fixture=fixtureFromPage(html,id,url);
       }else {
