@@ -124,7 +124,7 @@ if(nav){
  const templatesLink=nav.querySelector('a[href="/textvorlagen.html"]');
  if(templatesLink&&!nav.querySelector(".template-submenu")){
    const submenu=document.createElement("div");submenu.className="person-submenu template-submenu";submenu.setAttribute("aria-label","Textvorlagen-Untermenü");
-   for(const [id,title] of [["bogenversand","Bogenversand"],["erinnerung","Erinnerung"]]){
+   for(const [id,title] of [["bogenversand","Bogenversand"],["erinnerung","Erinnerung"],["bogen-eingegangen","Bogen eingegangen"]]){
      const a=document.createElement("a");a.href="/textvorlagen.html?vorlage="+id;a.textContent=title;
      if(location.pathname==="/textvorlagen.html"&&new URLSearchParams(location.search).get("vorlage")===id)a.setAttribute("aria-current","page");
      submenu.append(a);
