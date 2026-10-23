@@ -104,7 +104,8 @@ async function assignment(g,type,val){
   patch.planned_one_way_km=null;patch.route_origin=null;patch.route_destination=null;patch.route_checked_at=null;
   if(g.kilometers_source==="route"){patch.kilometers_text=null;patch.kilometers_source="manual"}
  }
- if(reason)patch.protected_change_reason=reason;\n try{Object.assign(g,await updateGame(userId,g.game_key,patch));render();status.textContent="Zuordnung in Supabase gespeichert."}
+ if(reason)patch.protected_change_reason=reason;
+ try{Object.assign(g,await updateGame(userId,g.game_key,patch));render();status.textContent="Zuordnung in Supabase gespeichert."}
  catch(e){status.textContent="Speichern fehlgeschlagen: "+e.message;render()}
 }
 
