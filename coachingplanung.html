@@ -171,6 +171,7 @@ function currentRoute(g){
 function drawEditor(){
  const g=selected(),visible=!!g;
  $("game-editor").hidden=!visible;$("recommendations").hidden=!visible;
+ if(ownerId)$("route-consent").checked=localStorage.getItem(consentKey())==="yes";
  if(!g)return;
  $("game-title").textContent=(g.home||"Heim")+" – "+(g.away||"Gast");
  const meta=$("game-metadata");meta.replaceChildren();
@@ -206,7 +207,13 @@ $("save-destination").addEventListener("click",async()=>{
  if(g.kilometers_source==="route"&&!confirm("Das Navigationsziel wurde geändert. Die bisher automatisch berechneten Kilometer werden gelöscht, damit keine falsche Fahrtstrecke stehen bleibt. Fortfahren?")){drawEditor();return}
  $("save-destination").disabled=true;
  try{
-  const patch={venue_route_address:dest&&dest!==String(g.venue||"").trim()?dest:null,planned_one_way_km:null,route_origin:null,route_destination:null,route_checked_at:null};
+  let reason="";
+ if(g.pdf_id||g.received_at){
+  reason=(prompt("Für dieses Spiel ist bereits ein Beobachtungsbogen hinterlegt. Bitte begründe die Änderung des Navigationsziels (mindestens 10 Zeichen):")||"").trim();
+  if(reason.length<10||!confirm("Navigationsziel trotz vorhandenem Beobachtungsbogen ändern? Der Bogen bleibt unverändert.")){note("Änderung abgebrochen: Administrator-Begründung und Bestätigung erforderlich.");return}
+ }
+ const patch={venue_route_address:dest&&dest!==String(g.venue||"").trim()?dest:null,planned_one_way_km:null,route_origin:null,route_destination:null,route_checked_at:null};
+ if(reason)patch.protected_change_reason=reason;
   if(g.kilometers_source==="route"){patch.kilometers_text=null;patch.kilometers_source="manual"}
   Object.assign(g,await updateGame(ownerId,g.game_key,patch));
   clearResults(g.game_key);drawEditor();note("Navigationsziel gespeichert.");void autoAssignedRoute(g);
