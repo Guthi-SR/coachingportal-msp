@@ -10,6 +10,22 @@ export default async function handler(req,res) {
   // Individually checked fixtures, not an automated BFV/DFBnet feed.
   // Only include games verified against the published match listing AND venue.
   const verifiedGames={
+    // Fixture cross-checked against the public BFV listing (including the pitch address)
+    "310315136":{
+      home:"SV Altfeld",
+      away:"TV Marktheidenfeld",
+      date:"2026-11-08",
+      kickoff:"14:00",
+      league:"KK-Gr 3 WÜ",
+      spielgebiet:"Kreis Würzburg",
+      staffelBezeichnung:"Kreisklasse Gruppe 3 Würzburg",
+      staffelKurz:"KK-Gr 3 WÜ",
+      venue:"Sportgelände Altfeld, Platz 1 | Römerstr. 19 | 97828 Marktheidenfeld",
+      source:"einzeln-verifiziert",
+      sourceUrl:"https://www.bfv.de/mannschaften/-/016PBLOQOK000000VV0AG80NVV8OQVTB",
+      note:"Einzeln anhand von Spielkennung, Begegnung und BFV-Spielstätte geprüft. Kein allgemeiner BFV-Liveabruf."
+    },
+
     "310133119":{
       home:"FC Einigkeit Rottershausen",
       away:"(SG 1) TSV Hausen/Rhön",
