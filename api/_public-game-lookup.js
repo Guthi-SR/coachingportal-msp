@@ -11,8 +11,8 @@ function cleanUrl(input) {
     u.hash="";return u.href;
   } catch {return null;}
 }
-async function read(url,limit=650000){
-  const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),5500);
+async function read(url,limit=650000,timeoutMs=3500){
+  const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),timeoutMs);
   try {
     const r=await fetch(url,{headers:{"Accept":"text/html, application/rss+xml, application/xml;q=0.9","User-Agent":"Mozilla/5.0 (compatible; CoachingportalMSP/1.0)"},
        signal:ctl.signal,redirect:"error"});
@@ -70,29 +70,34 @@ function fixtureFromPage(html,id,url){
 }
 export async function lookupIndexedFixture(id){
  const query='site:fussball.de "'+id+'"';
- const rss="https://www.bing.com/search?format=rss&q="+encodeURIComponent(query);
- let documents=indexedLinks(await read(rss,170000));
- if(!documents.length){
-   const ddg="https://html.duckduckgo.com/html/?q="+encodeURIComponent(query);
-   documents=indexedLinks(await read(ddg,170000));
- }
- for(const url of documents){
-   const path=new URL(url).pathname;
-   if(path.startsWith("/spiel/")){
-     const result=fixtureFromPage(await read(url),id,url);
-     if(result)return result;
-     continue;
-   }
-   // Search engines may return a team page listing multiple games.
-   const html=await read(url);
-   const index=html.indexOf(id);
-   if(index<0)continue;
-   const around=html.slice(Math.max(0,index-6000),index+6000);
-   const links=[...around.matchAll(/(?:href|data-href)=["']([^"']*\/spiel\/[^"']{5,220})["']/gi)]
-      .map(x=>cleanUrl(x[1])).filter(Boolean);
-   for(const gameUrl of [...new Set(links)].slice(0,4)){
-     const found=fixtureFromPage(await read(gameUrl),id,gameUrl);
-     if(found)return found;
+ const deadline=Date.now()+8500;
+ const sources=[
+   "https://www.bing.com/search?format=rss&q="+encodeURIComponent(query),
+   "https://html.duckduckgo.com/html/?q="+encodeURIComponent(query)
+ ];
+ for(const engine of sources){
+   if(Date.now()>deadline-1100)break;
+   const documents=indexedLinks(await read(engine,170000,Math.min(3200,Math.max(700,deadline-Date.now())))).slice(0,4);
+   for(const url of documents){
+     if(Date.now()>deadline-800)break;
+     const path=new URL(url).pathname;
+     if(path.startsWith("/spiel/")){
+       const result=fixtureFromPage(await read(url,650000,Math.min(2500,Math.max(500,deadline-Date.now()))),id,url);
+       if(result)return result;
+       continue;
+     }
+     const html=await read(url,650000,Math.min(2400,Math.max(500,deadline-Date.now())));
+     const index=html.indexOf(id);
+     if(index<0)continue;
+     const around=html.slice(Math.max(0,index-5500),index+5500);
+     const links=[...around.matchAll(/(?:href|data-href)=["']([^"']*\/spiel\/[^"']{5,220})["']/gi)]
+       .map(x=>{try{return cleanUrl(new URL(decode(x[1]),url).href)}catch{return null}})
+       .filter(Boolean);
+     for(const gameUrl of [...new Set(links)].slice(0,2)){
+       if(Date.now()>deadline-600)break;
+       const found=fixtureFromPage(await read(gameUrl,650000,Math.min(2300,Math.max(500,deadline-Date.now()))),id,gameUrl);
+       if(found)return found;
+     }
    }
  }
  return null;
