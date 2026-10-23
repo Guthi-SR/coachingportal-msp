@@ -81,11 +81,19 @@ const currentIso=()=>{const t=new Date();return [t.getFullYear(),String(t.getMon
 function person(people,id){return people.find(x=>x.id===id||x.name===id)}
 function fullName(p){return p?.name||[p?.first,p?.last].filter(Boolean).join(" ")||""}
 function cell(row,value){const td=document.createElement("td");td.textContent=value||"–";row.append(td);return td}
+function confirmProtectedEdit(g,description){
+ const attached=!!(g.pdf_id||g.received_at||docs.some(d=>d.game_key===g.game_key));
+ if(!attached)return true;
+ return confirm("ACHTUNG: Für dieses Spiel liegt bereits ein Beobachtungsbogen vor.\\n\\n"+description+"\\n\\nDer bestehende Bogen bleibt unverändert und wird NICHT automatisch neu zugeordnet.\\n\\nÄnderung als Administrator ausdrücklich durchführen?");
+}
 async function change(g,patch){
+ if(!confirmProtectedEdit(g,"Spieldaten ändern"))return;
  try{const updated=await updateGame(userId,g.game_key,patch);Object.assign(g,updated);render();status.textContent="Änderung gespeichert."}
  catch(e){status.textContent="Speichern fehlgeschlagen: "+e.message;render()}
 }
 async function assignment(g,type,val){
+ if(String(g[type+"_id"]||"")===String(val||""))return;
+ if(!confirmProtectedEdit(g,(type==="coach"?"Coach":"Schiedsrichter")+" ändern")){render();return}
  const people=type==="referee"?refs:coaches;
  const p=person(people,val);
  const name=fullName(p);
@@ -108,7 +116,9 @@ function planningSelect(g){
  for(const [key,label] of Object.entries(planningNames))select.add(new Option(label,key));
  select.value=g.planning_status||"offen";
  select.addEventListener("change",async()=>{
-  const next=select.value;select.disabled=true;
+  const next=select.value;
+  if(!confirmProtectedEdit(g,"Einteilungsstatus ändern")){select.value=g.planning_status||"offen";return}
+  select.disabled=true;
   try{
    Object.assign(g,await updatePlanningStatus(userId,g,next));
    render();status.textContent="Einteilungsstatus gespeichert: "+planningNames[next]+".";
