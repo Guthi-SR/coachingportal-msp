@@ -116,7 +116,9 @@ function extractBfvVenue(html, fixture){
    const gameDescription=look.slice(0,look.indexOf("Zum Spiel"));
    if(!gameDescription.includes(fixture.home)||!gameDescription.includes(fixture.away))continue;
    if(!(/\d/.test(game[2]) && /^[A-Za-zÄÖÜäöüß /.-]+$/.test(game[2].replace(/\d+/g,""))))continue;
-   return compact(game[1])+" | "+compact(game[2])+" | "+game[3]+" "+compact(game[4]);
+   const city=compact(game[4].split(/\s+(?:Landesliga|Kreisklasse|Kreisliga|Bezirksliga|Regionalliga|Bayernliga|Oberliga|Nächste Spiele|Mehr anzeigen|Sa\.\.|So\.\.|Mo\.\.|Di\.\.|Mi\.\.|Do\.\.|Fr\.\.)\b/i)[0]);
+   if(!city||city.length>50)return "";
+   return compact(game[1])+" | "+compact(game[2])+" | "+game[3]+" "+city;
  }
  return "";
 }
