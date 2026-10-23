@@ -94,6 +94,18 @@ function confirmProtectedEdit(g,description){
  if(!attached)return true;
  return confirm("ACHTUNG: Für dieses Spiel liegt bereits ein Beobachtungsbogen vor.\\n\\n"+description+"\\n\\nDer bestehende Bogen bleibt unverändert und wird NICHT automatisch neu zugeordnet.\\n\\nÄnderung als Administrator ausdrücklich durchführen?");
 }
+async function editVenue(g){
+ const address=prompt("Spielstätte bearbeiten: vollständige Adresse eingeben. Das Navigationsziel entspricht immer der Spielstätte.",g.venue||"");
+ if(address===null)return;
+ const value=address.trim();if(!value){status.textContent="Bitte eine Adresse eingeben.";return}
+ if(value===String(g.venue||"").trim())return;
+ const reason=protectedReason(g,"Spielstätte ändern");if(reason===null)return;
+ const patch={venue:value,venue_route_address:null,planned_one_way_km:null,route_origin:null,route_destination:null,route_checked_at:null};
+ if(g.kilometers_source==="route"){patch.kilometers_text=null;patch.kilometers_source="manual"}
+ if(reason)patch.protected_change_reason=reason;
+ try{Object.assign(g,await updateGame(userId,g.game_key,patch));render();status.textContent="Spielstätte gespeichert. Navigationsziel automatisch übernommen."}
+ catch(e){status.textContent="Spielstätte konnte nicht gespeichert werden: "+e.message}
+}
 async function change(g,patch){
  const reason=protectedReason(g,"Spieldaten ändern");if(reason===null)return;if(reason)patch.protected_change_reason=reason;
  try{const updated=await updateGame(userId,g.game_key,patch);Object.assign(g,updated);render();status.textContent="Änderung gespeichert."}
@@ -248,6 +260,7 @@ function mobileGameCard(g){
  details.addEventListener("toggle",()=>{if(details.open)openCardKeys.add(g.game_key);else openCardKeys.delete(g.game_key)});
  const inner=mobileElement("div","mobile-card-details");
  inner.append(mobileField("Spielkennung",g.game_key),mobileField("Spielstätte",g.venue||"Nicht hinterlegt"));
+ const venueEditMobile=mobileElement("button","","Spielstätte bearbeiten");venueEditMobile.type="button";venueEditMobile.onclick=()=>editVenue(g);inner.append(venueEditMobile);
  const planField=mobileElement("div","mobile-detail-field");planField.append(mobileElement("label","","Einteilungsstatus"),planningSelect(g));inner.append(planField);
  for(const type of ["referee","coach"]){
   const isRef=type==="referee";
@@ -363,7 +376,7 @@ function render(){
   del.type="button";del.textContent="Spiel löschen";
   del.setAttribute("aria-label","Spiel "+g.game_key+" löschen");
   del.onclick=()=>deleteGame(g,del);
-  actionCell.append(del);row.append(actionCell);tbody.append(row);mobileList.append(mobileGameCard(g))
+  const editBtn=document.createElement("button");editBtn.type="button";editBtn.textContent="Spiel bearbeiten";editBtn.onclick=()=>editVenue(g);actionCell.append(editBtn,del);row.append(actionCell);tbody.append(row);mobileList.append(mobileGameCard(g))
  }
  if(!visible.length)mobileList.append(mobileElement("p","mobile-card-empty","Keine Spiele für diesen Filter gefunden."));
  status.textContent=games.length?games.length+" Spiel(e) vorhanden.":"Noch keine Spiele vorhanden.";
