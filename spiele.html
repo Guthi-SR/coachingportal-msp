@@ -82,7 +82,14 @@ function person(people,id){return people.find(x=>x.id===id||x.name===id)}
 function fullName(p){return p?.name||[p?.first,p?.last].filter(Boolean).join(" ")||""}
 function cell(row,value){const td=document.createElement("td");td.textContent=value||"–";row.append(td);return td}
 function protectedGame(g){return !!(g.pdf_id||g.received_at||docs.some(d=>d.game_key===g.game_key))}
-function protectedReason(g,description){\n if(!protectedGame(g))return "";\n const reason=prompt("GESCHÜTZTES SPIEL: "+description+"\\nBeobachtungsbogen vorhanden. Bitte begründe die Änderung (mindestens 10 Zeichen). Der Bogen bleibt unverändert.");\n if(!reason||reason.trim().length<10){status.textContent="Änderung abgebrochen: Begründung mit mindestens 10 Zeichen erforderlich.";return null}\n if(!confirm("Geschütztes Spiel wirklich ändern? Der vorhandene Bogen bleibt unverändert."))return null;\n return reason.trim();\n}\nfunction confirmProtectedEdit(g,description){
+function protectedReason(g,description){
+ if(!protectedGame(g))return "";
+ const reason=prompt("GESCHÜTZTES SPIEL: "+description+"\\nBeobachtungsbogen vorhanden. Bitte begründe die Änderung (mindestens 10 Zeichen). Der Bogen bleibt unverändert.");
+ if(!reason||reason.trim().length<10){status.textContent="Änderung abgebrochen: Begründung mit mindestens 10 Zeichen erforderlich.";return null}
+ if(!confirm("Geschütztes Spiel wirklich ändern? Der vorhandene Bogen bleibt unverändert."))return null;
+ return reason.trim();
+}
+function confirmProtectedEdit(g,description){
  const attached=!!(g.pdf_id||g.received_at||docs.some(d=>d.game_key===g.game_key));
  if(!attached)return true;
  return confirm("ACHTUNG: Für dieses Spiel liegt bereits ein Beobachtungsbogen vor.\\n\\n"+description+"\\n\\nDer bestehende Bogen bleibt unverändert und wird NICHT automatisch neu zugeordnet.\\n\\nÄnderung als Administrator ausdrücklich durchführen?");
