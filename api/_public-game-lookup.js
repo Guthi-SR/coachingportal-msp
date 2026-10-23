@@ -85,7 +85,7 @@ function fixtureFromTeamPage(html,id,url){
     if(hh>23||mm>59)continue;
     const kickoff=day[4].padStart(2,"0")+":"+day[5];
     // The scores column before kick-off is a literal colon, not a final result.
-    const match=post.match(/^[\s|]*(.{3,105}?)\s*:\s*(.{3,115}?)\s*(?::\s*)?Zum Spiel\b/i);
+    const match=post.match(/^[\s|]*(.{3,105}?)\s*:\s*(.{3,115}?)\s*(?::\s*|[\uE000-\uF8FF\s]*)?Zum Spiel\b/i);
     if(!match)continue;
     const club=t=>compact(t.split(/[\uE000-\uF8FF]/)[0].replace(/[|]/g," ").replace(/\s+[^\p{L}\p{N}()\/.-]+$/gu,""));
     const home=club(match[1]),away=club(match[2]);
@@ -144,8 +144,45 @@ async function findFixtureVenue(fixture, deadline) {
  }
  return null;
 }
+// These are public TEAM SCHEDULE sources, not individually saved fixtures.
+// The first six digits of the match number are the association+league identifier.
+// One source can produce matches with many different nine-digit numbers.
+// Coverage can be extended by verified league/team sources, not by per-match entries.
+const staffelTeamSources={
+ "310089":[
+   {url:"https://www.fussball.de/mannschaft/-/team-id/01DJQATJKK000000VV0AG811VUPHCA1O",league:"Landesliga Nordwest"},
+   {url:"https://www.fussball.de/mannschaft/-/team-id/016PDSNBRC000000VV0AG811VTE5EA5R",league:"Landesliga Nordwest"}
+ ],
+ "310315":[
+   {url:"https://www.fussball.de/mannschaft/-/team-id/016PBLOQOK000000VV0AG80NVV8OQVTB",league:"Kreisklasse Gruppe 3 Würzburg"}
+ ],
+ "310133":[
+   {url:"https://www.fussball.de/mannschaft/-/team-id/016PDAD9VO000000VV0AG80NVV8OQVTB",league:"Kreisliga Rhön"}
+ ]
+};
+async function lookupKnownStaffelSchedule(id,diagnostics){
+ const sources=staffelTeamSources[id.slice(0,6)]||[];
+ diagnostics.directSources=sources.length;
+ diagnostics.directPages=0;diagnostics.directIdSeen=0;
+ for(const candidate of sources){
+   const html=await read(candidate.url,1100000,3600);
+   if(!html)continue;
+   diagnostics.directPages++;
+   if(!new RegExp("\\b"+id+"\\b").test(documentText(html)))continue;
+   diagnostics.directIdSeen++;
+   const fixture=fixtureFromTeamPage(html,id,candidate.url);
+   if(fixture){
+     return {...fixture,league:candidate.league,
+       source:"oeffentlicher-staffelspielplan",
+       note:"Direkt aus dem öffentlich zugänglichen Mannschaftsspielplan gelesen – kein fest gespeichertes Einzelspiel. Spielstätte muss separat bestätigt werden."};
+   }
+ }
+ return null;
+}
 export async function lookupIndexedFixture(id,diagnostics={}){
   diagnostics.engines=0;diagnostics.links=0;diagnostics.pages=0;diagnostics.idSeen=0;
+  const directly=await lookupKnownStaffelSchedule(id,diagnostics);
+  if(directly)return directly;
   const deadline=Date.now()+13500;
   const q='site:fussball.de/mannschaft "'+id+'"';
   const engines=[
