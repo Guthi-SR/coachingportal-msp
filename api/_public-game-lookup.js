@@ -160,6 +160,31 @@ const staffelTeamSources={
    {url:"https://www.fussball.de/mannschaft/-/team-id/016PDAD9VO000000VV0AG80NVV8OQVTB",league:"Kreisliga Rhön"}
  ]
 };
+async function directBfvVenue(fixture,teamUrl){
+ const id=new URL(teamUrl).pathname.match(/\/team-id\/([A-Za-z0-9]+)/)?.[1];
+ if(!id)return null;
+ const url="https://www.bfv.de/mannschaften/-/"+id;
+ const html=await read(url,1100000,4500);
+ if(!html)return null;
+ const text=documentText(html);
+ const [year,month,day]=fixture.date.split("-");
+ const stamp=day+"."+month+"."+year;
+ const normalized=s=>compact(s).toLocaleLowerCase("de").replace(/\s+/g," ");
+ const dateRx=new RegExp(stamp.replace(/\./g,"\\.")+"\\s*\\/\\s*"+fixture.kickoff+"\\s*Uhr","g");
+ for(const match of text.matchAll(dateRx)){
+   const slice=text.slice(match.index,match.index+750);
+   const next=slice.indexOf("Zum Spiel");
+   if(next<0||next>400)continue;
+   const teams=slice.slice(0,next);
+   if(!normalized(teams).includes(normalized(fixture.home))||!normalized(teams).includes(normalized(fixture.away)))continue;
+   const after=slice.slice(next+"Zum Spiel".length);
+   const address=after.match(/^\s*([^|]{4,115}?)\s*\|\s*([^|]{4,110}?\d[^|]{0,70}?)\s*\|\s*(\d{5})\s+([^|]{2,85}?)(?=\s+(?:Landesliga|Kreisliga|Kreisklasse|Bezirksliga|Bayernliga|Regionalliga|A-Klasse|B-Klasse|Oberliga)\b|$)/i);
+   if(!address)continue;
+   const venue=[address[1],address[2],address[3]+" "+address[4]].map(compact).join(" | ");
+   return {venue,venueSourceUrl:url};
+ }
+ return null;
+}
 async function lookupKnownStaffelSchedule(id,diagnostics){
  const sources=staffelTeamSources[id.slice(0,6)]||[];
  diagnostics.directSources=sources.length;
@@ -172,7 +197,8 @@ async function lookupKnownStaffelSchedule(id,diagnostics){
    diagnostics.directIdSeen++;
    const fixture=fixtureFromTeamPage(html,id,candidate.url);
    if(fixture){
-     return {...fixture,league:candidate.league,
+     const venue=await directBfvVenue(fixture,candidate.url);
+     return {...fixture,league:candidate.league,...(venue?{venue:venue.venue,venueSourceUrl:venue.venueSourceUrl}:{}),
        source:"oeffentlicher-staffelspielplan",
        note:"Direkt aus dem öffentlich zugänglichen Mannschaftsspielplan gelesen – kein fest gespeichertes Einzelspiel. Spielstätte muss separat bestätigt werden."};
    }
