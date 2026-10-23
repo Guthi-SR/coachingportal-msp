@@ -294,14 +294,14 @@ async function calculate(g,p,button){
  }finally{if(oldKey===selectedKey)drawCandidates();if(button)button.disabled=false}
 }
 async function autoAssignedRoute(g){
- if(!g?.coach_id||!venue(g)||!$("route-consent").checked)return;
+ if(!g?.coach_id||!venue(g)||!$("route-consent").checked)return {ok:false,error:"Coach, Ziel oder Zustimmung fehlt"};
  const p=coaches.find(c=>String(c.id)===String(g.coach_id));
- if(!p)return;
+ if(!p)return {ok:false,error:"Coach nicht in Stammdaten gefunden"};
  const key=routeKey(g,p);
- if(autoRouteBusy.has(key))return;
+ if(autoRouteBusy.has(key))return {ok:false,error:"Berechnung läuft bereits"};
  const alreadyValid=g.route_destination===venue(g)&&g.planned_one_way_km!=null&&g.route_origin;
- if(alreadyValid&&g.kilometers_text)return;
- if(g.kilometers_text&&g.kilometers_source!=="route")return; // Never override manual entries.
+ if(alreadyValid&&g.kilometers_text)return {ok:true};
+ if(g.kilometers_text&&g.kilometers_source!=="route")return {ok:true}; // Never override manual entries.
  autoRouteBusy.add(key);
  try{
   let r=results.get(key);
@@ -313,13 +313,15 @@ async function autoAssignedRoute(g){
    if(!response.ok)throw Error(r.error||"Route konnte nicht berechnet werden.");
    results.set(key,r);
   }
-  if(String(g.coach_id)!==String(p.id)||venue(g)!==r.destination)return;
+  if(String(g.coach_id)!==String(p.id)||venue(g)!==r.destination)return {ok:false,error:"Coach oder Spielstätte geändert"};
   const patch={planned_one_way_km:r.oneWayKm,route_origin:r.origin,route_destination:r.destination,route_checked_at:new Date().toISOString(),
     kilometers_text:Number(r.roundTripKm).toLocaleString("de-DE",{maximumFractionDigits:1}),kilometers_source:"route"};
   Object.assign(g,await updateGame(ownerId,g.game_key,patch));
   if(selectedKey===g.game_key){drawEditor();note("Kilometer automatisch berechnet: "+kmVal(r.roundTripKm)+" hin und zurück.");}
+  return {ok:true};
  }catch(e){
   if(selectedKey===g.game_key)note("Automatische Kilometerberechnung: "+errorText(e));
+  return {ok:false,error:errorText(e)};
  }finally{autoRouteBusy.delete(key)}
 }
 async function approveAssignedRoute(g,p,r){
@@ -384,18 +386,20 @@ async function backfillMissingRoutes(){
  if(backfillRunning||!ownerId||!$("route-consent").checked)return;
  backfillRunning=true;
  const pending=games.filter(g=>g.coach_id&&venue(g)&&g.planned_one_way_km==null&&!g.kilometers_text);
- let done=0;
+ let done=0,success=0,failures=[];
  try{
   for(const g of pending){
    if(!$("route-consent").checked)break;
-   await autoAssignedRoute(g);
+   const outcome=await autoAssignedRoute(g);
    done++;
-   $("route-progress").textContent="Automatischer Kilometer-Nachlauf: "+done+" von "+pending.length+" geprüft.";
+   if(outcome?.ok||g.planned_one_way_km!=null)success++;
+   else failures.push(g.game_key+": "+(outcome?.error||"Strecke nicht ermittelt"));
+   $("route-progress").textContent="Kilometer-Nachlauf: "+done+"/"+pending.length+" geprüft, "+success+" gespeichert, "+failures.length+" offen.";
    if(done<pending.length)await new Promise(resolve=>setTimeout(resolve,2500));
   }
  }finally{
   backfillRunning=false;
-  if(pending.length)$("route-progress").textContent="Nachlauf: "+done+" von "+pending.length+" Spielen geprüft. Bei fehlenden Kilometern bitte die Adresse kontrollieren.";
+  if(pending.length)$("route-progress").textContent="Nachlauf beendet: "+success+" von "+done+" gespeichert; "+failures.length+" offen."+(failures.length?" Fehler: "+failures.slice(0,8).join(" | "):"");
  }
 }
 async function reload(){
