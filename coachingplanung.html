@@ -124,6 +124,9 @@ import{sb,requireAdmin,dateDE,updateGame,updatePlanningStatus}from"/portal-workf
 import{cloudPeople}from"/portal-people.js";
 const $=id=>document.getElementById(id);
 let ownerId="",games=[],coaches=[],selectedKey="",pendingAll=false,runId=0;
+const autoRouteBusy=new Set();
+const consentKey=()=> "msp-route-consent-"+ownerId;
+$("route-consent").addEventListener("change",()=>{localStorage.setItem(consentKey(),$("route-consent").checked?"yes":"no");if($("route-consent").checked)void autoAssignedRoute(selected())});
 const results=new Map();
 const statusNames={offen:"Offen",voreingeteilt:"Voreingeteilt",eingeteilt:"Eingeteilt",bestaetigt:"Bestätigt"};
 const dashboardFilter=new URLSearchParams(location.search).get("status")||"alle";
@@ -155,7 +158,7 @@ function drawList(){
   const d=elem("strong","",dateDE(g.match_date));const meta=elem("div","");
   meta.append(elem("strong","",(g.home||"Heim")+" – "+(g.away||"Gast")),elem("small","",g.league||""));
   const pill=elem("span","pill "+(g.planning_status||"offen"),statusNames[g.planning_status]||"Offen");
-  b.append(d,meta,pill);b.addEventListener("click",()=>{selectedKey=g.game_key;drawList();drawEditor()});list.append(b);
+  b.append(d,meta,pill);b.addEventListener("click",()=>{selectedKey=g.game_key;drawList();drawEditor();void autoAssignedRoute(g)});list.append(b);
  }
  $("list-status").textContent=shown.length+" Spiele angezeigt."+(filter==="alle"?"":" Status: "+statusNames[filter]+", ohne Testspiele.")+(all?"":" Vergangene Spiele sind ausgeblendet.");
  if(!shown.length){list.append(elem("div","muted",filter==="alle"?"Keine kommenden Spiele. Du kannst ein neues Spiel anlegen oder vergangene Spiele einblenden.":"Keine Spiele mit diesem Status im gewählten Zeitraum. Ändere den Filter oder blende vergangene Spiele ein."));}
@@ -190,7 +193,7 @@ async function changeStatus(next){
  try{
   const updated=await updatePlanningStatus(ownerId,g,next);
   Object.assign(g,updated);
-  drawList();drawEditor();
+  drawList();drawEditor();void autoAssignedRoute(g);
   note("Status gespeichert: "+statusNames[next]+". "+(next==="eingeteilt"||next==="bestaetigt"?"Kilometer wurden nur übernommen, wenn eine bestätigte Route vorlag und das Feld frei war.":""));
  }catch(e){note("Status konnte nicht gespeichert werden: "+errorText(e));drawEditor()}
  finally{$("status-select").disabled=false}
@@ -206,7 +209,7 @@ $("save-destination").addEventListener("click",async()=>{
   const patch={venue_route_address:dest&&dest!==String(g.venue||"").trim()?dest:null,planned_one_way_km:null,route_origin:null,route_destination:null,route_checked_at:null};
   if(g.kilometers_source==="route"){patch.kilometers_text=null;patch.kilometers_source="manual"}
   Object.assign(g,await updateGame(ownerId,g.game_key,patch));
-  clearResults(g.game_key);drawEditor();note("Navigationsziel gespeichert. Die Strecken können jetzt neu berechnet werden.");
+  clearResults(g.game_key);drawEditor();note("Navigationsziel gespeichert.");void autoAssignedRoute(g);
  }catch(e){note("Fehler: "+errorText(e))}
  finally{$("save-destination").disabled=false}
 });
@@ -280,6 +283,35 @@ async function calculate(g,p,button){
   results.set(requestKey,{error:errorText(e)});note("Route für "+coachName(p)+": "+errorText(e));
  }finally{if(oldKey===selectedKey)drawCandidates();if(button)button.disabled=false}
 }
+async function autoAssignedRoute(g){
+ if(!g?.coach_id||!venue(g)||!$("route-consent").checked)return;
+ const p=coaches.find(c=>String(c.id)===String(g.coach_id));
+ if(!p)return;
+ const key=routeKey(g,p);
+ if(autoRouteBusy.has(key))return;
+ const alreadyValid=g.route_destination===venue(g)&&g.planned_one_way_km!=null&&g.route_origin;
+ if(alreadyValid&&g.kilometers_text)return;
+ if(g.kilometers_text&&g.kilometers_source!=="route")return; // Never override manual entries.
+ autoRouteBusy.add(key);
+ try{
+  let r=results.get(key);
+  if(!r?.oneWayKm){
+   const {data:{session}}=await sb.auth.getSession();
+   if(!session?.access_token)throw Error("Bitte neu anmelden.");
+   const response=await fetch("/api/coach-route",{method:"POST",headers:{"content-type":"application/json",Authorization:"Bearer "+session.access_token},body:JSON.stringify({gameKey:g.game_key,coachId:String(p.id)})});
+   r=await response.json();
+   if(!response.ok)throw Error(r.error||"Route konnte nicht berechnet werden.");
+   results.set(key,r);
+  }
+  if(String(g.coach_id)!==String(p.id)||venue(g)!==r.destination)return;
+  const patch={planned_one_way_km:r.oneWayKm,route_origin:r.origin,route_destination:r.destination,route_checked_at:new Date().toISOString(),
+    kilometers_text:Number(r.roundTripKm).toLocaleString("de-DE",{maximumFractionDigits:1}),kilometers_source:"route"};
+  Object.assign(g,await updateGame(ownerId,g.game_key,patch));
+  if(selectedKey===g.game_key){drawEditor();note("Kilometer automatisch berechnet: "+kmVal(r.roundTripKm)+" hin und zurück.");}
+ }catch(e){
+  if(selectedKey===g.game_key)note("Automatische Kilometerberechnung: "+errorText(e));
+ }finally{autoRouteBusy.delete(key)}
+}
 async function approveAssignedRoute(g,p,r){
  if(String(g.coach_id)!==String(p.id))return;
  if(!confirm("Ist das Karten-Ziel richtig?\\n\\n"+r.destinationResult+"\\n\\nEinfache Strecke: "+kmVal(r.oneWayKm)+"\\n\\nMit OK wird die Route beim bereits eingeteilten Coach gespeichert."))return;
@@ -306,6 +338,7 @@ async function assignCoach(g,p){
   route_origin:confirmed?r.origin:null,route_destination:confirmed?r.destination:null,route_checked_at:confirmed?new Date().toISOString():null};
  if(g.kilometers_source==="route"){patch.kilometers_text=null;patch.kilometers_source="manual"}
  try{Object.assign(g,await updateGame(ownerId,g.game_key,patch));drawList();drawEditor();
+  void autoAssignedRoute(g);
   note(coachName(p)+" ist voreingeteilt."+(confirmed?" Einfache Strecke gespeichert. Bei „Eingeteilt“ wird die Gesamtfahrt übernommen, sofern das Kilometerfeld frei ist.":" Ohne bestätigte Route bleibt das Kilometerfeld unverändert."));
  }catch(e){note("Einteilung fehlgeschlagen: "+errorText(e))}
 }
@@ -344,13 +377,14 @@ async function reload(){
   if(error)throw error;
   games=data||[];
   if(!games.some(g=>g.game_key===selectedKey))selectedKey="";
-  drawList();drawEditor();note("Spiele aktualisiert.");
+  drawList();drawEditor();void autoAssignedRoute(selected());note("Spiele aktualisiert.");
  }catch(e){note("Spiele konnten nicht geladen werden: "+errorText(e))}
  finally{$("reload").disabled=false}
 }
 try{
  const{user}=await requireAdmin();
  ownerId=user.id;
+ $("route-consent").checked=localStorage.getItem(consentKey())==="yes";
  coaches=(await cloudPeople(ownerId,"coach")).sort((a,b)=>collator.compare(coachName(a),coachName(b)));
  await reload();
 }catch(e){$("list-status").textContent="Zugriff oder Daten konnten nicht geladen werden: "+errorText(e);note("Bitte als Administrator anmelden.")}
