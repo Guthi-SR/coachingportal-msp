@@ -1,4 +1,4 @@
-const FIELDS=["home","away","date","kickoff","league","venue","competition","age"];
+const FIELDS=["home","away","date","kickoff","league","venue","competition","age","spieltag","spielgebiet","staffelBezeichnung","staffelKurz"];
 export default async function handler(req,res) {
   res.setHeader("Cache-Control","no-store");
   if(req.method!=="GET") return res.status(405).json({error:"Methode nicht erlaubt."});
@@ -15,6 +15,10 @@ export default async function handler(req,res) {
       date:"2026-10-24",
       kickoff:"15:00",
       league:"Kreisliga Rhön",
+      spieltag:"15",
+      spielgebiet:"Kreis Rhön",
+      staffelBezeichnung:"Kreisliga Rhön",
+      staffelKurz:"KL Rhön",
       venue:"Sportgelände Rottershausen, Platz 1 | Siebengärten 27 | 97714 Oerlenbach",
       source:"einzeln-verifiziert",
       sourceUrl:"https://www.bfv.de/mannschaften/-/016PCGHMG4000000VV0AG80NVV8OQVTB",
