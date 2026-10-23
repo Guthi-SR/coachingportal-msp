@@ -1,3 +1,4 @@
+import {lookupIndexedFixture} from "./_public-game-lookup.js";
 const FIELDS=["home","away","date","kickoff","league","venue","competition","age","spieltag","spielgebiet","staffelBezeichnung","staffelKurz"];
 export default async function handler(req,res) {
   res.setHeader("Cache-Control","no-store");
@@ -27,7 +28,9 @@ export default async function handler(req,res) {
   };
   if(!endpoint) {
     if(verifiedGames[id]) return res.status(200).json({found:true,id,...verifiedGames[id]});
-    return res.status(503).json({found:false,id,error:"Noch kein autorisierter BFV-Datenzugang eingerichtet. Für diese Spielkennung liegt kein einzeln verifizierter Eintrag vor. Bitte Spieldaten als Text übernehmen oder manuell erfassen."});
+    const indexed=await lookupIndexedFixture(id);
+    if(indexed)return res.status(200).json(indexed);
+    return res.status(503).json({found:false,id,error:"Für diese Kennung konnte aus den öffentlich auffindbaren Spielseiten kein eindeutiges Spiel ermittelt werden. Bitte die Spieldaten als Text einfügen; eine offizielle BFV-Schnittstelle ist nicht eingerichtet."});
   }
   let url;
   try {
