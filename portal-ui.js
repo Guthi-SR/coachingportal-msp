@@ -115,6 +115,11 @@ if(nav){
    if(location.pathname==="/beobachtungsboegen.html")link.setAttribute("aria-current","page");
    capture.insertAdjacentElement("afterend",link);
  }
+ if(!nav.querySelector('a[href="/textvorlagen.html"]')){
+  const link=document.createElement("a");link.href="/textvorlagen.html";link.textContent="Textvorlagen";
+  if(location.pathname==="/textvorlagen.html")link.setAttribute("aria-current","page");
+  nav.append(link);
+ }
  const path=location.pathname;
  const type=path.startsWith("/schiedsrichter")?"referee":path.startsWith("/coach-beobachter")?"coach":null;
  if(type){
