@@ -191,6 +191,26 @@ async function directBfvVenue(fixture,teamUrl){
  }
  return null;
 }
+async function gameSpecificBfvVenue(html,id,fixture){
+ // Derive the actual FUSSBALL.DE match identity from the row carrying the
+ // exact nine-digit number. The BFV shares the game's alphanumeric ID.
+ const offset=html.indexOf(id);
+ if(offset<0)return null;
+ const block=html.slice(offset,offset+6500);
+ const matches=[...block.matchAll(/href=["']https:\/\/www\.fussball\.de\/spiel\/[^"']+\/spiel\/([A-Z0-9]{20,40})["']/g)];
+ const gameId=matches[0]?.[1];
+ if(!gameId)return null;
+ const url="https://www.bfv.de/ergebnisse/spiel/-/"+gameId;
+ const page=await read(url,800000,4500);
+ if(!page)return null;
+ const txt=documentText(page);
+ const match=txt.match(/\bAdresse\s+([^|]{4,110})\s*\|\s*([^|]{4,115})\s*\|\s*(\d{5})\s+([^|]{2,85}?)(?=\s+(?:Route planen|Spielnummer|Schiedsrichter)\b)/i);
+ if(!match)return null;
+ const venue=[match[1],match[2],match[3]+" "+match[4]].map(compact).join(" | ");
+ // A ground must have a genuine postal address; never substitute club HQ.
+ if(!/\d/.test(match[2]))return null;
+ return {venue,venueSourceUrl:url};
+}
 async function lookupKnownStaffelSchedule(id,diagnostics){
  const sources=staffelTeamSources[id.slice(0,6)]||[];
  diagnostics.directSources=sources.length;
@@ -207,7 +227,7 @@ async function lookupKnownStaffelSchedule(id,diagnostics){
    diagnostics.directIdSeen++;
    const fixture=fixtureFromTeamPage(html,id,candidate.url);
    if(fixture){
-     const venue=await directBfvVenue(fixture,candidate.url);
+     const venue=await gameSpecificBfvVenue(html,id,fixture)||await directBfvVenue(fixture,candidate.url);
      return {...fixture,league:candidate.league,...(venue?{venue:venue.venue,venueSourceUrl:venue.venueSourceUrl}:{}),
        source:"oeffentlicher-staffelspielplan",
        note:venue?"Spiel und Navi-Adresse automatisch aus öffentlichen FUSSBALL.DE- und BFV-Spielplänen übernommen. Angaben vor dem Speichern prüfen.":"Spiel automatisch aus öffentlichem Mannschaftsspielplan übernommen. Vollständige Spielstättenadresse noch nicht bestätigt."};
