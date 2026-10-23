@@ -44,9 +44,13 @@ export default async function handler(req,res) {
   };
   if(!endpoint) {
     if(verifiedGames[id]) return res.status(200).json({found:true,id,...verifiedGames[id]});
-    const indexed=await lookupIndexedFixture(id);
+    const diagnostics={};
+    let indexed=null;
+    try{indexed=await lookupIndexedFixture(id,diagnostics)}
+    catch(e){console.error("Public game lookup failed:",e?.message||"unknown")}
     if(indexed)return res.status(200).json(indexed);
-    return res.status(503).json({found:false,id,error:"Für diese Kennung konnte aus den öffentlich auffindbaren Spielseiten kein eindeutiges Spiel ermittelt werden. Bitte die Spieldaten als Text einfügen; eine offizielle BFV-Schnittstelle ist nicht eingerichtet."});
+    const reason=!diagnostics.engines?"Suchquellen nicht abgefragt.":!diagnostics.links?"Suchdienste lieferten keine passenden Spielseiten.":!diagnostics.pages?"Gefundene Spielseiten konnten vom Server nicht geöffnet werden.":!diagnostics.idSeen?"Abgerufene Spielseiten enthalten die Kennung nicht.":"Spielseite vorhanden, aber Spieldaten konnten nicht eindeutig ausgelesen werden.";
+    return res.status(503).json({found:false,id,error:"Automatische Suche fehlgeschlagen: "+reason+" Ohne offizielle BFV-Schnittstelle bitte die Spieldaten als Text einfügen.",lookupDiagnostics:diagnostics});
   }
   let url;
   try {
