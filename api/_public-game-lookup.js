@@ -33,7 +33,7 @@ function indexedLinks(xml) {
    let val=decode(m[1]);
    try {
      const wrap=new URL(val,"https://html.duckduckgo.com");
-     if(wrap.hostname==="duckduckgo.com"||wrap.hostname==="html.duckduckgo.com")val=wrap.searchParams.get("uddg")||"";
+     if(wrap.hostname==="duckduckgo.com"||wrap.hostname==="html.duckduckgo.com"||wrap.hostname==="www.google.com"||wrap.hostname==="google.com")val=wrap.searchParams.get("uddg")||wrap.searchParams.get("q")||wrap.searchParams.get("url")||val;
    }catch{}
    const url=cleanUrl(val);if(url)found.push(url);
  }
@@ -85,9 +85,9 @@ function fixtureFromTeamPage(html,id,url){
     if(hh>23||mm>59)continue;
     const kickoff=day[4].padStart(2,"0")+":"+day[5];
     // The scores column before kick-off is a literal colon, not a final result.
-    const match=post.match(/^[\s|]*([\p{L}(\[][^:]{2,105}?)\s*:\s*([\p{L}(\[][^:]{2,115}?)(?=\s+Zum Spiel|\s+(?:Sonntag|Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag),|\s*:\s*|$)/u);
+    const match=post.match(/^[\\s|]*([^:]{3,120}?)\\s*:\\s*([^:]{3,120})/u);
     if(!match)continue;
-    const club=t=>compact(t.replace(/[|]/g," ").replace(/\s+[^\p{L}\p{N}()\/.-]+$/gu,""));
+    const club=t=>compact(t.split(/[\uE000-\uF8FF]/)[0].replace(/[|]/g," ").replace(/\s+[^\p{L}\p{N}()\/.-]+$/gu,""));
     const home=club(match[1]),away=club(match[2]);
     if(home.length<3||away.length<3||home.length>95||away.length>95)continue;
     // Never infer a pitch merely from the home club; fixtures can be relocated.
@@ -143,7 +143,7 @@ async function findFixtureVenue(fixture, deadline) {
  return null;
 }
 export async function lookupIndexedFixture(id){
-  const deadline=Date.now()+15500;
+  const deadline=Date.now()+13500;
   const q='site:fussball.de/mannschaft "'+id+'"';
   const engines=[
     'https://www.google.com/search?num=10&q='+encodeURIComponent(q),
