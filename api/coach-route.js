@@ -78,10 +78,19 @@ export default async function handler(req,res){
   if(hit&&Date.now()-hit.time<12*3600000)return json(res,200,hit.value);
   const start=await geocode(origin);
   if(!start||!placeMatchesOrigin(start,coach))return json(res,422,{error:"Wohnadresse nicht eindeutig gefunden. Bitte Coach-Stammdaten prüfen."});
-  let finish=await geocode(destination+", Deutschland");
-  if(!finish&&!game.venue_route_address){
-    const compact=destination.replace(/,?\s*Platz\s*\d+\s*$/i,"").trim();
-    if(compact&&compact!==destination)finish=await geocode(compact+", Deutschland");
+  // Try normalized German address variants without appending "Deutschland" twice.
+  const cleanDestination=destination.replace(/[,\s]+Deutschland\s*$/i,"").trim();
+  const candidates=[cleanDestination];
+  const commaAddress=cleanDestination.match(/^(.+?\s+\d+[a-z]?)\s*,?\s*(\d{5})\s+(.+)$/i);
+  if(commaAddress)candidates.push(commaAddress[1]+", "+commaAddress[2]+" "+commaAddress[3]);
+  const normalized=cleanDestination.replace(/straße/gi,"str.").replace(/strasse/gi,"str.");
+  if(normalized!==cleanDestination)candidates.push(normalized);
+  const compact=cleanDestination.replace(/,?\s*Platz\s*\d+\s*$/i,"").trim();
+  if(compact&&compact!==cleanDestination)candidates.push(compact);
+  let finish=null;
+  for(const candidate of [...new Set(candidates)]){
+    finish=await geocode(candidate+", Deutschland");
+    if(finish)break;
   }
   if(!finish)return json(res,422,{error:"Spielstätte nicht eindeutig gefunden. Bitte im Feld „Navigationsziel“ eine vollständige Sportplatz-Adresse eingeben und speichern."});
   // A municipality-only result is not precise enough for billing.
