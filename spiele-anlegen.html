@@ -4,13 +4,15 @@
  if(existingCloud){$("status").textContent="⚠️ Doppeltes Spiel verhindert: Die Spielkennung "+game.id+" existiert bereits in der Spieleverwaltung. Es wurde kein weiteres Spiel angelegt.";return}
  const personLists=await Promise.all([cloudPeople(user.id,"referee"),cloudPeople(user.id,"coach")]);
  const ref=personLists[0].find(p=>p.id===game.referee),coach=personLists[1].find(p=>p.id===game.coach);
+ let resolvedVenue=game.venue||null,venueWarning="";
+ if(resolvedVenue){try{const resp=await fetch("/api/venue-resolve?venue="+encodeURIComponent(resolvedVenue));if(resp.ok){const info=await resp.json();if(info.resolved&&info.address)resolvedVenue=info.address;else venueWarning="Spielstätte nicht eindeutig erkannt: Bitte Adresse in Spiele bearbeiten prüfen."}else venueWarning="Spielstättenadresse konnte nicht überprüft werden."}catch(e){venueWarning="Adressdienst nicht erreichbar; Adresse bitte prüfen."}}
  const {error:writeErr}=await sb.from("portal_games").insert({
   owner_id:user.id,game_key:game.id,match_date:game.date,kickoff:game.kickoff||null,is_test:game.isTest,kilometers_text:game.kilometersText||null,
-  home:game.home,away:game.away,league:game.league||null,venue:game.venue||null,
+  home:game.home,away:game.away,league:game.league||null,venue:resolvedVenue,
   referee_id:game.referee||null,referee_name:ref?.name||null,referee_email:ref?.mail||ref?.email||null,
   coach_id:game.coach||null,coach_name:coach?.name||null,coach_first_name:coach?.first||null,
   coach_email:coach?.mail||coach?.email||null,updated_at:new Date().toISOString()
  });
  if(writeErr){if(writeErr.code==="23505"){$("status").textContent="⚠️ Doppeltes Spiel verhindert: Die Spielkennung "+game.id+" existiert bereits. Es wurde nichts doppelt gespeichert.";return}throw writeErr;}
- localStorage.setItem(key,JSON.stringify(games));window.location.href=new URLSearchParams(location.search).get("return")==="planung"?"/coachingplanung.html":"/spiele.html";
+ localStorage.setItem(key,JSON.stringify(games));if(venueWarning){$("status").textContent="Spiel angelegt. "+venueWarning;return}window.location.href=new URLSearchParams(location.search).get("return")==="planung"?"/coachingplanung.html":"/spiele.html";
 }catch(error){$("status").textContent="Speichern in Supabase fehlgeschlagen: "+error.message;}}); $("search").addEventListener("click",async()=>{const id=normalizeGameId($("game-id").value);$("game-id").value=id;if(!/^\d{9}$/.test(id)){$("search-result").textContent="Bitte eine neunstellige Spielkennung eingeben.";return}$("search").disabled=true;$("search-result").textContent="Suche nach Spiel "+id+" läuft …";try{const response=await fetch("/api/spielsuche?id="+encodeURIComponent(id),{headers:{Accept:"application/json"}});const data=await response.json();if(!response.ok||!data.found)throw new Error(data.error||"Keine bestätigten Spieldaten gefunden.");for(const [field,value] of Object.entries({"home":data.home,"away":data.away,"match-date":data.date,"kickoff":data.kickoff,"venue":data.venue,"custom-league":data.league})){if(value&&$(field))$(field).value=value}$("search-result").textContent="Spiel gefunden: "+data.home+" – "+data.away+". Bitte Angaben prüfen."; }catch(error){$("search-result").textContent="Keine bestätigte automatische Zuordnung: "+error.message}finally{$("search").disabled=false}});$("status").textContent="Spieldaten eingeben und mit „Spiel anlegen“ speichern."}}</script><script type="module" src="/portal-ui.js"></script></html>
