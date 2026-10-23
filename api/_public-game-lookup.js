@@ -85,7 +85,7 @@ function fixtureFromTeamPage(html,id,url){
     if(hh>23||mm>59)continue;
     const kickoff=day[4].padStart(2,"0")+":"+day[5];
     // The scores column before kick-off is a literal colon, not a final result.
-    const match=post.match(/^[\\s|]*([^:]{3,120}?)\\s*:\\s*([^:]{3,120})/u);
+    const match=post.match(/^[\s|]*([^:]{3,120}?)\s*:\s*([^:]{3,120})/u);
     if(!match)continue;
     const club=t=>compact(t.split(/[\uE000-\uF8FF]/)[0].replace(/[|]/g," ").replace(/\s+[^\p{L}\p{N}()\/.-]+$/gu,""));
     const home=club(match[1]),away=club(match[2]);
