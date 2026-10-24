@@ -65,7 +65,8 @@ try{
    catch(e){status.textContent="Löschen fehlgeschlagen: "+e.message;del.disabled=false}
   };
   editDetails.append(del);
-  tr.append(tdActions);rows.append(tr);\n  filterRecords.push({row:tr,ref:normalize(values[2]),coach:normalize(values[3]),date:dateValue(d,g)});
+  tr.append(tdActions);rows.append(tr);
+  filterRecords.push({row:tr,ref:normalize(values[2]),coach:normalize(values[3]),date:dateValue(d,g)});
  }
  for(const [select,key] of [[filterRef,"ref"],[filterCoach,"coach"]]){const names=[...new Set(filterRecords.map(r=>r[key]).filter(v=>v&&v!=="–"))].sort((a,b)=>a.localeCompare(b,"de"));for(const name of names){const label=filterRecords.find(r=>r[key]===name)?.row?.children[key==="ref"?2:3]?.textContent||name;select.add(new Option(label,name))}}
  applyFilters();status.textContent=docs.length?docs.length+" Beobachtungsbogen/-bögen vorhanden.":"Noch keine Bögen erfasst.";
