@@ -1,4 +1,4 @@
-<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Coach-Beobachter – Coachingportal MSP</title><style>body{margin:0;font:16px system-ui;background:#f3f6fa;color:#142b46}header{background:#142b46;color:white;padding:22px}main{padding:24px;max-width:1000px;margin:auto}a{color:#142b46}section{background:white;border:1px solid #dce5ee;border-radius:12px;padding:24px}table{width:100%;border-collapse:collapse}td,th{text-align:left;border-bottom:1px solid #ddd;padding:12px}.portal-shell{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 90px)}.portal-sidebar{background:#fff;border-right:1px solid #dce5ee;padding:22px 14px;display:flex;flex-direction:column;gap:4px}.portal-sidebar strong{padding:10px 12px}.portal-sidebar a{display:block;padding:12px;color:#142b46;text-decoration:none;border-radius:8px}.portal-sidebar a:hover{background:#f0f4f9}.portal-sidebar a[aria-current="page"]{background:#e8f0f8;font-weight:700}.portal-content{min-width:0}.portal-content main{max-width:1050px;margin:auto;padding:22px}@media(max-width:650px){.portal-shell{grid-template-columns:190px minmax(0,1fr)}.portal-sidebar{padding:12px 6px}.portal-sidebar a{padding:10px 6px;font-size:13px}.portal-content main{padding:12px}}.person-sort{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:14px 0}.person-sort label{font-weight:600}.person-sort select{max-width:100%;padding:10px;border:1px solid #b9c8d7;border-radius:8px;background:white;font:inherit}@media(max-width:700px){html,body{width:100%;max-width:100%;overflow-x:hidden}*,*::before,*::after{box-sizing:border-box}main,section,article,.shell,.content{min-width:0;max-width:100%}img,video,iframe,canvas{max-width:100%;height:auto}input,select,textarea,button{max-width:100%}table{max-width:100%}pre{max-width:100%;overflow-x:auto}nav{max-width:100%}}</style><header><h1>Coachingportal MSP</h1></header><div class="portal-shell"><nav class="portal-sidebar" aria-label="Hauptmenü"><strong>Menü</strong><a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html">Spiele</a><a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html" aria-current="page">Coach-Beobachter</a></nav><div class="portal-content"><main><p><a href="/">← Startseite</a> · <a href="/coach-beobachter-verwaltung.html">Coach-Beobachterverwaltung</a></p><section><h2>Coach-Beobachter</h2><p id="status">Zugriff wird geprüft …</p><div class="person-sort"><label for="coach-sort">Alphabetisch sortieren nach:</label><select id="coach-sort" aria-label="Coach-Beobachter sortieren"><option value="last">Nachname (A–Z)</option><option value="first">Vorname (A–Z)</option></select></div><table id="table" hidden><thead><tr><th>Name</th><th>E-Mail</th></tr></thead><tbody id="rows"></tbody></table><p id="hint" hidden>Neue Coach-Beobachter kannst du unter „Coach-Beobachterverwaltung“ erfassen.</p></section></main></div></div><script type="module">
+<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Coach-Beobachter – Coachingportal MSP</title><style>body{margin:0;font:16px system-ui;background:#f3f6fa;color:#142b46}header{background:#142b46;color:white;padding:22px}main{padding:24px;max-width:1000px;margin:auto}a{color:#142b46}section{background:white;border:1px solid #dce5ee;border-radius:12px;padding:24px}table{width:100%;border-collapse:collapse}td,th{text-align:left;border-bottom:1px solid #ddd;padding:12px}.portal-shell{display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 90px)}.portal-sidebar{background:#fff;border-right:1px solid #dce5ee;padding:22px 14px;display:flex;flex-direction:column;gap:4px}.portal-sidebar strong{padding:10px 12px}.portal-sidebar a{display:block;padding:12px;color:#142b46;text-decoration:none;border-radius:8px}.portal-sidebar a:hover{background:#f0f4f9}.portal-sidebar a[aria-current="page"]{background:#e8f0f8;font-weight:700}.portal-content{min-width:0}.portal-content main{max-width:1050px;margin:auto;padding:22px}@media(max-width:650px){.portal-shell{grid-template-columns:190px minmax(0,1fr)}.portal-sidebar{padding:12px 6px}.portal-sidebar a{padding:10px 6px;font-size:13px}.portal-content main{padding:12px}}.ref-sort{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:14px 0}.ref-sort label{font-weight:600}.ref-sort select{max-width:100%;padding:10px;border:1px solid #b9c8d7;border-radius:8px;background:white;font:inherit} .ref-cards{display:grid;gap:12px}.ref-card{border:1px solid #dce5ee;border-radius:12px;padding:12px;background:#f9fbfd;min-width:0}.ref-card summary{cursor:pointer;font-weight:700;padding:6px;overflow-wrap:anywhere}.ref-card .contact{display:grid;gap:8px;padding:10px 6px;overflow-wrap:anywhere}.ref-card a{overflow-wrap:anywhere}.ref-card .details{border-top:1px solid #dce5ee;margin-top:8px;padding:12px 6px}.ref-card .details p{margin:7px 0;overflow-wrap:anywhere}.ref-actions{display:flex;flex-wrap:wrap;gap:8px}.ref-actions a{display:inline-block;padding:9px 12px;border:1px solid #b9c8d7;border-radius:8px;text-decoration:none;background:white}.ref-card .edit{display:inline-block;padding:10px;border:1px solid #b9c8d7;border-radius:8px;margin-top:8px}@media(max-width:650px){.portal-shell{display:block}.portal-sidebar{display:flex;flex-direction:row;overflow-x:auto;white-space:nowrap;padding:8px}.portal-sidebar strong{display:none}.portal-sidebar a{flex:none}.portal-content main{padding:10px}section{padding:14px}header{padding:12px}header h1{font-size:20px;margin:0}} </style><header><h1>Coachingportal MSP</h1></header><div class="portal-shell"><nav class="portal-sidebar" aria-label="Hauptmenü"><strong>Menü</strong><a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html">Spiele</a><a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html" aria-current="page">Coach-Beobachter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav><div class="portal-content"><main><p><a href="/">← Startseite</a> · <a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a></p><section><h2>Coach-Beobachter</h2><p id="status">Zugriff wird geprüft …</p><div class="ref-sort"><label for="coach-sort">Alphabetisch sortieren nach:</label><select id="coach-sort" aria-label="Coach-Beobachter sortieren"><option value="last">Nachname (A–Z)</option><option value="first">Vorname (A–Z)</option></select></div><label for="coach-search">Coach-Beobachter suchen</label><input id="coach-search" type="search" placeholder="Name eingeben …" autocomplete="off" style="display:block;width:100%;box-sizing:border-box;padding:12px;font:inherit;border:1px solid #b9c8d7;border-radius:9px;margin:8px 0 14px"><div id="rows" class="ref-cards"></div><p id="hint" hidden>Neue Coach-Beobachter kannst du unter „Coach-Beobachter-Verwaltung“ erfassen.</p></section></main></div></div><script type="module">
 import {cloudPeople} from "/portal-people.js";
 import {createClient} from "https://esm.sh/@supabase/supabase-js@2.57.4";
 const sb=createClient("https://izuwixrvuxrhviyabgom.supabase.co","sb_publishable_2Cep_1Pu93JXSKVrYzyRQA_5Nbq9XEZ");
@@ -11,7 +11,7 @@ if(!user){
   if(profile?.role!=="admin"){
     $("status").textContent="Nur für Administratoren freigegeben.";
   }else{
-    const coaches=await cloudPeople(user.id,"coach");
+    const refs=await cloudPeople(user.id,"coach");
     const sortSelect=$("coach-sort");
     const sortKey="msp-coach-sort-mode";
     const firstName=p=>String(p.first||p.name?.trim().split(/\s+/)[0]||"").trim();
@@ -26,31 +26,51 @@ if(!user){
     };
     sortSelect.value=localStorage.getItem(sortKey)==="first"?"first":"last";
     const render=()=>{
-      const rows=$("rows");
-      rows.replaceChildren();
-      for(const coach of [...coaches].sort(compare)){
-        const tr=document.createElement("tr");
-        const name=coach.name||[coach.first,coach.last].filter(Boolean).join(" ")||"Unbenannt";
-        const nameCell=document.createElement("td");
-        const link=document.createElement("a");
-        link.href="/coach-beobachter-profil.html?id="+encodeURIComponent(coach.id);
-        link.textContent=name;
-        link.setAttribute("aria-label","Profil öffnen: "+name);
-        nameCell.append(link);
-        const emailCell=document.createElement("td");
-        emailCell.textContent=coach.mail||coach.email||"–";
-        tr.append(nameCell,emailCell);
-        rows.append(tr);
+      const rows=$("rows");rows.replaceChildren();
+      const query=$("coach-search").value.trim().toLocaleLowerCase("de");
+      const filtered=[...refs].sort(compare).filter(r=>(r.name||[r.first,r.last].filter(Boolean).join(" ")).toLocaleLowerCase("de").includes(query));
+      for(const r of filtered){
+        const name=r.name||[r.first,r.last].filter(Boolean).join(" ")||"Unbenannt";
+        const card=document.createElement("details");card.className="ref-card";
+        const summary=document.createElement("summary");summary.textContent=name;card.append(summary);
+        const contact=document.createElement("div");contact.className="contact";
+        const phone=r.phoneMobile||r.phonePrivate||r.phoneBusiness||r.phone||"";
+        const mail=r.mail||r.email||"";
+        const city=r.city||"";
+        for(const [label,value,prefix] of [["Telefon",phone,"tel:"],["E-Mail",mail,"mailto:"],["Wohnort",city,""]]){
+          const line=document.createElement("div");line.append(document.createTextNode(label+": "));
+          if(value&&prefix){const link=document.createElement("a");link.href=prefix+(prefix==="tel:"?String(value).replace(/[^+\\d]/g,""):value);link.textContent=value;line.append(link)}else line.append(document.createTextNode(value||"–"));
+          contact.append(line);
+        }
+        if(phone){
+          const digits=String(phone).replace(/\D/g,"");
+          const international=digits.startsWith("00")?digits.slice(2):digits.startsWith("0")?"49"+digits.slice(1):digits;
+          if(international){
+            const actions=document.createElement("div");actions.className="ref-actions";
+            const call=document.createElement("a");call.href="tel:"+String(phone).replace(/[^+\d]/g,"");call.textContent="📞 Anrufen";actions.append(call);
+            const whatsapp=document.createElement("a");whatsapp.href="https://wa.me/"+international;whatsapp.target="_blank";whatsapp.rel="noopener noreferrer";whatsapp.textContent="WhatsApp schreiben";whatsapp.setAttribute("aria-label","WhatsApp-Chat mit "+name+" öffnen");actions.append(whatsapp);
+            contact.append(actions);
+          }
+        }
+        card.append(contact);
+        const more=document.createElement("div");more.className="details";
+        for(const [label,value] of [["Straße",[r.street,r.houseNumber].filter(Boolean).join(" ")],["PLZ",r.zip],["Qualifikation",r.qualification],["Spielklassen",r.leagues]]){
+          if(!value)continue;const p=document.createElement("p");p.textContent=label+": "+value;more.append(p);
+        }
+        const gamesLink=document.createElement("a");gamesLink.className="edit";gamesLink.href="/spiele.html?coach="+encodeURIComponent(r.id);gamesLink.textContent="Zeig mir Spiele";more.append(gamesLink);
+        const edit=document.createElement("a");edit.className="edit";edit.href="/coach-beobachter-profil.html?id="+encodeURIComponent(r.id);edit.textContent="Profil öffnen / bearbeiten";more.append(edit);card.append(more);rows.append(card);
       }
+      $("status").textContent=filtered.length+" von "+refs.length+" Coach-Beobachtern angezeigt.";
     };
+    $("coach-search").addEventListener("input",render);
     sortSelect.addEventListener("change",()=>{
       localStorage.setItem(sortKey,sortSelect.value);
       render();
       window.dispatchEvent(new CustomEvent("msp-coach-sort-change",{detail:{mode:sortSelect.value}}));
     });
-    $("status").textContent=coaches.length?coaches.length+" Coach-Beobachter erfasst.":"Noch keine Coach-Beobachter erfasst.";
+    $("status").textContent=refs.length?refs.length+" Coach-Beobachter erfasst.":"Noch keine Coach-Beobachter erfasst.";
     render();
-    $("table").hidden=false;
+
     $("hint").hidden=false;
   }
 }
