@@ -142,40 +142,8 @@ if(nav){
    }
    templatesLink.insertAdjacentElement("afterend",submenu);
  }
- const path=location.pathname;
- const type=path.startsWith("/coach-beobachter")?"coach":null;
- if(type){
-  const main=links.find(x=>x.getAttribute("href")===(type==="referee"?"/schiedsrichter.html":"/coach-beobachter.html"));
-  if(main)try{
-    const{user}=await requireAdmin();
-    const people=await cloudPeople(user.id,type);
-    const cmp=(a,b)=>String(a||"").localeCompare(String(b||""),"de",{sensitivity:"base"});
-    const firstName=p=>String(p.first||p.name?.trim().split(/\s+/)[0]||"").trim();
-    const lastName=p=>String(p.last||p.name?.trim().split(/\s+/).at(-1)||"").trim();
-    const personSort=(a,b)=>{
-      const key=type==="referee"?"msp-referee-sort-mode":"msp-coach-sort-mode";
-      const mode=localStorage.getItem(key)==="first"?"first":"last";
-      const primary=mode==="first"?firstName:lastName;
-      const secondary=mode==="first"?lastName:firstName;
-      return cmp(primary(a),primary(b))||cmp(secondary(a),secondary(b))||cmp(a.name,b.name);
-    };
-    const wrap=document.createElement("div");wrap.className="person-submenu";
-    wrap.setAttribute("aria-label",type==="referee"?"Schiedsrichter-Untermenü":"Coaches-Untermenü");
-    const renderSubmenu=()=>{
-      wrap.replaceChildren();
-      for(const p of [...people].sort(personSort)){
-        const a=document.createElement("a");a.href=(type==="referee"?"/schiedsrichter-profil.html?id=":"/coach-beobachter-profil.html?id=")+encodeURIComponent(p.id);
-        a.textContent=p.name||[p.first,p.last].filter(Boolean).join(" ")||"Unbenannt";
-        if(new URLSearchParams(location.search).get("id")===p.id)a.setAttribute("aria-current","page");
-        wrap.append(a);
-      }
-      if(!people.length){const empty=document.createElement("span");empty.className="none";empty.textContent="Noch keine Einträge";wrap.append(empty)}
-    };
-    renderSubmenu();
-    main.insertAdjacentElement("afterend",wrap);
-    window.addEventListener(type==="referee"?"msp-referee-sort-change":"msp-coach-sort-change",renderSubmenu);
-  }catch(e){console.warn("Untermenü:",e.message)}
- }
+ // Die Personen werden in den jeweiligen Seitenkacheln angezeigt, nicht im Seitenmenü.
+ for(const submenu of nav.querySelectorAll(".person-submenu:not(.template-submenu)"))submenu.remove();
 }
 /* Gemeinsame mobile Tabellenansicht: jede Zeile als lesbare Karte. */
 const mobileTables=document.createElement("style");
