@@ -57,6 +57,7 @@ if(!user){
         for(const [label,value] of [["Straße",[r.street,r.houseNumber].filter(Boolean).join(" ")],["PLZ",r.zip],["Verein",r.club],["Schiedsrichter seit",r.since]]){
           if(!value)continue;const p=document.createElement("p");p.textContent=label+": "+value;more.append(p);
         }
+        const gamesLink=document.createElement("a");gamesLink.className="edit";gamesLink.href="/spiele.html?referee="+encodeURIComponent(r.id);gamesLink.textContent="Zeig mir Spiele";more.append(gamesLink);
         const edit=document.createElement("a");edit.className="edit";edit.href="/verwaltung.html";edit.textContent="Bearbeiten";more.append(edit);card.append(more);rows.append(card);
       }
       $("status").textContent=filtered.length+" von "+refs.length+" Schiedsrichtern angezeigt.";
