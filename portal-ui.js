@@ -132,7 +132,7 @@ if(nav){
    templatesLink.insertAdjacentElement("afterend",submenu);
  }
  const path=location.pathname;
- const type=path.startsWith("/schiedsrichter")?"referee":path.startsWith("/coach-beobachter")?"coach":null;
+ const type=path.startsWith("/coach-beobachter")?"coach":null;
  if(type){
   const main=links.find(x=>x.getAttribute("href")===(type==="referee"?"/schiedsrichter.html":"/coach-beobachter.html"));
   if(main)try{
