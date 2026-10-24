@@ -181,7 +181,7 @@ if(nav){
  const navObserver=new MutationObserver(()=>dedupeMenu());
  navObserver.observe(nav,{childList:true});
  // Die Personen werden in den jeweiligen Seitenkacheln angezeigt, nicht im Seitenmenü.
- for(const submenu of nav.querySelectorAll(".person-submenu:not(.template-submenu)"))submenu.remove();
+ for(const submenu of nav.querySelectorAll(".person-submenu:not(.template-submenu)")){if(!submenu.closest("#portal-administration-menu"))submenu.remove();}
 }
 /* Gemeinsame mobile Tabellenansicht: jede Zeile als lesbare Karte. */
 const mobileTables=document.createElement("style");
