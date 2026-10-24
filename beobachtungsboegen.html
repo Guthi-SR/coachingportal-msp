@@ -69,7 +69,7 @@ try{
   filterRecords.push({row:tr,ref:normalize(values[2]),coach:normalize(values[3]),date:dateValue(d,g),checked:Boolean(g?.checked_at),sent:Boolean(g?.sent_at)});
  }
  for(const [select,key] of [[filterRef,"ref"],[filterCoach,"coach"]]){const names=[...new Set(filterRecords.map(r=>r[key]).filter(v=>v&&v!=="–"))].sort((a,b)=>a.localeCompare(b,"de"));for(const name of names){const label=filterRecords.find(r=>r[key]===name)?.row?.children[key==="ref"?2:3]?.textContent||name;select.add(new Option(label,name))}}
- const initialStatus=new URLSearchParams(location.search).get("status");if(["unchecked","checked","unsent","sent","checked-unsent"].includes(initialStatus)){filterStatus.value=initialStatus;document.getElementById("filterDetails").open=true;}
+ const initialStatus=new URLSearchParams(location.search).get("status");if(["unchecked","checked","unsent","sent","checked-unsent"].includes(initialStatus))filterStatus.value=initialStatus;
  applyFilters();status.textContent=docs.length?docs.length+" Beobachtungsbogen/-bögen vorhanden.":"Noch keine Bögen erfasst.";
  document.getElementById("table").hidden=!docs.length;
 }catch(e){status.textContent="Laden fehlgeschlagen: "+e.message}
