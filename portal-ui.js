@@ -154,6 +154,18 @@ if(nav){
  };
  ensureMainLink("/verwaltung.html","Schiedsrichterverwaltung","/beobachtungsboegen.html");
  ensureMainLink("/schiedsrichter.html","Schiedsrichter","/verwaltung.html");
+ if(!nav.querySelector("#portal-administration-menu")){
+  const section=document.createElement("details");
+  section.id="portal-administration-menu";
+  const label=document.createElement("summary");
+  label.textContent="Verwaltung";
+  section.append(label);
+  const children=document.createElement("div");
+  children.className="person-submenu";
+  section.append(children);
+  const ref=nav.querySelector('a[href="/verwaltung.html"]');
+  if(ref)ref.before(section);else nav.append(section);
+ }
  dedupeMenu();
  const navObserver=new MutationObserver(()=>dedupeMenu());
  navObserver.observe(nav,{childList:true});
