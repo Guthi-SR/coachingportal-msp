@@ -15,7 +15,7 @@ export async function requirePermission(permissionKey){
  if(pe||!p)throw Error("Benutzerprofil konnte nicht geladen werden.");
  if(p.role==="admin")return{user,profile:p,ownerId:user.id};
  const{data:allowed,error:permissionError}=await sb.rpc("portal_has_permission",{check_id:user.id,permission_key:permissionKey});
- if(permissionError)throw Error("Berechtigung konnte nicht geprüft werden.");
+ if(permissionError)throw Error("Berechtigung konnte nicht geprüft werden: "+permissionError.message);
  if(allowed!==true)throw Error("Diese Funktion ist in deinem Berechtigungsprofil nicht freigegeben.");
  const{data:ownerId,error:ownerError}=await sb.rpc("portal_get_owner_id");
  if(ownerError||!ownerId)throw Error("Dein Portalzugang ist keinem Administrator zugeordnet.");
