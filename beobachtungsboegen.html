@@ -29,7 +29,7 @@ try{
  const displayedPerson=(people,docId,gameId)=>{const direct=person(people,docId);return direct!=="–"?direct:person(people,gameId)};
  const dateValue=(d,g)=>String(g?.match_date||d.match_date||d.created_at||"").slice(0,10);
  const filterRecords=[];
- const applyFilters=()=>{let shown=0;for(const item of filterRecords){const matches=(!filterRef.value||item.ref===filterRef.value)&&(!filterCoach.value||item.coach===filterCoach.value)&&(!filterDate.value||item.date===filterDate.value);item.row.hidden=!matches;if(matches)shown++}filterCount.textContent=shown+" von "+filterRecords.length+" Bögen angezeigt"+(shown===0?" – keine Treffer.":"")};
+ const applyFilters=()=>{const matching=filterRecords.filter(item=>(!filterRef.value||item.ref===filterRef.value)&&(!filterCoach.value||item.coach===filterCoach.value)&&(!filterDate.value||item.date===filterDate.value));rows.replaceChildren(...matching.map(item=>item.row));filterCount.textContent=matching.length+" von "+filterRecords.length+" Bögen angezeigt"+(matching.length===0?" – keine Treffer.":"")};
  for(const el of [filterRef,filterCoach,filterDate])el.addEventListener("change",applyFilters);
  document.getElementById("filterReset").addEventListener("click",()=>{filterRef.value="";filterCoach.value="";filterDate.value="";applyFilters()});
  docs.sort((a,b)=>dateValue(b,byGame(b)).localeCompare(dateValue(a,byGame(a)))||(b.created_at||"").localeCompare(a.created_at||""));
