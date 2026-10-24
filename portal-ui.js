@@ -1,5 +1,6 @@
 import{requireAdmin}from"/portal-workflow.js";
 import{cloudPeople}from"/portal-people.js";
+import "/menu-editor.js";
 const nav=document.querySelector(".portal-sidebar,nav[aria-label='Hauptmenü']");
 
 /* Mobile navigation: the main content remains full width while the menu is off-canvas. */
