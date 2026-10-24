@@ -1,8 +1,8 @@
-<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Beobachtungsbogen ansehen</title><style>html,body{width:100%;height:100%;margin:0;background:#fff}#view{display:none;position:fixed;top:58px;left:0;width:100%;height:calc(100% - 58px);border:0}#toolbar{position:fixed;top:0;left:0;right:0;height:58px;display:flex;align-items:center;padding:8px 14px;background:#142b46;z-index:5}#back{display:inline-flex;align-items:center;min-height:40px;padding:8px 14px;border-radius:8px;background:#fff;color:#142b46;text-decoration:none;font:600 15px system-ui,sans-serif}#back:focus-visible{outline:3px solid #77c8ff;outline-offset:2px}#status{box-sizing:border-box;margin:calc(12vh + 58px) auto;padding:22px;max-width:680px;font:16px system-ui;color:#142b46}@media(max-width:700px){html,body{width:100%;max-width:100%;overflow-x:hidden}*,*::before,*::after{box-sizing:border-box}main,section,article,.shell,.content{min-width:0;max-width:100%}img,video,iframe,canvas{max-width:100%;height:auto}input,select,textarea,button{max-width:100%}table{max-width:100%}pre{max-width:100%;overflow-x:auto}nav{max-width:100%}}#pages{display:none;padding:70px 8px 18px;max-width:100%;overflow-x:hidden;background:#e9edf2;min-height:100vh}#pages canvas{display:block;width:100%;height:auto;margin:0 auto 12px;background:white;box-shadow:0 1px 5px #142b4622}@media(max-width:700px){#view{display:none!important}#pages{display:block}#back{font-size:13px;padding:8px 10px}}</style></head><body>
-<nav id="toolbar" aria-label="PDF-Navigation"><a id="back" href="/beobachtungsboegen.html">← Zurück zu den Beobachtungsbögen</a></nav>
+<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Beobachtungsbogen ansehen</title><style>html,body{width:100%;height:100%;margin:0;background:#fff}#view{display:none;position:fixed;top:58px;left:0;width:100%;height:calc(100% - 58px);border:0}#toolbar{position:fixed;top:0;left:0;right:0;height:58px;display:flex;align-items:center;padding:8px 14px;background:#142b46;z-index:5}#back{display:inline-flex;align-items:center;min-height:40px;padding:8px 14px;border-radius:8px;background:#fff;color:#142b46;text-decoration:none;font:600 15px system-ui,sans-serif}#back:focus-visible{outline:3px solid #77c8ff;outline-offset:2px}#status{box-sizing:border-box;margin:calc(12vh + 58px) auto;padding:22px;max-width:680px;font:16px system-ui;color:#142b46}@media(max-width:700px){html,body{width:100%;max-width:100%;overflow-x:hidden}*,*::before,*::after{box-sizing:border-box}main,section,article,.shell,.content{min-width:0;max-width:100%}img,video,iframe,canvas{max-width:100%;height:auto}input,select,textarea,button{max-width:100%}table{max-width:100%}pre{max-width:100%;overflow-x:auto}nav{max-width:100%}}#pages{display:none;padding:70px 8px 18px;max-width:100%;overflow-x:hidden;background:#e9edf2;min-height:100vh}#pages canvas{display:block;width:100%;height:auto;margin:0 auto 12px;background:white;box-shadow:0 1px 5px #142b4622}@media(max-width:700px){#view{display:none!important}#pages{display:block}#back{font-size:13px;padding:8px 10px}}#review{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto}#review button{border:1px solid #fff8;background:#ffffff22;color:#fff;border-radius:7px;padding:8px;font:600 13px system-ui;cursor:pointer}#review button[aria-pressed="true"]{background:#fff;color:#142b46}#review button:disabled{opacity:.6}#reviewMsg{color:#fff;font:12px system-ui}@media(max-width:700px){#toolbar{height:auto;min-height:58px;flex-wrap:wrap;gap:5px;padding:7px}#review{width:100%;margin-left:0}#view{top:104px;height:calc(100% - 104px)}#pages{padding-top:116px}}</style></head><body>
+<nav id="toolbar" aria-label="PDF-Navigation"><a id="back" href="/beobachtungsboegen.html">← Zurück zu den Beobachtungsbögen</a><div id="review" role="group" aria-label="Prüfstatus"><button type="button" id="inProgress">In Bearbeitung</button><button type="button" id="approved">Geprüft</button><span id="reviewMsg" role="status"></span></div></nav>
 <div id="pages" aria-label="PDF-Seiten"></div><p id="status" role="status">Beobachtungsbogen wird geöffnet …</p><iframe id="view" title="Beobachtungsbogen PDF"></iframe>
 <script type="module">
-import{requireAdmin,viewPdfBlob,observationAssignments,sb}from"/portal-workflow.js";
+import{requireAdmin,viewPdfBlob,observationAssignments,sb,syncGames,updateGame}from"/portal-workflow.js";
 const status=document.getElementById("status"),frame=document.getElementById("view"),pages=document.getElementById("pages");
 try{
  const id=new URLSearchParams(location.search).get("pdf");
@@ -12,6 +12,20 @@ try{
  const{data:found,error:lookupError}=await sb.from("portal_observations").select("document_id").eq("owner_id",user.id).eq("document_id",id).maybeSingle();
  if(lookupError)throw lookupError;
  if(!allowedLocal&&!found)throw Error("Für diesen Bogen besteht keine Zuordnung.");
+ const games=await syncGames(user.id);
+ const game=games.find(g=>g.pdf_id===id||observationAssignments(user.id).some(x=>x.id===id&&x.gameKey===g.game_key));
+ const progress=document.getElementById("inProgress"),approved=document.getElementById("approved"),reviewMsg=document.getElementById("reviewMsg");
+ const refreshReview=()=>{progress.setAttribute("aria-pressed",String(!game?.checked_at));approved.setAttribute("aria-pressed",String(!!game?.checked_at))};
+ if(!game){progress.disabled=true;approved.disabled=true;reviewMsg.textContent="Bitte zuerst einem Spiel zuordnen."}
+ else{
+  refreshReview();
+  for(const [button,checked] of [[progress,false],[approved,true]])button.addEventListener("click",async()=>{
+   progress.disabled=approved.disabled=true;reviewMsg.textContent="Speichern …";
+   try{const updated=await updateGame(user.id,game.game_key,{checked_at:checked?new Date().toISOString():null});Object.assign(game,updated);refreshReview();reviewMsg.textContent="Gespeichert"}
+   catch(e){reviewMsg.textContent="Fehler: "+e.message}
+   finally{progress.disabled=approved.disabled=false}
+  });
+ }
  const blob=await viewPdfBlob(user.id,id);
  if(!(blob instanceof Blob))throw Error("Der Beobachtungsbogen konnte nicht geladen werden.");
  const url=URL.createObjectURL(blob);
