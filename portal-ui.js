@@ -274,7 +274,24 @@ if(nav){
  gate.textContent=".portal-permissions-pending{visibility:hidden!important}";
  document.head.append(gate);
  void applyProfileMenuPermissions().finally(()=>nav.classList.remove("portal-permissions-pending"));
- const permissionObserver=new MutationObserver(()=>{
+ const permissionObserver=new MutationObserver(records=>{
+  // Neue geschützte Links sofort ausblenden, bevor sie sichtbar aufblitzen können.
+  for(const record of records){
+   for(const node of record.addedNodes){
+    if(node.nodeType!==1)continue;
+    const candidates=[];
+    if(node.matches?.("a[href]"))candidates.push(node);
+    candidates.push(...(node.querySelectorAll?.("a[href]")||[]));
+    for(const link of candidates){
+     const path=new URL(link.href,location.origin).pathname;
+     if(portalPermissionByPath[path]){
+      link.hidden=true;
+      link.setAttribute("aria-hidden","true");
+      link.setAttribute("tabindex","-1");
+     }
+    }
+   }
+  }
   if(!nav.dataset.permissionRefreshQueued){
    nav.dataset.permissionRefreshQueued="1";
    queueMicrotask(async()=>{
