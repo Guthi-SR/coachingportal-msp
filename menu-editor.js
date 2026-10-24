@@ -9,7 +9,8 @@ if(nav){
  const restore=()=>{try{const order=JSON.parse(localStorage.getItem(key)||"null");if(!Array.isArray(order))return;const items=new Map(all().map(x=>[id(x),x]));for(const entry of order){const item=items.get(entry.id);if(!item)continue;const parent=entry.parent==="root"?nav:document.querySelector("#"+entry.parent+" .person-submenu");if(parent)parent.append(item);items.delete(entry.id)} }catch(_){}};
  const save=()=>localStorage.setItem(key,JSON.stringify(all().map(x=>({id:id(x),parent:x.parentElement===nav?"root":x.closest("details")?.id||"root"}))));
  restore();
- try{await requireAdmin()}catch(_){return}
+ let isAdmin=false;try{await requireAdmin();isAdmin=true}catch(_){}
+ if(isAdmin){
  const style=document.createElement("style");style.textContent="#menu-editor{padding:8px 4px;border-bottom:1px solid #ddd;margin-bottom:8px}#menu-editor button{margin:3px;padding:7px;border:1px solid #aab;border-radius:6px;background:white;color:#142b46;cursor:pointer}.menu-editing a,.menu-editing details{cursor:grab!important}.menu-editing .menu-drop{outline:2px dashed #1684b8;outline-offset:2px}.menu-editing .person-submenu{min-height:30px;border:1px dashed #aac;padding:6px}";document.head.append(style);
  const bar=document.createElement("div");bar.id="menu-editor";
  const toggle=document.createElement("button");toggle.type="button";toggle.textContent="Menü bearbeiten";
@@ -24,4 +25,5 @@ if(nav){
  toggle.onclick=()=>{if(editing){location.reload()}else setEdit(true)};
  saveBtn.onclick=()=>{save();setEdit(false)};
  reset.onclick=()=>{if(confirm("Menüanordnung auf Standard zurücksetzen?")){localStorage.removeItem(key);location.reload()}};
+ }
 }
