@@ -144,6 +144,16 @@ if(nav){
  }
  // Doppelte Hauptmenü-Links entfernen (auch wenn andere Skripte sie erneut eingefügt haben).
  const dedupeMenu=()=>{const seen=new Set();for(const a of nav.querySelectorAll(':scope > a')){const href=a.getAttribute("href");if(!href)continue;const key=new URL(href,location.origin).pathname;if(seen.has(key))a.remove();else seen.add(key)}};
+ // Hauptmenüpunkte auch auf Seiten ergänzen, deren HTML sie noch nicht enthält.
+ const ensureMainLink=(href,label,afterHref)=>{
+   if(nav.querySelector('a[href="'+href+'"]'))return;
+   const link=document.createElement("a");link.href=href;link.textContent=label;
+   if(location.pathname===href)link.setAttribute("aria-current","page");
+   const after=nav.querySelector('a[href="'+afterHref+'"]');
+   if(after)after.insertAdjacentElement("afterend",link);else nav.append(link);
+ };
+ ensureMainLink("/verwaltung.html","Schiedsrichterverwaltung","/beobachtungsboegen.html");
+ ensureMainLink("/schiedsrichter.html","Schiedsrichter","/verwaltung.html");
  dedupeMenu();
  const navObserver=new MutationObserver(()=>dedupeMenu());
  navObserver.observe(nav,{childList:true});
