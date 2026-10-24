@@ -25,18 +25,17 @@ try{
  const person=(list,id)=>{const p=list.find(x=>x.id===id||x.name===id);return p?.name||[p?.first,p?.last].filter(Boolean).join(" ")||"–"};
  const byGame=doc=>games.find(g=>g.game_key===doc.game_key||g.pdf_id===doc.document_id);
  const filterRef=document.getElementById("filterRef"),filterCoach=document.getElementById("filterCoach"),filterDate=document.getElementById("filterDate"),filterCount=document.getElementById("filterCount");
- const addOptions=(el,people,ids)=>{for(const id of [...ids].filter(Boolean).sort((a,b)=>person(people,a).localeCompare(person(people,b),"de"))){el.add(new Option(person(people,id),id))}};
- addOptions(filterRef,refs,new Set(docs.map(d=>d.referee_id||byGame(d)?.referee_id)));addOptions(filterCoach,coaches,new Set(docs.map(d=>d.coach_id||byGame(d)?.coach_id)));
- const applyFilters=()=>{let shown=0;for(const d of docs){const g=byGame(d),tr=document.querySelector(`[data-document-id="${CSS.escape(d.document_id)}"]`);if(!tr)continue;const matches=(!filterRef.value||(d.referee_id||g?.referee_id)===filterRef.value)&&(!filterCoach.value||(d.coach_id||g?.coach_id)===filterCoach.value)&&(!filterDate.value||(g?.match_date||String(d.created_at||"").slice(0,10))===filterDate.value);tr.hidden=!matches;if(matches)shown++}filterCount.textContent=shown+" von "+docs.length+" Bögen angezeigt"+(shown===0?" – keine Treffer.":"")};
+ const normalize=v=>String(v??"").trim().toLocaleLowerCase("de");
+ const displayedPerson=(people,docId,gameId)=>{const direct=person(people,docId);return direct!=="–"?direct:person(people,gameId)};
+ const dateValue=(d,g)=>String(g?.match_date||d.match_date||d.created_at||"").slice(0,10);
+ const filterRecords=[];
+ const applyFilters=()=>{let shown=0;for(const item of filterRecords){const matches=(!filterRef.value||item.ref===filterRef.value)&&(!filterCoach.value||item.coach===filterCoach.value)&&(!filterDate.value||item.date===filterDate.value);item.row.hidden=!matches;if(matches)shown++}filterCount.textContent=shown+" von "+filterRecords.length+" Bögen angezeigt"+(shown===0?" – keine Treffer.":"")};
  for(const el of [filterRef,filterCoach,filterDate])el.addEventListener("change",applyFilters);
  document.getElementById("filterReset").addEventListener("click",()=>{filterRef.value="";filterCoach.value="";filterDate.value="";applyFilters()});
- docs.sort((a,b)=>{
-  const da=byGame(a)?.match_date||String(a.created_at||"").slice(0,10),db=byGame(b)?.match_date||String(b.created_at||"").slice(0,10);
-  return db.localeCompare(da)||(b.created_at||"").localeCompare(a.created_at||"");
- });
+ docs.sort((a,b)=>dateValue(b,byGame(b)).localeCompare(dateValue(a,byGame(a)))||(b.created_at||"").localeCompare(a.created_at||""));
  for(const d of docs){
   const g=byGame(d);const tr=document.createElement("tr");tr.dataset.documentId=d.document_id;
-  const values=[dateDE(g?.match_date||String(d.created_at||"").slice(0,10)),g?g.home+" – "+g.away:"Noch keinem Spiel zugeordnet",person(refs,d.referee_id),person(coaches,d.coach_id)];
+  const values=[dateDE(g?.match_date||String(d.created_at||"").slice(0,10)),g?g.home+" – "+g.away:"Noch keinem Spiel zugeordnet",displayedPerson(refs,d.referee_id,g?.referee_id),displayedPerson(coaches,d.coach_id,g?.coach_id)];
   for(const [i,v] of values.entries()){const td=document.createElement("td");td.dataset.label=["Spieldatum","Begegnung","Schiedsrichter","Coach / Beobachter"][i];td.textContent=v;tr.append(td)}
   const tdPdf=document.createElement("td"),link=document.createElement("a");
   tdPdf.dataset.label="Beobachtungsbogen";link.href="/beobachtungsbogen-ansehen.html?pdf="+encodeURIComponent(d.document_id);link.target="_blank";link.rel="noopener noreferrer";link.textContent="📘 Bogen";link.setAttribute("aria-label","PDF-Beobachtungsbogen öffnen: "+(d.file_name||"Bogen"));const statusGroup=document.createElement("div");statusGroup.className="bogen-status-group";const flags=[["Eingegangen","Nicht eingegangen",Boolean(d.created_at||d.storage_path||d.document_id)],["Geprüft","Nicht geprüft",Boolean(g?.checked_at)],["Versendet","Nicht versendet",Boolean(g?.sent_at)]];for(const [yes,no,done] of flags){const badge=document.createElement("span");badge.className="bogen-status";badge.dataset.done=String(done);badge.textContent=done?yes:no;statusGroup.append(badge)}tdPdf.append(link,statusGroup);tr.append(tdPdf);
@@ -66,8 +65,9 @@ try{
    catch(e){status.textContent="Löschen fehlgeschlagen: "+e.message;del.disabled=false}
   };
   editDetails.append(del);
-  tr.append(tdActions);rows.append(tr);
+  tr.append(tdActions);rows.append(tr);\n  filterRecords.push({row:tr,ref:normalize(values[2]),coach:normalize(values[3]),date:dateValue(d,g)});
  }
+ for(const [select,key] of [[filterRef,"ref"],[filterCoach,"coach"]]){const names=[...new Set(filterRecords.map(r=>r[key]).filter(v=>v&&v!=="–"))].sort((a,b)=>a.localeCompare(b,"de"));for(const name of names){const label=filterRecords.find(r=>r[key]===name)?.row?.children[key==="ref"?2:3]?.textContent||name;select.add(new Option(label,name))}}
  applyFilters();status.textContent=docs.length?docs.length+" Beobachtungsbogen/-bögen vorhanden.":"Noch keine Bögen erfasst.";
  document.getElementById("table").hidden=!docs.length;
 }catch(e){status.textContent="Laden fehlgeschlagen: "+e.message}
