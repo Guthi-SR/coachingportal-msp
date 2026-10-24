@@ -268,7 +268,23 @@ async function applyProfileMenuPermissions(){
   }
  }
 }
-if(nav)void applyProfileMenuPermissions();
+if(nav){
+ nav.classList.add("portal-permissions-pending");
+ const gate=document.createElement("style");
+ gate.textContent=".portal-permissions-pending{visibility:hidden!important}";
+ document.head.append(gate);
+ void applyProfileMenuPermissions().finally(()=>nav.classList.remove("portal-permissions-pending"));
+ const permissionObserver=new MutationObserver(()=>{
+  if(!nav.dataset.permissionRefreshQueued){
+   nav.dataset.permissionRefreshQueued="1";
+   queueMicrotask(async()=>{
+    delete nav.dataset.permissionRefreshQueued;
+    await applyProfileMenuPermissions();
+   });
+  }
+ });
+ permissionObserver.observe(nav,{childList:true,subtree:true});
+}
 
 /* Gemeinsame mobile Tabellenansicht: jede Zeile als lesbare Karte. */
 const mobileTables=document.createElement("style");
