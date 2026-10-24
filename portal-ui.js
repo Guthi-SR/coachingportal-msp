@@ -120,6 +120,17 @@ if(nav){
   if(location.pathname==="/textvorlagen.html")link.setAttribute("aria-current","page");
   nav.append(link);
  }
+ // Admin-only entry at the bottom of the main navigation.
+ try {
+   await requireAdmin();
+   if(!nav.querySelector('a[href="/zugang-einrichten.html"]')){
+     const accessLink=document.createElement("a");
+     accessLink.href="/zugang-einrichten.html";
+     accessLink.textContent="Zugang einrichten";
+     if(location.pathname==="/zugang-einrichten.html")accessLink.setAttribute("aria-current","page");
+     nav.append(accessLink);
+   }
+ }catch(_e){}
  // Textvorlagen: Hauptmenü mit festen, erweiterbaren Unterpunkten.
  const templatesLink=nav.querySelector('a[href="/textvorlagen.html"]');
  if(templatesLink&&!nav.querySelector(".template-submenu")){
