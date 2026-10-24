@@ -1,6 +1,5 @@
 import{requireAdmin}from"/portal-workflow.js";
 import{cloudPeople}from"/portal-people.js";
-import "/menu-editor.js";
 const nav=document.querySelector(".portal-sidebar,nav[aria-label='Hauptmenü']");
 
 /* Mobile navigation: the main content remains full width while the menu is off-canvas. */
@@ -197,3 +196,5 @@ document.head.append(mobileTables);
 const markMobileTables=()=>{for(const table of document.querySelectorAll("table")){if(table.dataset.mobileCards==="off"||table.classList.contains("ref-list")||table.classList.contains("coach-list")||table.id==="overview")continue;const headers=[...table.querySelectorAll("thead th")].map(th=>th.textContent.trim());if(!headers.length)continue;table.dataset.mobileCards="";for(const tr of table.querySelectorAll("tbody tr")){[...tr.children].forEach((td,i)=>{if(td.tagName==="TD"&&!td.hasAttribute("data-mobile-label"))td.setAttribute("data-mobile-label",headers[i]||"Details")})}}};
 markMobileTables();
 new MutationObserver(()=>{if(!document.hidden)markMobileTables()}).observe(document.body,{childList:true,subtree:true});
+
+await import("/menu-editor.js");
