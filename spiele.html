@@ -102,7 +102,7 @@ async function editGameDate(g){
  if(value===g.match_date)return;
  change(g,{match_date:value});
 }
-function editVenue(g){
+async function editVenue(g){
  const address=prompt("Spielstätte bearbeiten: vollständige Adresse eingeben. Das Navigationsziel entspricht immer der Spielstätte.",g.venue||"");
  if(address===null)return;
  const value=address.trim();if(!value){status.textContent="Bitte eine Adresse eingeben.";return}
