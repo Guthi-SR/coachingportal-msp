@@ -3,9 +3,13 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Coachingportal MSP – Anmeldung</title>
+<link rel="icon" type="image/svg+xml" href="/portal-logo.svg">
+<link rel="apple-touch-icon" href="/portal-logo.svg">
+<meta name="apple-mobile-web-app-title" content="Coachingportal MSP">
 <style>
 body{font:16px system-ui,sans-serif;margin:0;background:#f3f6fa;color:#142b46}
 header{background:#142b46;color:white;padding:24px;text-align:center}
+.portal-brand{display:flex;align-items:center;justify-content:center;gap:14px}.portal-brand img{width:56px;height:56px;object-fit:cover;border-radius:12px;flex:none}.portal-brand h1{margin:0}@media(max-width:480px){.portal-brand img{width:44px;height:44px}.portal-brand h1{font-size:22px}}
 main{max-width:1100px;margin:35px auto;padding:0 18px}
 section{background:white;border:1px solid #dce5ee;border-radius:14px;padding:28px}
 label{display:block;margin:16px 0 7px;font-weight:600}
@@ -84,7 +88,7 @@ body.dashboard-active .dash-page{border:0;border-radius:0;min-width:0;max-width:
 </style>
 </head>
 <body>
-<header><h1>Coachingportal MSP</h1><div>SRG Main-Spessart</div></header>
+<header><div class="portal-brand"><img src="/portal-logo.svg" alt="Zwei Schiedsrichter auf dem Fußballplatz"><h1>Coachingportal MSP</h1></div><div>SRG Main-Spessart</div></header>
 <main><div id="dashboard" hidden class="portal-shell"><nav class="portal-sidebar" aria-label="Hauptmenü"><strong>Menü</strong><a href="/" aria-current="page">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html">Spiele</a><a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav><section class="portal-content dash-page" aria-label="Dashboard">
  <div class="dash-top"><div><p class="dash-kicker">SRG Main-Spessart · Übersicht</p><h2>Dein Dashboard</h2><p class="dash-sub">Spiele, Beobachtungsbögen und Coaching-Aufgaben auf einen Blick</p></div><div class="dash-actions"><button id="refresh-dashboard" type="button">↻ Aktualisieren</button><button id="dashboard-logout" type="button" class="dash-logout">Abmelden</button></div></div>
  <p id="dash-loading" class="dash-message" role="status" aria-live="polite">Dashboard wird geladen …</p>
