@@ -166,6 +166,17 @@ if(nav){
   const ref=nav.querySelector('a[href="/verwaltung.html"]');
   if(ref)ref.before(section);else nav.append(section);
  }
+ const administration=nav.querySelector("#portal-administration-menu");
+ if(administration){
+  const children=administration.querySelector(".person-submenu");
+  for(const [href,label] of [["/verwaltung.html","Schiedsrichterverwaltung"],["/coach-beobachter-verwaltung.html","Coach-Beobachter-Verwaltung"]]){
+   let link=nav.querySelector('a[href="'+href+'"]');
+   if(!link){link=document.createElement("a");link.href=href;}
+   link.textContent=label;
+   children.append(link);
+   if(location.pathname===href)administration.open=true;
+  }
+ }
  dedupeMenu();
  const navObserver=new MutationObserver(()=>dedupeMenu());
  navObserver.observe(nav,{childList:true});
