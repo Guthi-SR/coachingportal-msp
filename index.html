@@ -333,7 +333,9 @@ el("save-password").onclick=async()=>{
   const saveButton=el("save-password");saveButton.disabled=true;msg("Passwort wird gespeichert …");
   let error;try{({error}=await supabase.auth.updateUser({password}));}catch(e){error=e}finally{saveButton.disabled=false}
   if(error)return msg("Passwort konnte nicht gespeichert werden: "+(error.message||"Verbindung prüfen und erneut versuchen."));
-  const {data:{user:updatedUser}}=await supabase.auth.getUser();\n  if(!updatedUser)return msg("Passwort gespeichert, aber Sitzung abgelaufen. Bitte erneut anmelden.");\n  const {error:flagError}=await supabase.from("portal_profiles").update({must_change_password:false}).eq("user_id",updatedUser.id);
+  const {data:{user:updatedUser}}=await supabase.auth.getUser();
+  if(!updatedUser)return msg("Passwort gespeichert, aber Sitzung abgelaufen. Bitte erneut anmelden.");
+  const {error:flagError}=await supabase.from("portal_profiles").update({must_change_password:false}).eq("user_id",updatedUser.id);
   if(flagError)return msg("Passwort gespeichert, aber Freischaltung nicht abgeschlossen: "+flagError.message);
   el("password-form").hidden=true;el("new-password").value="";msg("Passwort gespeichert.");await render();
 };
