@@ -67,7 +67,7 @@ input,select{font:inherit;border-radius:8px;border:1px solid #afbfce;padding:11p
 </nav>
 <main>
 <h2>Coachingplanung</h2>
-<p class="intro">Plane Coachings unverbindlich vor, vergleiche Coach-Adressen nach einfacher Fahrstrecke und ändere den Einteilungsstatus. Alle Änderungen sind nur für Administratoren freigeschaltet. Ohne Bestätigung wird nichts versendet.</p>
+<p class="intro">Plane Coachings unverbindlich vor, vergleiche Coach-Adressen nach einfacher Fahrstrecke und ändere den Einteilungsstatus. Welche Funktionen verfügbar sind, richtet sich nach deinem Berechtigungsprofil. Ohne Bestätigung wird nichts versendet.</p>
 <div class="panel">
  <div class="controls">
   <h3>Spiele auswählen</h3>
@@ -120,7 +120,7 @@ input,select{font:inherit;border-radius:8px;border:1px solid #afbfce;padding:11p
 <p id="planning-status" role="status" aria-live="polite"></p>
 </main></div>
 <script type="module">
-import{sb,requireAdmin,dateDE,updateGame,updatePlanningStatus}from"/portal-workflow.js";
+import{sb,requirePermission,dateDE,updateGame,updatePlanningStatus}from"/portal-workflow.js";
 import{cloudPeople}from"/portal-people.js";
 const $=id=>document.getElementById(id);
 let ownerId="",games=[],coaches=[],selectedKey="",pendingAll=false,runId=0;
@@ -414,11 +414,10 @@ async function reload(){
  finally{$("reload").disabled=false}
 }
 try{
- const{user}=await requireAdmin();
- ownerId=user.id;
+ const{user,ownerId}=await requirePermission("coaching_planning_view");
  $("route-consent").checked=localStorage.getItem(consentKey())==="yes";
  coaches=(await cloudPeople(ownerId,"coach")).sort((a,b)=>collator.compare(coachName(a),coachName(b)));
  await reload();
-}catch(e){$("list-status").textContent="Zugriff oder Daten konnten nicht geladen werden: "+errorText(e);note("Bitte als Administrator anmelden.")}
+}catch(e){$("list-status").textContent="Zugriff oder Daten konnten nicht geladen werden: "+errorText(e);note("Bitte Anmeldung und Profilberechtigung prüfen.")}
 </script><script type="module" src="/portal-ui.js"></script>
 </body></html>
