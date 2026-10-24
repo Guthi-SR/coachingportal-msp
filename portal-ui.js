@@ -1,6 +1,26 @@
 import{requireAdmin}from"/portal-workflow.js";
 import{cloudPeople}from"/portal-people.js";
-const nav=document.querySelector(".portal-sidebar,nav[aria-label='Hauptmenü']");
+let nav=document.querySelector(".portal-sidebar,nav[aria-label='Hauptmenü']");
+if(!nav){
+ const sidebar=document.createElement("nav");
+ sidebar.className="portal-sidebar";
+ sidebar.setAttribute("aria-label","Hauptmenü");
+ sidebar.style.cssText="background:white;border-right:1px solid #dce5ee;padding:20px 12px;display:flex;flex-direction:column;gap:6px;min-width:0";
+ const items=[["/","Dashboard"],["/spiele.html","Spiele"],["/beobachtungsboegen.html","Beobachtungsbögen"],["/schiedsrichter.html","Schiedsrichter"],["/textvorlagen.html","Textvorlagen"],["/zugang-einrichten.html","Benutzerverwaltung"],["/benutzerprofile.html","Benutzerprofile & Rechte"]];
+ for(const [href,label] of items){const link=document.createElement("a");link.href=href;link.textContent=label;link.style.cssText="padding:10px 12px;color:#142b46;text-decoration:none;border-radius:7px";sidebar.append(link)}
+ const shell=document.createElement("div");
+ shell.className="portal-shell";
+ shell.style.cssText="display:grid;grid-template-columns:230px minmax(0,1fr);min-height:calc(100vh - 110px)";
+ const content=document.createElement("div");content.className="portal-content";content.style.minWidth="0";
+ const header=document.querySelector("body > header");
+ const children=[...document.body.children].filter(x=>x!==header&&x.tagName!=="SCRIPT");
+ for(const child of children)content.append(child);
+ shell.append(sidebar,content);
+ if(header)header.after(shell);else document.body.prepend(shell);
+ const style=document.createElement("style");style.textContent="@media(max-width:767px){.portal-shell{display:block!important}.portal-sidebar{position:fixed!important;top:0;bottom:0;left:0;width:min(85vw,300px);z-index:1302;overflow-y:auto;visibility:hidden;transform:translateX(-105%);transition:transform .2s ease}.portal-menu-open .portal-sidebar{visibility:visible;transform:translateX(0)}}";document.head.append(style);
+ nav=sidebar;
+}
+
 
 /* Mobile navigation: the main content remains full width while the menu is off-canvas. */
 const mobileNavCss=document.createElement("style");
