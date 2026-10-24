@@ -12,6 +12,11 @@ if(!user){
     $("status").textContent="Nur für Administratoren freigegeben.";
   }else{
     const refs=await cloudPeople(user.id,"coach");
+    const {data:coachGames,error:gamesError}=await sb.from("portal_games").select("coach_id,match_date").eq("owner_id",user.id);
+    if(gamesError)throw gamesError;
+    const today=new Date().toLocaleDateString("sv-SE",{timeZone:"Europe/Berlin"});
+    const counts=new Map();
+    for(const g of coachGames||[]){if(g.coach_id&&g.match_date&&g.match_date<=today)counts.set(String(g.coach_id),(counts.get(String(g.coach_id))||0)+1);}
     const sortSelect=$("coach-sort");
     const sortKey="msp-coach-sort-mode";
     const firstName=p=>String(p.first||p.name?.trim().split(/\s+/)[0]||"").trim();
@@ -32,7 +37,7 @@ if(!user){
       for(const r of filtered){
         const name=r.name||[r.first,r.last].filter(Boolean).join(" ")||"Unbenannt";
         const card=document.createElement("details");card.className="ref-card";
-        const summary=document.createElement("summary");summary.textContent=name;card.append(summary);
+        const summary=document.createElement("summary");summary.textContent=name+" ("+(counts.get(String(r.id))||0)+")";summary.setAttribute("aria-label",name+": "+(counts.get(String(r.id))||0)+" bisherige Coaching-Spiele");card.append(summary);
         const contact=document.createElement("div");contact.className="contact";
         const phone=r.phoneMobile||r.phonePrivate||r.phoneBusiness||r.phone||"";
         const mail=r.mail||r.email||"";
