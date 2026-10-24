@@ -274,14 +274,14 @@ function mobileGameCard(g){
   holder.append(label,sel);inner.append(holder);
  }
  const checks=mobileElement("div","mobile-checks");
- for(const [field,label] of [["received_at","Bogen eingegangen"],["checked_at","Bogen geprüft"]]){
+ for(const [field,label] of [["received_at","Bogen eingegangen"]]){
   const checkLabel=document.createElement("label"),input=document.createElement("input");input.type="checkbox";input.checked=!!g[field];
   if(field==="checked_at"&&!g.received_at)input.disabled=true;
   input.setAttribute("aria-label",label+" für "+g.game_key);
   input.addEventListener("change",()=>change(g,field==="received_at"?{received_at:input.checked?new Date().toISOString():null,...(!input.checked?{checked_at:null}:{})}:{checked_at:input.checked?new Date().toISOString():null}));
   checkLabel.append(input,document.createTextNode(label));checks.append(checkLabel);
  }
- inner.append(checks);
+ const reviewStatus=mobileElement("div","small",g.checked_at?"✓ Bogen geprüft":"Bogen in Bearbeitung");checks.append(reviewStatus);inner.append(checks);
  const actions=mobileElement("div","mobile-actions");
  if(!g.is_test){
   const manual=mobileElement("button","",g.sent_manual_at?"Versandnotiz ändern":"Bereits versendet");
@@ -344,12 +344,13 @@ function render(){
   const pdfCell=document.createElement("td");
   if(doc){const a=document.createElement("a");a.href="/beobachtungsbogen-ansehen.html?pdf="+encodeURIComponent(doc.document_id);a.target="_blank";a.rel="noopener noreferrer";a.textContent="📘";a.style.fontSize="24px";a.title="Bogen separat öffnen";pdfCell.append(a)}
   else pdfCell.textContent="–";row.append(pdfCell);
-  for(const [field,prop] of [["received_at","Bogen eingegangen"],["checked_at","Bogen geprüft"]]){
+  for(const [field,prop] of [["received_at","Bogen eingegangen"]]){
    const td=document.createElement("td"),input=document.createElement("input");input.type="checkbox";input.checked=!!g[field];input.title=prop;input.setAttribute("aria-label",prop+" für "+g.game_key);
    if(field==="checked_at"&&!g.received_at)input.disabled=true;
    input.addEventListener("change",()=>change(g,field==="received_at"?{received_at:input.checked?new Date().toISOString():null,...(!input.checked?{checked_at:null}:{})}:{checked_at:input.checked?new Date().toISOString():null}));
    td.append(input);row.append(td)
   }
+  const checkedCell=document.createElement("td");checkedCell.textContent=g.checked_at?"✓ Geprüft":"In Bearbeitung";checkedCell.className="small";row.append(checkedCell);
   const sendCell=document.createElement("td");const sent=!!(g.sent_at||g.sent_manual_at);
   const label=document.createElement("div");label.textContent=g.is_test?"Testspiel – Test-E-Mail möglich":sent?"✓ Versendet":g.received_at?"Bogen eingegangen":"Noch nicht versendet";label.className="small";sendCell.append(label);
   const manual=document.createElement("button");manual.type="button";manual.textContent=g.sent_manual_at?"Versandnotiz ändern":"Bereits versendet";manual.onclick=()=>{
