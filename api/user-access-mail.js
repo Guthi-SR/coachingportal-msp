@@ -22,9 +22,9 @@ export default async function handler(req,res){
   if(!prepared.ok||!data.ok)return reply(res,prepared.status===409?409:502,data.error||"Persönlicher Link konnte nicht erstellt werden.");
   const email=String(data.to||"").trim().toLowerCase();
   const link=String(data.link||"");
-  if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||!link.startsWith(SB+"/auth/v1/verify?"))return reply(res,502,"Ungültige Empfängeradresse oder Link.");
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!link.startsWith(SB+"/auth/v1/verify?"))return reply(res,502,"Ungültige Empfängeradresse oder Link.");
   const subject="Einladung zum Coachingportal MSP";
-  const body=["Hallo "+data.firstName+" "+data.lastName+",","","du wurdest zum Coachingportal MSP eingeladen. Richte deinen Zugang über folgenden persönlichen Link ein:",link,"","Benutzername: "+data.username,"","Zum Coachingportal: https://coachingportal-msp.vercel.app/","","Viele Grüße","Coachingportal MSP"].join("\\n");
+  const body=["Hallo "+data.firstName+" "+data.lastName+",","","du wurdest zum Coachingportal MSP eingeladen. Richte deinen Zugang über folgenden persönlichen Link ein:",link,"","Benutzername: "+data.username,"","Zum Coachingportal: https://coachingportal-msp.vercel.app/","","Viele Grüße","Coachingportal MSP"].join("\n");
   const sent=await deliverMail({to:email,subject,text:body});
   return res.status(200).json({ok:true,message:"Zugangs-E-Mail über STRATO versendet.",id:sent.id||null});
  }catch(e){return reply(res,502,"Versand fehlgeschlagen: "+String(e.message||e).slice(0,180))}
