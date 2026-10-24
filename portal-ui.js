@@ -142,6 +142,11 @@ if(nav){
    }
    templatesLink.insertAdjacentElement("afterend",submenu);
  }
+ // Doppelte Hauptmenü-Links entfernen (auch wenn andere Skripte sie erneut eingefügt haben).
+ const dedupeMenu=()=>{const seen=new Set();for(const a of nav.querySelectorAll(':scope > a')){const href=a.getAttribute("href");if(!href)continue;const key=new URL(href,location.origin).pathname;if(seen.has(key))a.remove();else seen.add(key)}};
+ dedupeMenu();
+ const navObserver=new MutationObserver(()=>dedupeMenu());
+ navObserver.observe(nav,{childList:true});
  // Die Personen werden in den jeweiligen Seitenkacheln angezeigt, nicht im Seitenmenü.
  for(const submenu of nav.querySelectorAll(".person-submenu:not(.template-submenu)"))submenu.remove();
 }
