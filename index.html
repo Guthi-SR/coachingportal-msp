@@ -330,16 +330,17 @@ el("reset").onclick=async()=>{
 el("save-password").onclick=async()=>{
   const password=el("new-password").value;
   if(password.length<12)return msg("Bitte mindestens 12 Zeichen verwenden.");
-  const {error}=await supabase.auth.updateUser({password});
-  if(error)return msg("Das Passwort konnte nicht gespeichert werden.");
-  const {error:flagError}=await supabase.from("portal_profiles").update({must_change_password:false}).eq("user_id",(await supabase.auth.getUser()).data.user.id);
-  if(flagError)return msg("Passwort gespeichert, aber Freischaltung nicht abgeschlossen. Bitte Administrator kontaktieren.");
+  const saveButton=el("save-password");saveButton.disabled=true;msg("Passwort wird gespeichert …");
+  let error;try{({error}=await supabase.auth.updateUser({password}));}catch(e){error=e}finally{saveButton.disabled=false}
+  if(error)return msg("Passwort konnte nicht gespeichert werden: "+(error.message||"Verbindung prüfen und erneut versuchen."));
+  const {data:{user:updatedUser}}=await supabase.auth.getUser();\n  if(!updatedUser)return msg("Passwort gespeichert, aber Sitzung abgelaufen. Bitte erneut anmelden.");\n  const {error:flagError}=await supabase.from("portal_profiles").update({must_change_password:false}).eq("user_id",updatedUser.id);
+  if(flagError)return msg("Passwort gespeichert, aber Freischaltung nicht abgeschlossen: "+flagError.message);
   el("password-form").hidden=true;el("new-password").value="";msg("Passwort gespeichert.");await render();
 };
 el("dashboard-logout").onclick=async()=>{await supabase.auth.signOut();msg("Abgemeldet.");await render()};el("logout").onclick=async()=>{await supabase.auth.signOut();msg("Abgemeldet.");await render()};
 supabase.auth.onAuthStateChange(event=>{
-  if(event==="PASSWORD_RECOVERY"||event==="USER_UPDATED"){el("password-form").hidden=false;el("account").hidden=true;el("auth-form").hidden=true;msg("Bitte jetzt dein neues Passwort festlegen.");}
-  else if(event==="SIGNED_IN"||event==="SIGNED_OUT")setTimeout(render,0);
+  if(event==="PASSWORD_RECOVERY"){el("password-form").hidden=false;el("account").hidden=true;el("auth-form").hidden=true;msg("Bitte jetzt dein neues Passwort festlegen.");}
+  else if(event==="SIGNED_IN"||event==="SIGNED_OUT"||event==="USER_UPDATED")setTimeout(render,0);
 });
 await render();
 </script>
