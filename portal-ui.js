@@ -6,7 +6,7 @@ if(!nav){
  sidebar.className="portal-sidebar";
  sidebar.setAttribute("aria-label","Hauptmenü");
  sidebar.style.cssText="background:white;border-right:1px solid #dce5ee;padding:20px 12px;display:flex;flex-direction:column;gap:6px;min-width:0";
- const items=[["/","Dashboard"],["/spiele.html","Spiele"],["/beobachtungsboegen.html","Beobachtungsbögen"],["/schiedsrichter.html","Schiedsrichter"],["/textvorlagen.html","Textvorlagen"],["/zugang-einrichten.html","Benutzerverwaltung"],["/benutzerprofile.html","Benutzerprofile & Rechte"]];
+ const items=[["/","Startseite"],["/spiele-anlegen.html","Spiele anlegen"],["/spiele.html","Spiele"],["/coachingplanung.html","Coachingplanung"],["/auswertung.html","Auswertung"],["/beobachtungsbogen-erfassen.html","Beobachtungsbogen erfassen"],["/beobachtungsboegen.html","Beobachtungsbögen"],["/schiedsrichter.html","Schiedsrichter"],["/coach-beobachter.html","Coach-Beobachter"],["/textvorlagen.html","Textvorlagen"]];
  for(const [href,label] of items){const link=document.createElement("a");link.href=href;link.textContent=label;link.style.cssText="padding:10px 12px;color:#142b46;text-decoration:none;border-radius:7px";sidebar.append(link)}
  const shell=document.createElement("div");
  shell.className="portal-shell";
@@ -178,6 +178,7 @@ if(nav){
    const after=nav.querySelector('a[href="'+afterHref+'"]');
    if(after)after.insertAdjacentElement("afterend",link);else nav.append(link);
  };
+ for(const [href,label] of [["/","Startseite"],["/spiele-anlegen.html","Spiele anlegen"],["/spiele.html","Spiele"],["/coachingplanung.html","Coachingplanung"],["/auswertung.html","Auswertung"],["/beobachtungsbogen-erfassen.html","Beobachtungsbogen erfassen"],["/beobachtungsboegen.html","Beobachtungsbögen"],["/coach-beobachter.html","Coach-Beobachter"]])ensureMainLink(href,label,"/spiele.html");
  ensureMainLink("/verwaltung.html","Schiedsrichterverwaltung","/beobachtungsboegen.html");
  ensureMainLink("/schiedsrichter.html","Schiedsrichter","/verwaltung.html");
  if(!nav.querySelector("#portal-administration-menu")){
