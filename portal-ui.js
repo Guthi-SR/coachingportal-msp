@@ -210,6 +210,66 @@ if(nav){
  // Die Personen werden in den jeweiligen Seitenkacheln angezeigt, nicht im Seitenmenü.
  for(const submenu of nav.querySelectorAll(".person-submenu:not(.template-submenu)")){if(!submenu.closest("#portal-administration-menu"))submenu.remove();}
 }
+
+/* Zentrale profilbasierte Menüsteuerung: Berechtigungen kommen aus Supabase, nicht aus lokalen Häkchen. */
+async function applyProfileMenuPermissions(){
+ const permissionByPath={
+  "/spiele.html":"games_view",
+  "/spiele-anlegen.html":"games_create",
+  "/coachingplanung.html":"coaching_planning_view",
+  "/auswertung.html":"reports_view",
+  "/beobachtungsboegen.html":"reports_view",
+  "/beobachtungsbogen-erfassen.html":"reports_upload",
+  "/verwaltung.html":"referees_manage",
+  "/schiedsrichter.html":"referees_manage",
+  "/coach-beobachter-verwaltung.html":"coaches_manage",
+  "/coach-beobachter.html":"coaches_manage",
+  "/benutzerprofile.html":"users_manage",
+  "/zugang-einrichten.html":"users_manage",
+  "/textvorlagen.html":"mail_send"
+ };
+ try{
+  const {data:{user},error}=await (await import("/portal-workflow.js")).sb.auth.getUser();
+  if(error||!user)return;
+  const {data:profile,error:profileError}=await (await import("/portal-workflow.js")).sb
+   .from("portal_profiles").select("role").eq("user_id",user.id).single();
+  if(profileError||!profile)return;
+  if(profile.role==="admin")return;
+  const {sb}=await import("/portal-workflow.js");
+  const permissionCache=new Map();
+  for(const permission of new Set(Object.values(permissionByPath))){
+   const {data, error:checkError}=await sb.rpc("portal_has_permission",{check_id:user.id,permission_key:permission});
+   permissionCache.set(permission,!checkError&&data===true);
+  }
+  for(const link of nav?.querySelectorAll("a[href]")||[]){
+   const path=new URL(link.href,location.origin).pathname;
+   const permission=permissionByPath[path];
+   if(!permission)continue;
+   const allowed=permissionCache.get(permission)===true;
+   link.hidden=!allowed;
+   link.setAttribute("aria-hidden",String(!allowed));
+   if(!allowed)link.setAttribute("tabindex","-1");else link.removeAttribute("tabindex");
+  }
+  // Leere Verwaltungsgruppen und sonstige Untermenüs ebenfalls ausblenden.
+  for(const group of nav?.querySelectorAll("details")||[]){
+   const childLinks=[...group.querySelectorAll("a[href]")];
+   if(childLinks.length&&childLinks.every(a=>a.hidden))group.hidden=true;
+   else group.hidden=false;
+  }
+ }catch(error){
+  // Im Zweifel keine geschützten Menüpunkte anzeigen; die serverseitigen Seitenprüfungen bleiben maßgeblich.
+  for(const link of nav?.querySelectorAll("a[href]")||[]){
+   const path=new URL(link.href,location.origin).pathname;
+   if(permissionByPath[path]){link.hidden=true;link.setAttribute("aria-hidden","true");link.setAttribute("tabindex","-1");}
+  }
+  for(const group of nav?.querySelectorAll("details")||[]){
+   const links=[...group.querySelectorAll("a[href]")];
+   if(links.length&&links.every(a=>a.hidden))group.hidden=true;
+  }
+ }
+}
+if(nav)void applyProfileMenuPermissions();
+
 /* Gemeinsame mobile Tabellenansicht: jede Zeile als lesbare Karte. */
 const mobileTables=document.createElement("style");
 mobileTables.textContent=`@media(max-width:767px){body.portal-mobile-nav table[data-mobile-cards]{min-width:0!important;width:100%!important;display:block!important}body.portal-mobile-nav table[data-mobile-cards] thead{display:none!important}body.portal-mobile-nav table[data-mobile-cards] tbody{display:grid!important;gap:12px!important}body.portal-mobile-nav table[data-mobile-cards] tbody tr{display:block!important;border:1px solid #dce5ee!important;border-radius:12px!important;padding:12px!important;background:#fff!important;min-width:0!important}body.portal-mobile-nav table[data-mobile-cards] tbody td{display:flex!important;justify-content:space-between!important;align-items:flex-start!important;gap:12px!important;min-width:0!important;width:100%!important;max-width:100%!important;text-align:right!important;padding:9px 0!important;border-bottom:1px solid #eef2f7!important;white-space:normal!important;overflow-wrap:anywhere!important}body.portal-mobile-nav table[data-mobile-cards] tbody td::before{content:attr(data-mobile-label);font-weight:650;color:#536b80;text-align:left;flex:0 0 38%;white-space:normal}body.portal-mobile-nav table[data-mobile-cards] tbody td:last-child{border-bottom:0!important}body.portal-mobile-nav table[data-mobile-cards] button,body.portal-mobile-nav table[data-mobile-cards] a{min-height:40px;white-space:normal!important}body.portal-mobile-nav .scroll,body.portal-mobile-nav .tablebox{max-width:100%;overflow-x:visible!important}body.portal-mobile-nav input,body.portal-mobile-nav select,body.portal-mobile-nav textarea{max-width:100%;min-width:0}body.portal-mobile-nav main,body.portal-mobile-nav section{max-width:100%;min-width:0}}`;
