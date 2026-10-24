@@ -439,6 +439,8 @@ try{
  const requestedReferee=new URLSearchParams(location.search).get("referee");
  if(requestedReferee&&refs.some(p=>String(p.id)===requestedReferee)){refereeFilter=requestedReferee;refFilter.value=requestedReferee;}
  const coachSelect=$("coach-filter");for(const p of [...coaches].sort((a,b)=>fullName(a).localeCompare(fullName(b),"de")))coachSelect.add(new Option(fullName(p),p.id));
+ const requestedCoach=new URLSearchParams(location.search).get("coach");
+ if(requestedCoach&&coaches.some(p=>String(p.id)===requestedCoach)){coachFilter=requestedCoach;coachSelect.value=requestedCoach;}
  games=await syncGames(userId);docs=await syncObservations(userId);
  if(await associateUniqueObservations(userId,games,docs))games=await syncGames(userId);
  render()
