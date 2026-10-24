@@ -335,8 +335,8 @@ el("save-password").onclick=async()=>{
   if(error)return msg("Passwort konnte nicht gespeichert werden: "+(error.message||"Verbindung prüfen und erneut versuchen."));
   const {data:{user:updatedUser}}=await supabase.auth.getUser();
   if(!updatedUser)return msg("Passwort gespeichert, aber Sitzung abgelaufen. Bitte erneut anmelden.");
-  const {error:flagError}=await supabase.from("portal_profiles").update({must_change_password:false}).eq("user_id",updatedUser.id);
-  if(flagError)return msg("Passwort gespeichert, aber Freischaltung nicht abgeschlossen: "+flagError.message);
+  const {data:completed,error:flagError}=await supabase.rpc("complete_first_password_change");
+  if(flagError||completed!==true)return msg("Passwort gespeichert, aber Freischaltung nicht abgeschlossen. Bitte Admin kontaktieren.");
   el("password-form").hidden=true;el("new-password").value="";msg("Passwort gespeichert.");await render();
 };
 el("dashboard-logout").onclick=async()=>{await supabase.auth.signOut();msg("Abgemeldet.");await render()};el("logout").onclick=async()=>{await supabase.auth.signOut();msg("Abgemeldet.");await render()};
