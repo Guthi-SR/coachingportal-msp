@@ -23,6 +23,34 @@ if(!nav){
 
 
 if(nav)nav.style.visibility="hidden";
+/* Persönliche Begrüßung im Kopfbereich, für alle Portal-Seiten. */
+async function showPortalGreeting(){
+ const header=document.querySelector("body > header");
+ if(!header||header.querySelector(".portal-greeting"))return;
+ try{
+  const {sb}=await import("/portal-workflow.js");
+  const {data:{user},error}=await sb.auth.getUser();
+  if(error||!user)return;
+  const {data:account}=await sb.from("portal_user_access")
+   .select("first_name,username").eq("user_id",user.id).maybeSingle();
+  const firstName=String(account?.first_name||user.user_metadata?.first_name||
+   account?.username?.split("_")[0]||user.email?.split("@")[0]?.split(/[._-]/)[0]||"").trim();
+  if(!firstName)return;
+  const greeting=document.createElement("span");
+  greeting.className="portal-greeting";
+  greeting.textContent="Hallo "+firstName;
+  header.append(greeting);
+ }catch(error){console.warn("Begrüßung konnte nicht geladen werden",error)}
+}
+const portalGreetingStyle=document.createElement("style");
+portalGreetingStyle.textContent=`
+body > header{position:relative}
+body > header .portal-greeting{position:absolute;right:20px;top:50%;transform:translateY(-50%);font:600 15px system-ui,sans-serif;color:#fff;text-align:right}
+@media(max-width:767px){body > header .portal-greeting{position:static;display:block;transform:none;margin-top:7px;font-size:13px;text-align:right}}
+`;
+document.head.append(portalGreetingStyle);
+void showPortalGreeting();
+
 /* Mobile navigation: the main content remains full width while the menu is off-canvas. */
 const mobileNavCss=document.createElement("style");
 mobileNavCss.textContent=String.raw`
