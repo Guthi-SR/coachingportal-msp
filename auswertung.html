@@ -52,11 +52,12 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
  #overview td:nth-child(2):before{content:"Spiele gesamt: ";color:#607589;font-weight:500}
  #overview td:nth-child(3):before{content:"Spiele im Zeitraum: ";color:#607589;font-weight:500}
  #overview td:nth-child(4):before{content:"Spiele in Zukunft: ";color:#607589;font-weight:500}
- #overview td:nth-child(5):before{content:"Kilometer gesamt: ";color:#607589;font-weight:500}
- #overview td:nth-child(6):before{content:"Kilometer im Zeitraum: ";color:#607589;font-weight:500}
- #overview td:nth-child(7):before{content:"Kilometer Zukunft: ";color:#607589;font-weight:500}
- #overview td:nth-child(8){grid-column:1/-1}
- #overview td:nth-child(8) button{width:100%;min-height:44px}
+ #overview td:nth-child(5):before{content:"Noch nicht bestätigt: ";color:#607589;font-weight:500}
+ #overview td:nth-child(6):before{content:"Kilometer gesamt: ";color:#607589;font-weight:500}
+ #overview td:nth-child(7):before{content:"Kilometer im Zeitraum: ";color:#607589;font-weight:500}
+ #overview td:nth-child(8):before{content:"Kilometer Zukunft: ";color:#607589;font-weight:500}
+ #overview td:nth-child(9){grid-column:1/-1}
+ #overview td:nth-child(9) button{width:100%;min-height:44px}
  .details-table{min-width:0}
  .details-table td,.details-table th{padding:10px 5px;font-size:13px}
  .summary{min-width:0}
@@ -107,7 +108,7 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 </div>
 <div class="tablebox">
 <table id="overview" aria-label="Alle Coaches mit Spielen im Zeitraum, geplanten Spielen und Kilometern">
-<thead><tr><th>Coach / Beobachter</th><th>Spiele gesamt</th><th>Spiele im Zeitraum</th><th>Spiele in Zukunft</th><th>Kilometer gesamt</th><th>Kilometer im Zeitraum</th><th>Kilometer Zukunft</th><th>Einzelaufstellung</th></tr></thead>
+<thead><tr><th>Coach / Beobachter</th><th>Spiele gesamt</th><th>Spiele im Zeitraum</th><th>Spiele in Zukunft</th><th>Noch nicht bestätigt</th><th>Kilometer gesamt</th><th>Kilometer im Zeitraum</th><th>Kilometer Zukunft</th><th>Einzelaufstellung</th></tr></thead>
 <tbody id="overview-rows"></tbody>
 </table></div>
 </div>
@@ -116,7 +117,7 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 <p class="hint" id="details-subtitle"></p>
 <div class="tablebox"><table class="summary">
 <thead><tr><th>Coach</th><th>Spiele im Zeitraum</th><th>Geplant (Zukunft)</th><th>Kilometer gesamt</th><th>Kilometer geplant</th><th>Spiele insgesamt</th><th>Kilometer insgesamt</th></tr></thead>
-<tbody><tr><td id="coach-name"></td><td id="game-count"></td><td id="planned-count"></td><td id="km-total"></td><td id="planned-km-total"></td><td id="overall-game-count"></td><td id="overall-km-total"></td></tr></tbody></table></div>
+<tbody><tr><td id="coach-name"></td><td id="game-count"></td><td id="planned-count"></td><td id="unconfirmed-count"></td><td id="km-total"></td><td id="planned-km-total"></td><td id="overall-game-count"></td><td id="overall-km-total"></td></tr></tbody></table></div>
 <p><button id="export-excel" type="button" disabled>Excel exportieren (.xlsx)</button></p>
 <h3>Spiele im ausgewählten Zeitraum</h3>
 <div class="tablebox"><table class="details-table">
@@ -178,7 +179,8 @@ function summarize(p,from,to){
   .sort((a,b)=>String(a.match_date).localeCompare(String(b.match_date))||String(a.kickoff||"").localeCompare(String(b.kickoff||"")));
  const sum=rows.reduce((s,g)=>s+(distance(g.kilometers_text)??0),0);
  const plannedSum=planned.reduce((s,g)=>s+(distance(g.kilometers_text)??0),0);
- return{name:displayName(p),from,to,games:rows,plannedGames:planned,sum,plannedSum,
+ const unconfirmed=games.filter(g=>!g.is_test&&coachMatches(p,g)&&["voreingeteilt","eingeteilt"].includes(String(g.planning_status||"offen")));
+ return{name:displayName(p),from,to,games:rows,plannedGames:planned,unconfirmedGames:unconfirmed,sum,plannedSum,
   totalGames:rows.length+planned.length,totalKm:sum+plannedSum,
   missing:rows.filter(g=>String(g.kilometers_text||"").trim()&&distance(g.kilometers_text)===null).length,
   plannedMissing:planned.filter(g=>distance(g.kilometers_text)===null).length};
@@ -197,6 +199,7 @@ function showCoachDetails(id){
  $("coach-name").textContent=current.name;
  $("game-count").textContent=current.games.length;
  $("planned-count").textContent=current.plannedGames.length;
+ $("unconfirmed-count").textContent=current.unconfirmedGames.length;
  $("planned-km-total").textContent=labelKm(current.plannedSum);
  $("overall-game-count").textContent=current.totalGames;
  $("overall-km-total").textContent=labelKm(current.totalKm);
@@ -260,6 +263,7 @@ function renderOverview(){
   const km=document.createElement("td");km.textContent=labelKm(result.sum);
   const plannedKm=document.createElement("td");plannedKm.textContent=labelKm(result.plannedSum);if(!result.plannedSum)plannedKm.className="zero";
   const totalCount=document.createElement("td");totalCount.textContent=String(result.totalGames);
+  const unconfirmedCount=document.createElement("td");unconfirmedCount.textContent=String(result.unconfirmedGames.length);if(!result.unconfirmedGames.length)unconfirmedCount.className="zero";
   const totalKmCell=document.createElement("td");totalKmCell.textContent=labelKm(result.totalKm);
   const action=document.createElement("td"),btn=document.createElement("button");
   btn.className="detail-btn";btn.type="button";
@@ -268,10 +272,10 @@ function renderOverview(){
   btn.setAttribute("aria-expanded",String(opened));
   btn.setAttribute("aria-controls","details-result");
   btn.addEventListener("click",()=>showCoachDetails(String(coach.id)));
-  action.append(btn);tr.append(name,totalCount,count,planned,totalKmCell,km,plannedKm,action);tbody.append(tr);
+  action.append(btn);tr.append(name,totalCount,count,planned,unconfirmedCount,totalKmCell,km,plannedKm,action);tbody.append(tr);
  }
  if(!ordered.length){
-  const row=document.createElement("tr"),cell=document.createElement("td");cell.colSpan=8;cell.textContent="Noch keine Coaches angelegt.";row.append(cell);tbody.append(row);
+  const row=document.createElement("tr"),cell=document.createElement("td");cell.colSpan=9;cell.textContent="Noch keine Coaches angelegt.";row.append(cell);tbody.append(row);
  }
  $("overview-total").textContent=ordered.length+" Coaches · "+totalGames+" Spiele im Zeitraum · "+games.filter(g=>!g.is_test&&g.match_date>today).length+" geplante Spiele insgesamt · "+labelKm(totalKm);
  updateCoachExportStatus();
@@ -361,7 +365,7 @@ try{
  const{user}=await requireAdmin();
  const [list,gameResult]=await Promise.all([
   cloudPeople(user.id,"coach"),
-  sb.from("portal_games").select("game_key,match_date,kickoff,home,away,league,coach_id,coach_name,is_test,kilometers_text,expense_type").eq("owner_id",user.id)
+  sb.from("portal_games").select("game_key,match_date,kickoff,home,away,league,coach_id,coach_name,is_test,kilometers_text,expense_type,planning_status").eq("owner_id",user.id)
  ]);
  if(gameResult.error)throw gameResult.error;
  games=gameResult.data||[];
