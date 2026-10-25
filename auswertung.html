@@ -115,7 +115,7 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 <p><button id="export-excel" type="button" disabled>Excel exportieren (.xlsx)</button></p>
 <h3>Details der Coachings</h3>
 <div class="tablebox"><table class="details-table">
-<thead><tr><th>Datum</th><th>Coaching</th><th>Kilometer</th></tr></thead>
+<thead><tr><th>Datum</th><th>Coaching</th><th>Einsatzart</th><th>Km hin und zurück</th><th>Fahrtkosten</th><th>Spesen</th><th>Gesamt</th></tr></thead>
 <tbody id="detail-rows"></tbody></table></div>
 <p class="hint" id="km-note"></p>
 </div>
@@ -146,6 +146,10 @@ function distance(s){
  return Number.isFinite(value)?value:null;
 }
 function labelKm(value){return value.toLocaleString("de-DE",{maximumFractionDigits:2})+" km"}
+function expenseLabel(type){return ({pateneinsatz:"Pateneinsatz",coaching_gruppe:"Coaching Gruppe",coaching_ksa:"Coaching KSA"})[type]||"Coaching Gruppe"}
+function expenseRate(type){return type==="pateneinsatz"?20:30}
+function gameCompensation(game){const km=distance(game.kilometers_text),mileage=km===null?null:Math.round(km*0.3*100)/100,fee=expenseRate(game.expense_type||"coaching_gruppe");return{km,mileage,fee,total:km===null?null:Math.round((mileage+fee)*100)/100,complete:km!==null,type:game.expense_type||"coaching_gruppe"}}
+
 function effectiveRange(){
  const from=$("from").value||defaultFrom,to=$("to").value||berlinToday();
  return{from,to};
@@ -180,14 +184,13 @@ function showCoachDetails(id){
  $("details-subtitle").textContent="Zeitraum "+dateDE(from)+" bis "+dateDE(to);
  const tbody=$("detail-rows");tbody.replaceChildren();
  for(const game of current.games){
-  const tr=document.createElement("tr");
-  for(const val of [dateDE(game.match_date),[game.home,game.away].filter(Boolean).join(" – ")||"Coaching",game.kilometers_text||"–"]){
-   const td=document.createElement("td");td.textContent=val;tr.append(td);
-  }
+  const tr=document.createElement("tr"),m=gameCompensation(game);
+  const vals=[dateDE(game.match_date),[game.home,game.away].filter(Boolean).join(" – ")||"Coaching",expenseLabel(m.type),m.km===null?(game.kilometers_text||"Fehlt"):labelKm(m.km),m.mileage===null?"Fehlt":m.mileage.toLocaleString("de-DE",{style:"currency",currency:"EUR"}),m.fee.toLocaleString("de-DE",{style:"currency",currency:"EUR"}),m.total===null?"Unvollständig":m.total.toLocaleString("de-DE",{style:"currency",currency:"EUR"})];
+  for(const val of vals){const td=document.createElement("td");td.textContent=val;tr.append(td)}
   tbody.append(tr);
  }
  if(!current.games.length){
-  const row=document.createElement("tr"),td=document.createElement("td");td.colSpan=3;td.textContent="Keine Spiele im gewählten Zeitraum.";row.append(td);tbody.append(row);
+  const row=document.createElement("tr"),td=document.createElement("td");td.colSpan=7;td.textContent="Keine Spiele im gewählten Zeitraum.";row.append(td);tbody.append(row);
  }
  $("km-note").textContent=current.missing?current.missing+" Kilometerangabe(n) sind nicht numerisch und wurden nicht zur Summe addiert.":"";
  $("details-result").hidden=false;
@@ -270,104 +273,25 @@ for(const mode of document.querySelectorAll('input[name="coach-scope"]')){
  mode.addEventListener("change",()=>{if(mode.checked){coachScope=mode.value;renderOverview();}});
 }
 async function exportBatchCoaches(){
- const {from,to}=effectiveRange();
- if(from>to){$("coach-export-status").textContent="Bitte einen gültigen Zeitraum wählen.";return}
- const snapshot=getBatchCoaches().map(person=>({...summarize(person,from,to),person}));
- if(!snapshot.length){$("coach-export-status").textContent="Bitte mindestens einen Coach auswählen.";return}
- const button=$("export-coaches");
- button.disabled=true;const previous=button.textContent;button.textContent="Excel wird erstellt …";
+ const {from,to}=effectiveRange();if(from>to){$("coach-export-status").textContent="Bitte einen gültigen Zeitraum wählen.";return}
+ const snapshot=getBatchCoaches().map(person=>({...summarize(person,from,to),person}));if(!snapshot.length){$("coach-export-status").textContent="Bitte mindestens einen Coach auswählen.";return}
+ const button=$("export-coaches");button.disabled=true;const previous=button.textContent;button.textContent="Excel wird erstellt …";
  try{
-  const ExcelJS=await loadExcelLibrary();
-  const book=new ExcelJS.Workbook();
-  book.creator="Coachingportal MSP";
-  book.title="Coach-Auswertung";
-  book.subject="Coaching-Spiele im gewählten Zeitraum";
-  book.created=new Date();book.calcProperties.fullCalcOnLoad=true;
-  const overview=book.addWorksheet("Übersicht");
-  overview.columns=[{width:35},{width:19},{width:21},{width:32}];
-  overview.mergeCells("A1:C1");
-  overview.getCell("A1").value="Coach-Auswertung";
-  overview.getCell("A1").font={name:"Aptos Display",size:18,bold:true,color:{argb:"FFFFFFFF"}};
-  overview.getCell("A1").fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};
-  overview.getCell("A1").alignment={vertical:"middle"};overview.getRow(1).height=38;
-  overview.getCell("A3").value="Zeitraum";
-  overview.getCell("B3").value=dateDE(from)+" – "+dateDE(to);
-  overview.getCell("A4").value="Auswahl";
-  overview.getCell("B4").value=coachScope==="all"?"Alle Coaches":snapshot.length+" ausgewählte Coaches";
-  overview.getCell("A5").value="Testspiele ausgeschlossen";
-  overview.getCell("B5").value="Ja";
-  const details=book.addWorksheet("Einzelspiele");
-  details.columns=[
-   {header:"Datum",key:"date",width:16},
-   {header:"Coach",key:"name",width:33},
-   {header:"Begegnung",key:"game",width:55},
-   {header:"Spielklasse",key:"league",width:31},
-   {header:"Km im Spiel",key:"km",width:18},
-   {header:"Coach-ID",key:"coachid",width:22}
-  ];
-  let detailCount=0;
-  for(const item of snapshot){
-   for(const game of item.games){
-    const raw=String(game.kilometers_text??"").trim();
-    const km=distance(raw);
-    details.addRow({
-     date:new Date(game.match_date+"T12:00:00Z"),
-     name:String(item.name),
-     game:[game.home,game.away].filter(Boolean).join(" – ")||"Coaching",
-     league:game.league||"",
-     km:km===null?(raw||null):km,
-     coachid:String(item.person.id)
-    });
-    detailCount++;
-   }
-  }
-  details.getColumn(1).numFmt="dd.mm.yyyy";
-  details.getColumn(5).numFmt='0.##" km"';
-  details.getColumn(6).hidden=true;
-  details.views=[{state:"frozen",ySplit:1}];
-  details.autoFilter={from:"A1",to:"F"+Math.max(1,detailCount+1)};
-  const headers=["Coach","Anzahl Spiele","Km im Spiel","Interne ID"];
-  for(let col=1;col<=headers.length;col++)overview.getRow(7).getCell(col).value=headers[col-1];
-  const endRow=Math.max(2,detailCount+1);
-  for(const [i,item] of snapshot.entries()){
-   const row=overview.getRow(8+i);
-   row.getCell(1).value=item.name;
-   row.getCell(4).value=String(item.person.id);
-   row.getCell(2).value={formula:"COUNTIF(Einzelspiele!$F$2:$F$"+endRow+",D"+row.number+")",result:item.games.length};
-   row.getCell(3).value={formula:"SUMIF(Einzelspiele!$F$2:$F$"+endRow+",D"+row.number+",Einzelspiele!$E$2:$E$"+endRow+")",result:item.sum};
-   row.getCell(3).numFmt='0.##" km"';
-  }
-  overview.getColumn(4).hidden=true;
-  const totalRow=overview.getRow(8+snapshot.length);
-  totalRow.getCell(1).value="GESAMT";
-  totalRow.getCell(2).value={formula:"SUM(B8:B"+(7+snapshot.length)+")",result:snapshot.reduce((a,i)=>a+i.games.length,0)};
-  totalRow.getCell(3).value={formula:"SUM(C8:C"+(7+snapshot.length)+")",result:snapshot.reduce((a,i)=>a+i.sum,0)};
-  totalRow.getCell(3).numFmt='0.##" km"';
-  totalRow.eachCell(cell=>{
-   cell.font={name:"Aptos",bold:true,color:{argb:"FF142B46"}};
-   cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE8F0F8"}};
-  });
-  for(const sheet of [overview,details]){
-   const row=sheet.getRow(sheet===overview?7:1);
-   row.height=28;
-   row.eachCell(cell=>{
-    cell.font={name:"Aptos",bold:true,color:{argb:"FFFFFFFF"}};
-    cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};
-    cell.alignment={vertical:"middle"};
-   });
-  }
-  const bytes=await book.xlsx.writeBuffer();
-  const blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
-  const url=URL.createObjectURL(blob),a=document.createElement("a");
-  a.href=url;
-  a.download="Coaches_Auswertung_"+from+"_bis_"+to+"_"+(coachScope==="all"?"alle":snapshot.length+"_ausgewaehlt")+".xlsx";
-  document.body.append(a);a.click();a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),60000);
-  $("coach-export-status").textContent="Excel-Auswertung erstellt.";
- }catch(error){$("coach-export-status").textContent="Excel-Export fehlgeschlagen: "+error.message}
- finally{button.textContent=previous;updateCoachExportStatus()}
+  const ExcelJS=await loadExcelLibrary(),book=new ExcelJS.Workbook();book.creator="Coachingportal MSP";book.title="Coach-Auswertung";book.subject="Spiele, Kilometer und Aufwandsentschädigung";book.created=new Date();book.calcProperties.fullCalcOnLoad=true;
+  const overview=book.addWorksheet("Übersicht");overview.columns=[{width:31},{width:15},{width:18},{width:20},{width:17},{width:20},{width:19}];overview.mergeCells("A1:F1");overview.getCell("A1").value="Coach-Auswertung – Spiele und Aufwandsentschädigung";overview.getCell("A1").font={size:16,bold:true,color:{argb:"FFFFFFFF"}};overview.getCell("A1").fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};overview.getRow(1).height=34;
+  overview.getCell("A3").value="Zeitraum";overview.getCell("B3").value=dateDE(from)+" – "+dateDE(to);overview.getCell("A4").value="Auswahl";overview.getCell("B4").value=coachScope==="all"?"Alle Coaches":snapshot.length+" ausgewählte Coaches";overview.getCell("A5").value="Testspiele ausgeschlossen";overview.getCell("B5").value="Ja";
+  const details=book.addWorksheet("Einzelspiele");details.columns=[{header:"Datum",width:14},{header:"Coach",width:28},{header:"Begegnung",width:48},{header:"Spielklasse",width:25},{header:"Einsatzart",width:21},{header:"Km hin und zurück",width:19},{header:"Kilometerkosten (0,30 €/km)",width:23},{header:"Spesen",width:15},{header:"Aufwandsentschädigung gesamt",width:25},{header:"Abrechnung",width:18},{header:"Coach-ID",width:22}];
+  let count=0;for(const item of snapshot)for(const game of item.games){const m=gameCompensation(game);details.addRow([new Date(game.match_date+"T12:00:00Z"),String(item.name),[game.home,game.away].filter(Boolean).join(" – ")||"Coaching",game.league||"",expenseLabel(m.type),m.km,m.mileage,m.fee,m.total,m.complete?"Vollständig":"Kilometer fehlen",String(item.person.id)]);count++}
+  details.getColumn(1).numFmt="dd.mm.yyyy";details.getColumn(6).numFmt='0.##" km"';for(const n of [7,8,9])details.getColumn(n).numFmt='€ #,##0.00';details.getColumn(11).hidden=true;details.views=[{state:"frozen",ySplit:1}];details.autoFilter={from:"A1",to:"K"+Math.max(1,count+1)};
+  ["Coach","Anzahl Spiele","Km gesamt","Kilometerkosten","Spesen gesamt","Gesamtbetrag","Unvollständige Spiele"].forEach((h,i)=>overview.getRow(7).getCell(i+1).value=h);
+  for(const [i,item] of snapshot.entries()){const row=overview.getRow(8+i),ms=item.games.map(gameCompensation),complete=ms.filter(m=>m.complete);row.getCell(1).value=item.name;row.getCell(2).value=item.games.length;row.getCell(3).value=ms.reduce((s,m)=>s+(m.km??0),0);row.getCell(4).value=complete.reduce((s,m)=>s+(m.mileage??0),0);row.getCell(5).value=ms.reduce((s,m)=>s+m.fee,0);row.getCell(6).value=complete.reduce((s,m)=>s+(m.total??0),0);row.getCell(7).value=ms.filter(m=>!m.complete).length}
+  const total=overview.getRow(8+snapshot.length);total.getCell(1).value="GESAMT";for(let col=2;col<=7;col++)total.getCell(col).value=snapshot.reduce((sum,item)=>{const ms=item.games.map(gameCompensation);if(col===2)return sum+item.games.length;if(col===3)return sum+ms.reduce((s,m)=>s+(m.km??0),0);if(col===4)return sum+ms.filter(m=>m.complete).reduce((s,m)=>s+(m.mileage??0),0);if(col===5)return sum+ms.reduce((s,m)=>s+m.fee,0);if(col===6)return sum+ms.filter(m=>m.complete).reduce((s,m)=>s+(m.total??0),0);return sum+ms.filter(m=>!m.complete).length},0);
+  overview.getColumn(3).numFmt='0.##" km"';for(const n of [4,5,6])overview.getColumn(n).numFmt='€ #,##0.00';total.eachCell(cell=>{cell.font={bold:true,color:{argb:"FF142B46"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE8F0F8"}}});
+  for(const sheet of [overview,details]){const row=sheet.getRow(sheet===overview?7:1);row.height=28;row.eachCell(cell=>{cell.font={bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};cell.alignment={vertical:"middle"}})}
+  const bytes=await book.xlsx.writeBuffer(),blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="Coaches_Auswertung_"+from+"_bis_"+to+".xlsx";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);$("coach-export-status").textContent="Excel-Auswertung mit Einsatzarten und Entschädigungen erstellt.";
+ }catch(error){$("coach-export-status").textContent="Excel-Export fehlgeschlagen: "+error.message}finally{button.textContent=previous;updateCoachExportStatus()}
 }
-$("export-coaches").addEventListener("click",exportBatchCoaches);
+addEventListener("click",exportBatchCoaches);
 
 
 function loadExcelLibrary(){
@@ -385,97 +309,20 @@ function loadExcelLibrary(){
 }
 const noFormula=x=>String(x??"");
 async function exportExcel(){
- const current=lastResult;if(!current)return;
- const button=$("export-excel");button.disabled=true;
- const oldLabel=button.textContent;button.textContent="Excel wird erstellt …";
+ const current=lastResult;if(!current)return;const button=$("export-excel");button.disabled=true;const oldLabel=button.textContent;button.textContent="Excel wird erstellt …";
  try{
-  const ExcelJS=await loadExcelLibrary();
-  const book=new ExcelJS.Workbook();
-  book.creator="Coachingportal MSP";
-  book.title="Coaching-Auswertung";
-  book.subject="Coachingspiele und Kilometer im gewählten Zeitraum";
-  book.created=new Date();
-  book.calcProperties.fullCalcOnLoad=true;
-  const sumSheet=book.addWorksheet("Übersicht",{views:[{state:"frozen",ySplit:2}]});
-  const detail=book.addWorksheet("Details");
-  detail.columns=[
-   {header:"Datum",key:"date",width:17},
-   {header:"Coaching",key:"game",width:57},
-   {header:"Kilometer",key:"km",width:19}
-  ];
-  for(const game of current.games){
-   const raw=String(game.kilometers_text??"").trim();
-   const numeric=distance(raw);
-   detail.addRow({
-    date:new Date(game.match_date+"T12:00:00Z"),
-    game:noFormula([game.home,game.away].filter(Boolean).join(" – ")||"Coaching"),
-    km:numeric===null?(raw||null):numeric
-   });
-  }
-  detail.getColumn(1).numFmt="dd.mm.yyyy";
-  detail.getColumn(3).numFmt='0.##" km"';
-  detail.views=[{state:"frozen",ySplit:1}];
-  detail.autoFilter={from:"A1",to:"C"+Math.max(1,current.games.length+1)};
-  detail.getRow(1).height=27;
-  detail.getRow(1).eachCell(cell=>{
-   cell.font={name:"Aptos",size:11,bold:true,color:{argb:"FFFFFFFF"}};
-   cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};
-   cell.alignment={vertical:"middle"};
-  });
-  for(let i=2;i<=current.games.length+1;i++){
-   const row=detail.getRow(i);
-   row.height=23;
-   row.eachCell(cell=>{
-    cell.font={name:"Aptos",size:11,color:{argb:"FF142B46"}};
-    cell.alignment={vertical:"middle",wrapText:cell.col===2};
-    if(i%2===0)cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFF3F6FA"}};
-   });
-  }
-  sumSheet.columns=[{width:29},{width:40},{width:20}];
-  sumSheet.mergeCells("A1:C1");
-  const title=sumSheet.getCell("A1");title.value="Coaching-Auswertung";title.font={name:"Aptos Display",size:18,bold:true,color:{argb:"FFFFFFFF"}};
-  title.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};
-  title.alignment={vertical:"middle"};sumSheet.getRow(1).height=38;
-  sumSheet.getCell("A3").value="Coach";
-  sumSheet.getCell("B3").value=current.name;
-  sumSheet.getCell("A4").value="Zeitraum";
-  sumSheet.getCell("B4").value=(current.from?dateDE(current.from):"Beginn offen")+" – "+(current.to?dateDE(current.to):"Ende offen");
-  sumSheet.getCell("A6").value="Anzahl Spiele";
-  sumSheet.getCell("A7").value="Kilometer gesamt";
-  const endRow=Math.max(2,current.games.length+1);
-  sumSheet.getCell("B6").value={formula:"COUNTA(Details!A2:A"+endRow+")",result:current.games.length};
-  sumSheet.getCell("B7").value={formula:"SUM(Details!C2:C"+endRow+")",result:current.sum};
-  sumSheet.getCell("B7").numFmt='0.##" km"';
-  sumSheet.mergeCells("A9:C9");
-  sumSheet.getCell("A9").value="Testspiele werden nicht berücksichtigt.";
-  sumSheet.mergeCells("A10:C10");
-  sumSheet.getCell("A10").value=current.missing?"Hinweis: "+current.missing+" nicht numerische Kilometerangaben sind nicht in der Summe enthalten.":"Datenstand zum Zeitpunkt des Exports.";
-  for(const addr of ["A3","A4","A6","A7"]){
-   sumSheet.getCell(addr).font={name:"Aptos",bold:true,color:{argb:"FF142B46"}};
-  }
-  for(const addr of ["A6","B6","A7","B7"]){
-   sumSheet.getCell(addr).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE8F0F8"}};
-   sumSheet.getCell(addr).alignment={vertical:"middle"};
-  }
-  for(const row of [6,7])sumSheet.getRow(row).height=29;
-  sumSheet.getCell("A9").font={italic:true,color:{argb:"FF51667C"}};
-  sumSheet.getCell("A10").font={italic:true,color:{argb:"FF51667C"}};
-  const buffer=await book.xlsx.writeBuffer();
-  const blob=new Blob([buffer],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
-  const safeName=current.name.normalize("NFKD").replace(/[^a-zA-Z0-9_-]+/g,"_").replace(/^_+|_+$/g,"").slice(0,60)||"Coach";
-  const start=current.from||"alle",end=current.to||"alle";
-  const filename="Coaching_Auswertung_"+safeName+"_"+start+"_bis_"+end+".xlsx";
-  const url=URL.createObjectURL(blob),link=document.createElement("a");
-  link.href=url;link.download=filename;document.body.append(link);link.click();link.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),60000);
-  $("status").textContent="Excel-Datei für "+current.name+" erstellt.";
- }catch(error){
-  $("status").textContent="Excel-Export fehlgeschlagen: "+error.message;
- }finally{
-  button.disabled=!lastResult;button.textContent=oldLabel;
- }
+  const ExcelJS=await loadExcelLibrary(),book=new ExcelJS.Workbook();book.creator="Coachingportal MSP";book.title="Coaching-Auswertung";book.subject="Spiele, Kilometer und Aufwandsentschädigung";book.created=new Date();book.calcProperties.fullCalcOnLoad=true;
+  const sum=book.addWorksheet("Übersicht"),detail=book.addWorksheet("Einzelspiele");sum.columns=[{width:40},{width:28},{width:20}];sum.mergeCells("A1:C1");sum.getCell("A1").value="Coaching-Auswertung – Aufwandsentschädigung";sum.getCell("A1").font={size:16,bold:true,color:{argb:"FFFFFFFF"}};sum.getCell("A1").fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};sum.getRow(1).height=34;sum.getCell("A3").value="Coach";sum.getCell("B3").value=current.name;sum.getCell("A4").value="Zeitraum";sum.getCell("B4").value=(current.from?dateDE(current.from):"Beginn offen")+" – "+(current.to?dateDE(current.to):"Ende offen");
+  detail.columns=[{header:"Datum",width:14},{header:"Begegnung",width:45},{header:"Einsatzart",width:21},{header:"Km hin und zurück",width:19},{header:"Kilometerkosten (0,30 €/km)",width:23},{header:"Spesen",width:15},{header:"Aufwandsentschädigung gesamt",width:25},{header:"Abrechnung",width:18}];
+  const rows=current.games.map(game=>({game,m:gameCompensation(game)}));for(const {game,m} of rows)detail.addRow([new Date(game.match_date+"T12:00:00Z"),[game.home,game.away].filter(Boolean).join(" – ")||"Coaching",expenseLabel(m.type),m.km,m.mileage,m.fee,m.total,m.complete?"Vollständig":"Kilometer fehlen"]);
+  detail.getColumn(1).numFmt="dd.mm.yyyy";detail.getColumn(4).numFmt='0.##" km"';for(const n of [5,6,7])detail.getColumn(n).numFmt='€ #,##0.00';detail.views=[{state:"frozen",ySplit:1}];detail.autoFilter={from:"A1",to:"H"+Math.max(1,rows.length+1)};
+  const complete=rows.filter(x=>x.m.complete),sums=[["Anzahl Spiele",current.games.length],["Km gesamt",rows.reduce((s,x)=>s+(x.m.km??0),0)],["Kilometerkosten",complete.reduce((s,x)=>s+(x.m.mileage??0),0)],["Spesen gesamt",rows.reduce((s,x)=>s+x.m.fee,0)],["Gesamtbetrag (nur Spiele mit Kilometerangabe)",complete.reduce((s,x)=>s+(x.m.total??0),0)],["Spiele mit fehlenden Kilometern",rows.filter(x=>!x.m.complete).length]];
+  sums.forEach((x,i)=>{sum.getCell(6+i,1).value=x[0];sum.getCell(6+i,2).value=x[1]});sum.getCell("B7").numFmt='0.##" km"';for(const n of [8,9,10])sum.getCell(n,2).numFmt='€ #,##0.00';
+  for(const sheet of [sum,detail]){const row=sheet.getRow(1);row.eachCell(cell=>{cell.font={bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}}})}
+  const bytes=await book.xlsx.writeBuffer(),blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="Coaching_Auswertung_"+current.from+"_bis_"+current.to+".xlsx";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+ }catch(error){$("km-note").textContent="Excel-Export fehlgeschlagen: "+error.message}finally{button.textContent=oldLabel;button.disabled=false}
 }
-$("export-excel").addEventListener("click",exportExcel);
+addEventListener("click",exportExcel);
 try{
  const{user}=await requireAdmin();
  const [list,gameResult]=await Promise.all([
