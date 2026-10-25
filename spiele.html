@@ -269,7 +269,7 @@ async function saveRouteConsent(allowed){
   if(error)throw error;
   routeConsentEnabled=allowed;
   toggle.checked=allowed;
-  $("global-route-setting-card").hidden=allowed;
+  $("global-route-consent-label").hidden=allowed;
   $("global-route-consent-revoke").hidden=!allowed;
   status.textContent=allowed?"Zustimmung zentral in Supabase gespeichert.":"Zentrale Routenzustimmung widerrufen.";
   $("venue-check-consent").checked=allowed;
