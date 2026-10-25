@@ -272,6 +272,7 @@ async function saveRouteConsent(allowed){
   $("global-route-consent-label").hidden=allowed;
   $("global-route-consent-revoke").hidden=!allowed;
   status.textContent=allowed?"Zustimmung zentral in Supabase gespeichert.":"Zentrale Routenzustimmung widerrufen.";
+  if(allowed&&games.length)void startRouteReview();
   $("venue-check-consent").checked=allowed;
  }catch(e){toggle.checked=routeConsentEnabled;status.textContent="Speichern fehlgeschlagen: "+e.message}
  finally{toggle.disabled=false}
@@ -297,7 +298,10 @@ async function loadConfirmedVenue(g){
    $("venue-check-status").textContent="Bereits bestätigte Spielstätte gefunden: "+data.verified_address;
    if(!g.venue_route_address||g.venue_route_address!==data.verified_address)$("venue-check-query").value=data.verified_address;
    renderVenueCandidates([{label:data.verified_address,lat:data.lat,lon:data.lon,category:"confirmed",type:"confirmed",address:{}}],true);
-   if(g.coach_id&&g.venue_route_address===data.verified_address&&!g.route_checked_at)$("venue-check-status").textContent+=" · Coach vorhanden. Zustimmung anhaken, um die Fahrtstrecke automatisch zu berechnen.";
+   if(g.coach_id&&g.venue_route_address===data.verified_address&&!g.route_checked_at){
+    $("venue-check-status").textContent+=" · Fahrtstrecke wird vorbereitet.";
+    if(hasRouteConsent()&&!batchRouteRunning)void calculateConfirmedVenueRoute(g);
+   }
   }
  }catch(e){$("venue-check-status").textContent="Gespeicherte Bestätigung konnte nicht geladen werden: "+e.message}
 }
@@ -371,10 +375,48 @@ async function calculateConfirmedVenueRoute(g){
  }catch(e){$("venue-check-status").textContent="Routenberechnung fehlgeschlagen: "+e.message}
  finally{venueRouteBusy=false;button.disabled=!g.coach_id}
 }
+let batchRouteRunning=false,batchQueue=[],batchTotal=0,batchDone=0;
+async function startRouteReview(){
+ if(batchRouteRunning||!hasRouteConsent()||!games.length)return;
+ try{
+  const {data:{user}}=await sb.auth.getUser();
+  const {data:profile}=await sb.from("portal_profiles").select("role").eq("user_id",user.id).maybeSingle();
+  if(profile?.role!=="admin")return;
+  const {data:confirmed,error}=await sb.from("portal_confirmed_venues").select("venue_name,verified_address").eq("owner_id",userId);
+  if(error)throw error;
+  const verified=new Map((confirmed||[]).map(v=>[v.venue_name,v.verified_address]));
+  batchQueue=games.filter(g=>g.coach_id&&g.venue_route_address&&g.planned_one_way_km==null&&!g.kilometers_text&&verified.get(g.venue)===g.venue_route_address);
+  if(!batchQueue.length){$("global-route-consent-status").textContent="Zentrale Zustimmung aktiv. Keine bestätigten Spiele mit fehlender Strecke gefunden.";return}
+  batchTotal=batchQueue.length;batchDone=0;batchRouteRunning=true;
+  $("global-route-consent-status").textContent="Streckenprüfung startet für "+batchTotal+" Spiele mit bestätigten Spielstätten.";
+  await reviewNextRoute();
+ }catch(e){$("global-route-consent-status").textContent="Streckenprüfung konnte nicht starten: "+e.message}
+}
+async function reviewNextRoute(){
+ if(!batchRouteRunning)return;
+ const g=batchQueue.shift();
+ if(!g){
+  batchRouteRunning=false;
+  $("global-route-consent-status").textContent="Streckenprüfung abgeschlossen: "+batchDone+" Spiele geprüft. Die Kilometer wurden nur nach deiner jeweiligen Bestätigung übernommen.";
+  if(venueDialog.open)venueDialog.close();
+  return;
+ }
+ batchDone++;
+ if(venueDialog.open)venueDialog.close();
+ venueGame=g;
+ $("venue-check-game").textContent=(g.home||"–")+" – "+(g.away||"–")+" · "+dateDE(g.match_date)+" · "+batchDone+"/"+batchTotal;
+ $("venue-check-query").value=g.venue_route_address||g.venue||"";
+ $("venue-check-consent").checked=true;
+ $("venue-check-results").replaceChildren();
+ $("venue-check-status").textContent="Automatische Streckenprüfung "+batchDone+"/"+batchTotal;
+ $("venue-route-calc").disabled=false;
+ venueDialog.showModal();
+ await calculateConfirmedVenueRoute(g);
+}
 let venueRouteBusy=false;
 $("venue-route-calc").addEventListener("click",()=>{void calculateConfirmedVenueRoute(venueGame)});
 $("venue-check-consent").addEventListener("change",async()=>{
- if(venueGame){setRouteConsent($("venue-check-consent").checked);$("global-route-consent").checked=hasRouteConsent()}
+ if(venueGame&&$("venue-check-consent").checked!==hasRouteConsent())await saveRouteConsent($("venue-check-consent").checked);
  const g=venueGame;if(!g||!$("venue-check-consent").checked||!g.coach_id||g.route_checked_at)return;
  try{
   const {data,error}=await sb.from("portal_confirmed_venues").select("verified_address").eq("owner_id",userId).eq("venue_name",String(g.venue||"").trim()).maybeSingle();
@@ -768,6 +810,6 @@ try{
  if(requestedCoach&&coaches.some(p=>String(p.id)===requestedCoach)){coachFilter=requestedCoach;coachSelect.value=requestedCoach;}
  games=await syncGames(userId);docs=await syncObservations(userId);
  if(await associateUniqueObservations(userId,games,docs))games=await syncGames(userId);
- render()
+ render();void startRouteReview()
 }catch(error){status.textContent="Laden fehlgeschlagen: "+error.message}
 </script><script type="module" src="/portal-ui.js"></script></body></html>
