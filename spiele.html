@@ -144,6 +144,7 @@
    <label>Staffel-Kurzbezeichnung <input id="ge-staffel-kurz"></label>
    <label>Schiedsrichter <select id="ge-referee"></select></label>
    <label>Coach / Beobachter <select id="ge-coach"></select></label>
+   <label>Einsatzart <select id="ge-expense-type"><option value="coaching_gruppe">Coaching Gruppe (30 €)</option><option value="pateneinsatz">Pateneinsatz (20 €)</option><option value="coaching_ksa">Coaching KSA (30 €)</option></select></label>
    <label>Einteilungsstatus <select id="ge-planning"><option value="offen">Offen</option><option value="voreingeteilt">Voreingeteilt</option><option value="eingeteilt">Eingeteilt</option><option value="bestaetigt">Vom Coach bestätigt</option></select></label>
   </div>
   <p id="game-edit-error" role="status" aria-live="polite"></p>
@@ -202,6 +203,7 @@ function editGame(g){
   select.value=g[type+"_id"]||"";
  }
  $("ge-planning").value=g.planning_status||"offen";
+ $("ge-expense-type").value=g.expense_type||"coaching_gruppe";
  $("game-edit-error").textContent="";
  $("game-edit-save").disabled=false;
  gameEditDialog.showModal();
@@ -240,6 +242,9 @@ $("game-edit-form").addEventListener("submit",async event=>{
    Object.assign(patch,{coach_id:value||null,coach_name:name||null,coach_first_name:personData?.first||name.split(" ")[0]||null,coach_email:personData?.mail||personData?.email||null,planning_status:value?"voreingeteilt":"offen",planned_one_way_km:null,route_origin:null,route_destination:null,route_checked_at:null});
   }
  }
+ const expenseType=$("ge-expense-type").value;
+ if(!["pateneinsatz","coaching_gruppe","coaching_ksa"].includes(expenseType)){$("game-edit-error").textContent="Bitte eine gültige Einsatzart auswählen.";return}
+ if(expenseType!==(g.expense_type||"coaching_gruppe"))patch.expense_type=expenseType;
  const selectedPlanning=$("ge-planning").value;
  const coachId=patch.coach_id!==undefined?patch.coach_id:g.coach_id;
  if(selectedPlanning!=="offen"&&!coachId){$("game-edit-error").textContent="Für diesen Einteilungsstatus zuerst einen Coach auswählen.";return}
