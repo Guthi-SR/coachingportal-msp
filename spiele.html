@@ -82,7 +82,15 @@
 #venue-check-dialog .venue-candidate strong{display:block;margin-bottom:6px}
 #venue-check-dialog .venue-map{display:inline-block;margin:5px 12px 5px 0}
 @media(max-width:600px){#venue-check-dialog{padding:14px}}
-</style></head><body>
+</style><style id="venue-status-style">
+.venue-status{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:4px 8px;font-size:12px;font-weight:700;line-height:1.25;margin-top:5px;white-space:normal}
+.venue-status-confirmed{background:#e0f4e8;color:#17683b}
+.venue-status-pending{background:#fff0c2;color:#795500}
+.venue-status-missing{background:#fde5e5;color:#9d2020}
+.venue-status-unknown{background:#e8edf3;color:#455468}
+.venue-cell{min-width:180px;max-width:270px;overflow-wrap:anywhere}
+.venue-cell .venue-status{display:table}
+</head><body>
 <header><h1>Coachingportal MSP</h1></header><div class="shell"><nav aria-label="Hauptmenü"><strong>Menü</strong><a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html" aria-current="page">Spiele</a><a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav>
 <main><section><h2>Spiele und Bogenstatus</h2><p id="status" role="status">Spiele und Bögen werden geladen …</p>
 <div class="legend"><span><i class="dot green"></i>Grün: Bogen versendet</span><span><i class="dot yellow"></i>Gelb: Spiel in den nächsten 5 Tagen</span><span><i class="dot red"></i>Rot: 5 Tage nach Spiel noch kein Bogen eingegangen</span></div>
@@ -376,6 +384,27 @@ function planningSelect(g){
  return select;
 }
 
+async function getVenueStatus(g){
+ const address=String(g.venue_route_address||"").trim();
+ if(!String(g.venue||"").trim()&&!address)return{kind:"missing",label:"Adresse fehlt"};
+ if(!address)return{kind:"pending",label:"Noch nicht geprüft"};
+ try{
+  const {data,error}=await sb.from("portal_confirmed_venues").select("verified_address").eq("owner_id",userId).eq("venue_name",String(g.venue||address).trim()).maybeSingle();
+  if(error)throw error;
+  if(data?.verified_address&&data.verified_address===address)return{kind:"confirmed",label:"Spielstätte bestätigt"};
+  return{kind:"pending",label:"Noch nicht bestätigt"};
+ }catch(e){return{kind:"unknown",label:"Status nicht abrufbar"}}
+}
+function venueCell(g){
+ const box=mobileElement("div","venue-cell");
+ box.append(mobileElement("div","",g.venue||g.venue_route_address||"Nicht hinterlegt"));
+ const status=mobileElement("span","venue-status","Prüfung …");status.classList.add("venue-status-unknown");box.append(status);
+ void getVenueStatus(g).then(result=>{
+  status.textContent=result.label;
+  status.className="venue-status venue-status-"+result.kind;
+ });
+ return box;
+}
 function hasBogen(g){return !!(g.pdf_id||docs.some(d=>d.game_key===g.game_key))}
 function gamePersonName(game,kind){
  const people=kind==="referee"?refs:coaches;
@@ -487,7 +516,8 @@ function mobileGameCard(g){
  if(openCardKeys.has(g.game_key))details.open=true;
  details.addEventListener("toggle",()=>{if(details.open)openCardKeys.add(g.game_key);else openCardKeys.delete(g.game_key)});
  const inner=mobileElement("div","mobile-card-details");
- inner.append(mobileField("Spielkennung",g.game_key),mobileField("Spielstätte",g.venue||"Nicht hinterlegt"));
+ inner.append(mobileField("Spielkennung",g.game_key));
+ const venueInfo=mobileElement("div","mobile-detail-field");venueInfo.append(mobileElement("small","","Spielstätte"));venueInfo.append(venueCell(g));inner.append(venueInfo);
  const editMobile=mobileElement("button","","Spiel bearbeiten");editMobile.type="button";editMobile.onclick=()=>editGame(g);inner.append(editMobile);const venueMobile=mobileElement("button","","Spielstätte prüfen");venueMobile.type="button";venueMobile.onclick=()=>openVenueCheck(g);inner.append(venueMobile);
  const planField=mobileElement("div","mobile-detail-field");planField.append(mobileElement("label","","Einteilungsstatus"),planningSelect(g));inner.append(planField);
  for(const type of ["referee","coach"]){
@@ -546,7 +576,8 @@ function render(){
  $("filter-count").textContent=visible.length+" von "+games.length+" Spielen angezeigt.";
  for(const g of visible){
   const row=document.createElement("tr");const cls=g.is_test?"":gameColor(g);if(cls)row.className=cls;
-  for(const v of [dateDE(g.match_date),g.kickoff,g.game_key,g.home,g.away,g.league,g.venue])cell(row,v);
+  for(const v of [dateDE(g.match_date),g.kickoff,g.game_key,g.home,g.away,g.league])cell(row,v);
+   const venueTd=document.createElement("td");venueTd.append(venueCell(g));row.append(venueTd);
   if(g.is_test){const t=row.children[2],flag=document.createElement("span");flag.textContent=" TEST";flag.style.cssText="font-weight:700;color:#9d2936;white-space:nowrap";t.append(flag);}
   const kmTd=document.createElement("td"),km=document.createElement("input");km.type="text";km.inputMode="decimal";km.maxLength=40;
   km.value=g.kilometers_text||"";km.placeholder="z. B. 42,5";km.style.width="115px";km.setAttribute("aria-label","Kilometer für Spiel "+g.game_key);
