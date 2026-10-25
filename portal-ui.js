@@ -248,10 +248,12 @@ if(nav){
  }catch(e){console.warn("Menüberechtigungen nicht verfügbar",e)}
  const apply=()=>{
   for(const a of nav.querySelectorAll("a[href]")){
-   const rule=permissionPaths[new URL(a.href,location.origin).pathname];
-   if(!rule)continue;
-   const allowed=admin||granted.has(rule);
+   const path=new URL(a.href,location.origin).pathname;
+   const rule=permissionPaths[path];
+   // Startseite bleibt erreichbar; unbekannte Menüziele sind für normale Benutzer gesperrt.
+   const allowed=admin||path==="/"||(Boolean(rule)&&granted.has(rule));
    if(a.hidden!==!allowed)a.hidden=!allowed;
+   a.setAttribute("aria-hidden",String(!allowed));
    if(!allowed)a.setAttribute("tabindex","-1");else a.removeAttribute("tabindex");
   }
   for(const group of nav.querySelectorAll("details")){
