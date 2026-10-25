@@ -263,7 +263,7 @@ function renderVenueCandidates(candidates,confirmed=false){
   const meta=document.createElement("p");meta.className="small";
   meta.textContent=confirmed?"Im Portal bereits bestätigt.":"Kartentreffer: "+(p.category||"Ort/Adresse")+" · "+(p.type||"Position");item.append(meta);
   const map=document.createElement("a");map.className="venue-map";map.href="https://www.openstreetmap.org/?mlat="+p.lat+"&mlon="+p.lon+"#map=18/"+p.lat+"/"+p.lon;map.target="_blank";map.rel="noopener noreferrer";map.textContent="Auf Karte prüfen ↗";item.append(map);
-  const choose=document.createElement("button");choose.type="button";choose.textContent=confirmed?"Bestätigte Adresse verwenden":"Diese Spielstätte bestätigen";choose.disabled=confirmed;
+  const choose=document.createElement("button");choose.type="button";choose.textContent=confirmed?"Bestätigte Adresse übernehmen":"Diese Spielstätte bestätigen";
   choose.addEventListener("click",()=>void confirmVenue(p));item.append(choose);box.append(item);
  }
 }
@@ -287,9 +287,9 @@ async function confirmVenue(p){
  if(!confirm("Bitte bestätigen, dass diese Adresse wirklich zur Spielstätte gehört:\n\n"+p.label+"\n\nDie bestätigte Adresse wird gespeichert und kann für weitere Spiele wiederverwendet werden."))return;
  $("venue-check-status").textContent="Spielstätte wird gespeichert …";
  try{
-  const {error:saveError}=await sb.from("portal_confirmed_venues").upsert({owner_id:userId,venue_name:String(g.venue||"").trim(),verified_address:p.label,lat:p.lat,lon:p.lon,confirmed_at:new Date().toISOString()},{onConflict:"owner_id,venue_name"});
+  const {error:saveError}=await sb.from("portal_confirmed_venues").upsert({owner_id:userId,venue_name:String(g.venue||$("venue-check-query").value.trim()||p.label).trim(),verified_address:p.label,lat:p.lat,lon:p.lon,confirmed_at:new Date().toISOString()},{onConflict:"owner_id,venue_name"});
   if(saveError)throw saveError;
-  const patch={venue_route_address:p.label,planned_one_way_km:null,route_origin:null,route_destination:null,route_checked_at:null};
+  const patch={...(g.venue?{}:{venue:$("venue-check-query").value.trim()||p.label}),venue_route_address:p.label,planned_one_way_km:null,route_origin:null,route_destination:null,route_checked_at:null};
   if(g.kilometers_source==="route"){patch.kilometers_text=null;patch.kilometers_source="manual"}
   Object.assign(g,await updateGame(userId,g.game_key,patch));
   render();
