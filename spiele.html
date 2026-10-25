@@ -94,6 +94,9 @@
    <label>Spielgebiet <input id="ge-spielgebiet"></label>
    <label>Staffelbezeichnung <input id="ge-staffel"></label>
    <label>Staffel-Kurzbezeichnung <input id="ge-staffel-kurz"></label>
+   <label>Schiedsrichter <select id="ge-referee"></select></label>
+   <label>Coach / Beobachter <select id="ge-coach"></select></label>
+   <label>Einteilungsstatus <select id="ge-planning"><option value="offen">Offen</option><option value="voreingeteilt">Voreingeteilt</option><option value="eingeteilt">Eingeteilt</option><option value="bestaetigt">Vom Coach bestätigt</option></select></label>
   </div>
   <p id="game-edit-error" role="status" aria-live="polite"></p>
   <div class="actions"><button type="button" id="game-edit-cancel">Abbrechen</button><button type="submit" class="primary" id="game-edit-save">Änderungen speichern</button></div>
@@ -132,6 +135,12 @@ function editGame(g){
  editingGame=g;
  $("ge-key").value=g.game_key||"";
  for(const [key,id] of Object.entries(gameEditFields))$(id).value=g[key]??"";
+ for(const [type,id,people] of [["referee","ge-referee",refs],["coach","ge-coach",coaches]]){
+  const select=$(id);select.replaceChildren(new Option("Keine Zuordnung",""));
+  for(const p of people)select.add(new Option(fullName(p),p.id));
+  select.value=g[type+"_id"]||"";
+ }
+ $("ge-planning").value=g.planning_status||"offen";
  $("game-edit-error").textContent="";
  $("game-edit-save").disabled=false;
  gameEditDialog.showModal();
@@ -160,6 +169,22 @@ $("game-edit-form").addEventListener("submit",async event=>{
  if(!(patch.home??g.home)?.trim()||!(patch.away??g.away)?.trim()){
   $("game-edit-error").textContent="Heim- und Gastmannschaft sind erforderlich.";return;
  }
+ for(const type of ["referee","coach"]){
+  const value=$(type==="referee"?"ge-referee":"ge-coach").value;
+  if(String(value||"")===String(g[type+"_id"]||""))continue;
+  const personData=person(type==="referee"?refs:coaches,value);
+  const name=fullName(personData);
+  if(type==="referee"){
+   Object.assign(patch,{referee_id:value||null,referee_name:name||null,referee_email:personData?.mail||personData?.email||null});
+  }else{
+   Object.assign(patch,{coach_id:value||null,coach_name:name||null,coach_first_name:personData?.first||name.split(" ")[0]||null,coach_email:personData?.mail||personData?.email||null,planning_status:value?"voreingeteilt":"offen",planned_one_way_km:null,route_origin:null,route_destination:null,route_checked_at:null});
+  }
+ }
+ const selectedPlanning=$("ge-planning").value;
+ const coachId=patch.coach_id!==undefined?patch.coach_id:g.coach_id;
+ if(selectedPlanning!=="offen"&&!coachId){$("game-edit-error").textContent="Für diesen Einteilungsstatus zuerst einen Coach auswählen.";return}
+ if(selectedPlanning!==(patch.planning_status??g.planning_status??"offen"))patch.planning_status=selectedPlanning;
+ if(!Object.keys(patch).length){gameEditDialog.close();return}
  const reason=protectedReason(g,"Spiel bearbeiten");if(reason===null)return;
  if(reason)patch.protected_change_reason=reason;
  if(Object.hasOwn(patch,"venue")){
@@ -351,8 +376,7 @@ function mobileGameCard(g){
  details.addEventListener("toggle",()=>{if(details.open)openCardKeys.add(g.game_key);else openCardKeys.delete(g.game_key)});
  const inner=mobileElement("div","mobile-card-details");
  inner.append(mobileField("Spielkennung",g.game_key),mobileField("Spielstätte",g.venue||"Nicht hinterlegt"));
- const venueEditMobile=mobileElement("button","","Spielstätte bearbeiten");venueEditMobile.type="button";venueEditMobile.onclick=()=>editVenue(g);inner.append(venueEditMobile);
- const dateEditMobile=mobileElement("button","","Spieldatum bearbeiten");dateEditMobile.type="button";dateEditMobile.onclick=()=>editGameDate(g);inner.append(dateEditMobile);
+ const editMobile=mobileElement("button","","Spiel bearbeiten");editMobile.type="button";editMobile.onclick=()=>editGame(g);inner.append(editMobile);
  const planField=mobileElement("div","mobile-detail-field");planField.append(mobileElement("label","","Einteilungsstatus"),planningSelect(g));inner.append(planField);
  for(const type of ["referee","coach"]){
   const isRef=type==="referee";
