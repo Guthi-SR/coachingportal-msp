@@ -90,6 +90,7 @@
 .venue-status-unknown{background:#e8edf3;color:#455468}
 .venue-cell{min-width:180px;max-width:270px;overflow-wrap:anywhere}
 .venue-cell .venue-status{display:table}
+.venue-confirmed-address{font-size:12px;line-height:1.4;color:#3d5369;margin-top:4px;overflow-wrap:anywhere}
 </style></head><body>
 <header><h1>Coachingportal MSP</h1></header><div class="shell"><nav aria-label="Hauptmenü"><strong>Menü</strong><a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html" aria-current="page">Spiele</a><a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav>
 <main><section><h2>Spiele und Bogenstatus</h2><p id="status" role="status">Spiele und Bögen werden geladen …</p>
@@ -397,7 +398,12 @@ async function getVenueStatus(g){
 }
 function venueCell(g){
  const box=mobileElement("div","venue-cell");
- box.append(mobileElement("div","",g.venue||g.venue_route_address||"Nicht hinterlegt"));
+ box.append(mobileElement("div","",g.venue||"Spielstätte nicht benannt"));
+ const address=String(g.venue_route_address||"").trim();
+ if(address&&address!==String(g.venue||"").trim()){
+  const line=mobileElement("div","venue-confirmed-address",address);
+  box.append(line);
+ }
  const status=mobileElement("span","venue-status","Prüfung …");status.classList.add("venue-status-unknown");box.append(status);
  void getVenueStatus(g).then(result=>{
   status.textContent=result.label;
