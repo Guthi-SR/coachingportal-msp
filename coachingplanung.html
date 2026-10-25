@@ -125,8 +125,19 @@ import{cloudPeople}from"/portal-people.js";
 const $=id=>document.getElementById(id);
 let ownerId="",games=[],coaches=[],selectedKey="",pendingAll=false,runId=0;
 const autoRouteBusy=new Set();
-const consentKey=()=> "msp-route-consent-"+ownerId;
-function saveRouteConsent(){if(!ownerId)return;try{localStorage.setItem(consentKey(),$("route-consent").checked?"yes":"no")}catch(e){note("Zustimmung konnte in diesem Browser nicht dauerhaft gespeichert werden.")}if($("route-consent").checked)void backfillMissingRoutes()}
+let centralRouteConsent=false;
+async function loadCentralRouteConsent(){
+ const {data,error}=await sb.from("portal_route_settings").select("route_consent_enabled").eq("owner_id",ownerId).maybeSingle();
+ if(error)throw error;
+ centralRouteConsent=data?.route_consent_enabled===true;
+ $("route-consent").checked=centralRouteConsent;
+ $("route-consent").closest("label").hidden=centralRouteConsent;
+}
+function saveRouteConsent(){
+ if(centralRouteConsent){$("route-consent").checked=true;return}
+ note("Die zentrale Zustimmung wird vom Administrator unter „Spiele und Bogenstatus“ festgelegt.");
+ $("route-consent").checked=false;
+}
 $("route-consent").addEventListener("change",saveRouteConsent);
 const results=new Map();
 const statusNames={offen:"Offen",voreingeteilt:"Voreingeteilt",eingeteilt:"Eingeteilt",bestaetigt:"Bestätigt"};
@@ -416,7 +427,7 @@ async function reload(){
 try{
  const access=await requirePermission("coaching_planning_view");
  ownerId=access.ownerId;
- $("route-consent").checked=localStorage.getItem(consentKey())==="yes";
+ await loadCentralRouteConsent();
  coaches=(await cloudPeople(ownerId,"coach")).sort((a,b)=>collator.compare(coachName(a),coachName(b)));
  await reload();
 }catch(e){$("list-status").textContent="Zugriff oder Daten konnten nicht geladen werden: "+errorText(e);note("Bitte Anmeldung und Profilberechtigung prüfen.")}
