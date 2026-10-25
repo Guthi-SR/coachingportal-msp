@@ -257,7 +257,7 @@ function renderOverview(){
   const km=document.createElement("td");km.textContent=labelKm(result.sum);
   const plannedKm=document.createElement("td");plannedKm.textContent=labelKm(result.plannedSum);if(!result.plannedSum)plannedKm.className="zero";
   const totalCount=document.createElement("td");totalCount.textContent=String(result.totalGames);
-  const totalKm=document.createElement("td");totalKm.textContent=labelKm(result.totalKm);
+  const totalKmCell=document.createElement("td");totalKmCell.textContent=labelKm(result.totalKm);
   const action=document.createElement("td"),btn=document.createElement("button");
   btn.className="detail-btn";btn.type="button";
   const opened=String(coach.id)===selectedCoachId;
@@ -265,7 +265,7 @@ function renderOverview(){
   btn.setAttribute("aria-expanded",String(opened));
   btn.setAttribute("aria-controls","details-result");
   btn.addEventListener("click",()=>showCoachDetails(String(coach.id)));
-  action.append(btn);tr.append(name,count,planned,km,plannedKm,totalCount,totalKm,action);tbody.append(tr);
+  action.append(btn);tr.append(name,count,planned,km,plannedKm,totalCount,totalKmCell,action);tbody.append(tr);
  }
  if(!ordered.length){
   const row=document.createElement("tr"),cell=document.createElement("td");cell.colSpan=8;cell.textContent="Noch keine Coaches angelegt.";row.append(cell);tbody.append(row);
