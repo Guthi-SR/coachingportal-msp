@@ -10,18 +10,20 @@ header{background:#142b46;color:#fff;padding:22px}.shell{display:grid;grid-templ
 <main><section><h2>Alle Beobachtungsbögen</h2><p>Alle erfassten Bögen – sortiert nach Spieldatum, neueste zuerst. Ein Klick auf den Bogen öffnet nur das PDF in einem separaten Tab.</p>
 <details class="filter-details" id="filterDetails"><summary>Filter anzeigen / einklappen</summary><div class="bogen-filter" aria-label="Beobachtungsbögen filtern"><label>Schiedsrichter<select id="filterRef"><option value="">Alle Schiedsrichter</option></select></label><label>Coach / Beobachter<select id="filterCoach"><option value="">Alle Coaches</option></select></label><label>Bearbeitungsstatus<select id="filterStatus"><option value="">Alle Status</option><option value="unchecked">Noch nicht geprüft</option><option value="checked">Bereits geprüft</option><option value="unsent">Noch nicht versendet</option><option value="sent">Bereits versendet</option><option value="checked-unsent">Geprüft, noch nicht versendet</option></select></label><label>Spieldatum<input id="filterDate" type="date"></label><button type="button" id="filterReset">Filter zurücksetzen</button></div></details><p id="filterCount" aria-live="polite"></p><p id="status" role="status">Bögen werden geladen …</p><table id="table" hidden><thead><tr><th>Spieldatum</th><th>Begegnung</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Beobachtungsbogen</th><th>Zuordnung</th><th>Aktionen</th></tr></thead><tbody id="rows"></tbody></table></section></main></div>
 <script type="module">import {cloudPeople} from "/portal-people.js";
-import{requireAdmin,syncGames,syncObservations,associateUniqueObservations,observationAssignments,localPeople,linkObservation,reassignObservation,deleteObservation,dateDE}from"/portal-workflow.js";
+import{sb,requirePermission,syncGames,syncObservations,associateUniqueObservations,observationAssignments,localPeople,linkObservation,reassignObservation,deleteObservation,dateDE}from"/portal-workflow.js";
 const status=document.getElementById("status"),rows=document.getElementById("rows");
 try{
- const{user}=await requireAdmin();let games=await syncGames(user.id);
- let docs=await syncObservations(user.id);
- if(await associateUniqueObservations(user.id,games,docs)){games=await syncGames(user.id);docs=await syncObservations(user.id)}
- const local=observationAssignments(user.id);
- const {data:deletedDocs,error:deletedError}=await (await import("/portal-workflow.js")).sb.from("portal_deleted_observations").select("document_id").eq("owner_id",user.id);
- if(deletedError)throw deletedError;
- const deletedIds=new Set((deletedDocs||[]).map(x=>x.document_id));
- const seen=new Set(docs.map(x=>x.document_id));for(const o of local)if(!seen.has(o.id)&&!deletedIds.has(o.id))docs.push({document_id:o.id,game_key:o.gameKey||null,referee_id:o.referee,coach_id:o.coach,file_name:o.fileName,created_at:o.createdAt});
- const refs=await cloudPeople(user.id,"referee"),coaches=await cloudPeople(user.id,"coach");
+ const{user,ownerId,profile}=await requirePermission("reports_view");
+ const {data:editPermission}=profile.role==="admin"?{data:true}:await sb.rpc("portal_has_permission",{check_id:user.id,permission_key:"reports_edit"});
+ const readOnly=!editPermission;
+ const [gameResult,docResult]=await Promise.all([
+  sb.from("portal_games").select("*").eq("owner_id",ownerId).order("match_date",{ascending:false}),
+  sb.from("portal_observations").select("*").eq("owner_id",ownerId).order("created_at",{ascending:false})
+ ]);
+ if(gameResult.error)throw gameResult.error;
+ if(docResult.error)throw docResult.error;
+ let games=gameResult.data||[],docs=docResult.data||[];
+ const refs=await cloudPeople(ownerId,"referee"),coaches=await cloudPeople(ownerId,"coach");
  const person=(list,id)=>{const p=list.find(x=>x.id===id||x.name===id);return p?.name||[p?.first,p?.last].filter(Boolean).join(" ")||"–"};
  const byGame=doc=>games.find(g=>g.game_key===doc.game_key||g.pdf_id===doc.document_id);
  const filterRef=document.getElementById("filterRef"),filterCoach=document.getElementById("filterCoach"),filterDate=document.getElementById("filterDate"),filterStatus=document.getElementById("filterStatus"),filterCount=document.getElementById("filterCount");
