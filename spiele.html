@@ -69,6 +69,19 @@
 #game-edit-dialog #ge-key{background:#f0f3f7;color:#526277}
 #game-edit-error{color:#9b2634}
 @media(max-width:650px){#game-edit-dialog{padding:14px}#game-edit-dialog .game-edit-grid{grid-template-columns:minmax(0,1fr)}#game-edit-dialog .game-edit-wide{grid-column:auto}}
+</style><style id="venue-check-style">
+#venue-check-dialog{width:min(700px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;border:1px solid #dce5ee;border-radius:14px;padding:20px;box-sizing:border-box}
+#venue-check-dialog::backdrop{background:rgba(9,25,42,.55)}
+#venue-check-dialog label{display:block;font-weight:600;margin:12px 0 6px}
+#venue-check-dialog input[type=text]{box-sizing:border-box;width:100%;padding:10px}
+#venue-check-dialog .venue-consent{display:flex;gap:8px;align-items:flex-start;font-size:13px;font-weight:400}
+#venue-check-dialog .venue-consent input{margin-top:3px;flex:none}
+#venue-check-dialog .venue-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+#venue-check-dialog .venue-close{float:right}
+#venue-check-dialog .venue-candidate{border:1px solid #d6e0ea;border-radius:10px;padding:12px;margin:10px 0}
+#venue-check-dialog .venue-candidate strong{display:block;margin-bottom:6px}
+#venue-check-dialog .venue-map{display:inline-block;margin:5px 12px 5px 0}
+@media(max-width:600px){#venue-check-dialog{padding:14px}}
 </style></head><body>
 <header><h1>Coachingportal MSP</h1></header><div class="shell"><nav aria-label="Hauptmenü"><strong>Menü</strong><a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html" aria-current="page">Spiele</a><a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav>
 <main><section><h2>Spiele und Bogenstatus</h2><p id="status" role="status">Spiele und Bögen werden geladen …</p>
@@ -101,6 +114,18 @@
   <p id="game-edit-error" role="status" aria-live="polite"></p>
   <div class="actions"><button type="button" id="game-edit-cancel">Abbrechen</button><button type="submit" class="primary" id="game-edit-save">Änderungen speichern</button></div>
  </form>
+</dialog>
+<dialog id="venue-check-dialog" aria-labelledby="venue-check-title">
+ <form method="dialog" id="venue-check-close-form"><button class="venue-close" aria-label="Schließen">Schließen</button></form>
+ <h2 id="venue-check-title">Spielstätte prüfen</h2>
+ <p id="venue-check-game" class="small"></p>
+ <label for="venue-check-query">Sportplatzname oder vollständige Adresse</label>
+ <input id="venue-check-query" type="text" maxlength="240" placeholder="Sportplatz, Straße, PLZ und Ort">
+ <label class="venue-consent"><input id="venue-check-consent" type="checkbox"> Ich bin einverstanden, dass die eingegebene Spielstätte zur Adresssuche an OpenStreetMap/Nominatim übertragen wird. Für eine Fahrtstrecke werden zusätzlich die Coach-Adresse und die Spielstätte an Kartendienste übertragen.</label>
+ <div class="venue-actions"><button type="button" id="venue-check-search">Adresse suchen</button><button type="button" id="venue-route-calc" disabled>Fahrtstrecke berechnen</button></div>
+ <p id="venue-check-status" role="status" aria-live="polite"></p>
+ <div id="venue-check-results"></div>
+ <p class="small">Bitte prüfe, ob die gefundene Position wirklich zum Sportplatz gehört. Eine Kartenadresse allein ist noch keine Bestätigung.</p>
 </dialog>
 <dialog id="manual"><form method="dialog" id="manual-form"><h2>Bogen bereits versendet</h2><p>Hier kannst du einen Versand dokumentieren, der außerhalb des Portals stattgefunden hat. Es wird keine E-Mail versendet.</p><label>Versanddatum <input type="date" id="manual-date" required></label><label>Notiz zum Versandweg oder Grund <textarea id="manual-note" required placeholder="Beispiel: am 12.10.2026 per E-Mail von meiner bisherigen Adresse verschickt"></textarea></label><p id="manual-error" role="status"></p><div class="actions"><button type="button" id="cancel-manual">Abbrechen</button><button type="submit" class="primary">Als bereits versendet speichern</button></div></form></dialog>
 <dialog id="mail"><form method="dialog" id="mail-form"><h2 id="mail-head">E-Mail versenden</h2><label id="test-recipient-wrap" hidden>Testempfänger
@@ -202,6 +227,93 @@ $("game-edit-form").addEventListener("submit",async event=>{
   $("game-edit-error").textContent="Speichern fehlgeschlagen: "+error.message;
  }finally{save.disabled=false}
 });
+
+// Spielstätte bestätigen und wiederverwenden.
+let venueGame=null,venueCandidates=[];
+const venueDialog=$("venue-check-dialog");
+function openVenueCheck(g){
+ venueGame=g;venueCandidates=[];
+ $("venue-check-game").textContent=(g.home||"–")+" – "+(g.away||"–")+" · "+dateDE(g.match_date);
+ $("venue-check-query").value=g.venue_route_address||g.venue||"";
+ $("venue-check-consent").checked=false;
+ $("venue-check-status").textContent="";
+ $("venue-check-results").replaceChildren();
+ $("venue-route-calc").disabled=!g.coach_id||!g.venue_route_address;
+ venueDialog.showModal();
+ void loadConfirmedVenue(g);
+}
+async function loadConfirmedVenue(g){
+ try{
+  const {data,error}=await sb.from("portal_confirmed_venues").select("verified_address,lat,lon,confirmed_at").eq("owner_id",userId).eq("venue_name",String(g.venue||"").trim()).maybeSingle();
+  if(error)throw error;
+  if(data){
+   $("venue-check-status").textContent="Bereits bestätigte Spielstätte gefunden: "+data.verified_address;
+   if(!g.venue_route_address||g.venue_route_address!==data.verified_address)$("venue-check-query").value=data.verified_address;
+   renderVenueCandidates([{label:data.verified_address,lat:data.lat,lon:data.lon,category:"confirmed",type:"confirmed",address:{}}],true);
+  }
+ }catch(e){$("venue-check-status").textContent="Gespeicherte Bestätigung konnte nicht geladen werden: "+e.message}
+}
+function renderVenueCandidates(candidates,confirmed=false){
+ venueCandidates=candidates;
+ const box=$("venue-check-results");box.replaceChildren();
+ if(!candidates.length){box.textContent="Keine passende Adresse gefunden. Ergänze bitte Straße, Hausnummer, PLZ und Ort.";return}
+ for(const [i,p] of candidates.entries()){
+  const item=document.createElement("div");item.className="venue-candidate";
+  const title=document.createElement("strong");title.textContent=p.label;item.append(title);
+  const meta=document.createElement("p");meta.className="small";
+  meta.textContent=confirmed?"Im Portal bereits bestätigt.":"Kartentreffer: "+(p.category||"Ort/Adresse")+" · "+(p.type||"Position");item.append(meta);
+  const map=document.createElement("a");map.className="venue-map";map.href="https://www.openstreetmap.org/?mlat="+p.lat+"&mlon="+p.lon+"#map=18/"+p.lat+"/"+p.lon;map.target="_blank";map.rel="noopener noreferrer";map.textContent="Auf Karte prüfen ↗";item.append(map);
+  const choose=document.createElement("button");choose.type="button";choose.textContent=confirmed?"Bestätigte Adresse verwenden":"Diese Spielstätte bestätigen";choose.disabled=confirmed;
+  choose.addEventListener("click",()=>void confirmVenue(p));item.append(choose);box.append(item);
+ }
+}
+$("venue-check-search").addEventListener("click",async()=>{
+ const g=venueGame,query=$("venue-check-query").value.trim();
+ if(!g||!query){$("venue-check-status").textContent="Bitte einen Sportplatznamen oder eine vollständige Adresse eingeben.";return}
+ if(!$("venue-check-consent").checked){$("venue-check-status").textContent="Bitte zuerst der Übertragung der Spielstättenangabe an OpenStreetMap/Nominatim zustimmen.";return}
+ const button=$("venue-check-search");button.disabled=true;$("venue-check-status").textContent="Adresse wird gesucht …";
+ try{
+  const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)throw Error("Bitte erneut anmelden.");
+  const response=await fetch("/api/venue-check",{method:"POST",headers:{"content-type":"application/json",Authorization:"Bearer "+session.access_token},body:JSON.stringify({gameKey:g.game_key,query})});
+  const data=await response.json();if(!response.ok)throw Error(data.error||"Adresssuche fehlgeschlagen.");
+  $("venue-check-status").textContent=data.message||"Bitte Kartenposition kontrollieren.";
+  renderVenueCandidates(data.candidates||[]);
+ }catch(e){$("venue-check-status").textContent="Adresssuche fehlgeschlagen: "+e.message}
+ finally{button.disabled=false}
+});
+async function confirmVenue(p){
+ const g=venueGame;if(!g)return;
+ if(!$("venue-check-consent").checked){$("venue-check-status").textContent="Bitte zuerst der Übertragung der Spielstättenangabe zustimmen.";return}
+ if(!confirm("Bitte bestätigen, dass diese Adresse wirklich zur Spielstätte gehört:\n\n"+p.label+"\n\nDie bestätigte Adresse wird gespeichert und kann für weitere Spiele wiederverwendet werden."))return;
+ $("venue-check-status").textContent="Spielstätte wird gespeichert …";
+ try{
+  const {error:saveError}=await sb.from("portal_confirmed_venues").upsert({owner_id:userId,venue_name:String(g.venue||"").trim(),verified_address:p.label,lat:p.lat,lon:p.lon,confirmed_at:new Date().toISOString()},{onConflict:"owner_id,venue_name"});
+  if(saveError)throw saveError;
+  const patch={venue_route_address:p.label,planned_one_way_km:null,route_origin:null,route_destination:null,route_checked_at:null};
+  if(g.kilometers_source==="route"){patch.kilometers_text=null;patch.kilometers_source="manual"}
+  Object.assign(g,await updateGame(userId,g.game_key,patch));
+  render();
+  $("venue-check-status").textContent="Spielstätte bestätigt und gespeichert. Die Adresse kann für weitere Spiele mit demselben Sportplatz wiederverwendet werden.";
+  $("venue-route-calc").disabled=!g.coach_id;
+ }catch(e){$("venue-check-status").textContent="Speichern fehlgeschlagen: "+e.message}
+}
+$("venue-route-calc").addEventListener("click",async()=>{
+ const g=venueGame;if(!g?.coach_id)return;
+ if(!$("venue-check-consent").checked){$("venue-check-status").textContent="Bitte der Übertragung der Coach-Adresse und Spielstätte an die Kartendienste zustimmen.";return}
+ const button=$("venue-route-calc");button.disabled=true;$("venue-check-status").textContent="Fahrtstrecke wird berechnet …";
+ try{
+  const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)throw Error("Bitte erneut anmelden.");
+  const response=await fetch("/api/coach-route",{method:"POST",headers:{"content-type":"application/json",Authorization:"Bearer "+session.access_token},body:JSON.stringify({gameKey:g.game_key,coachId:String(g.coach_id)})});
+  const data=await response.json();if(!response.ok)throw Error(data.error||"Routenberechnung fehlgeschlagen.");
+  const message="Gefundene Route:\nStart: "+data.originResult+"\nZiel: "+data.destinationResult+"\n\nEinfache Fahrt: "+data.oneWayKm+" km\nHin und zurück: "+data.roundTripKm+" km\n\nRoute übernehmen?";
+  if(!confirm(message)){$("venue-check-status").textContent="Route nicht übernommen. Prüfe gegebenenfalls Adresse und Coach-Stammdaten.";return}
+  const patch={planned_one_way_km:data.oneWayKm,route_origin:data.origin,route_destination:data.destination,route_checked_at:new Date().toISOString(),kilometers_text:String(data.roundTripKm),kilometers_source:"route"};
+  Object.assign(g,await updateGame(userId,g.game_key,patch));render();
+  $("venue-check-status").textContent="Route gespeichert: "+data.oneWayKm+" km einfach / "+data.roundTripKm+" km hin und zurück.";
+ }catch(e){$("venue-check-status").textContent="Routenberechnung fehlgeschlagen: "+e.message}
+ finally{button.disabled=false}
+});
+
 async function editGameDate(g){
  const next=prompt("Neues Spieldatum eingeben (JJJJ-MM-TT):",g.match_date||"");
  if(next===null)return;
@@ -376,7 +488,7 @@ function mobileGameCard(g){
  details.addEventListener("toggle",()=>{if(details.open)openCardKeys.add(g.game_key);else openCardKeys.delete(g.game_key)});
  const inner=mobileElement("div","mobile-card-details");
  inner.append(mobileField("Spielkennung",g.game_key),mobileField("Spielstätte",g.venue||"Nicht hinterlegt"));
- const editMobile=mobileElement("button","","Spiel bearbeiten");editMobile.type="button";editMobile.onclick=()=>editGame(g);inner.append(editMobile);
+ const editMobile=mobileElement("button","","Spiel bearbeiten");editMobile.type="button";editMobile.onclick=()=>editGame(g);inner.append(editMobile);const venueMobile=mobileElement("button","","Spielstätte prüfen");venueMobile.type="button";venueMobile.onclick=()=>openVenueCheck(g);inner.append(venueMobile);
  const planField=mobileElement("div","mobile-detail-field");planField.append(mobileElement("label","","Einteilungsstatus"),planningSelect(g));inner.append(planField);
  for(const type of ["referee","coach"]){
   const isRef=type==="referee";
@@ -493,7 +605,7 @@ function render(){
   del.type="button";del.textContent="Spiel löschen";
   del.setAttribute("aria-label","Spiel "+g.game_key+" löschen");
   del.onclick=()=>deleteGame(g,del);
-  const editBtn=document.createElement("button");editBtn.type="button";editBtn.textContent="Spiel bearbeiten";editBtn.onclick=()=>editGame(g);actionCell.append(editBtn,del);row.append(actionCell);tbody.append(row);mobileList.append(mobileGameCard(g))
+  const venueBtn=document.createElement("button");venueBtn.type="button";venueBtn.textContent="Spielstätte prüfen";venueBtn.onclick=()=>openVenueCheck(g);const editBtn=document.createElement("button");editBtn.type="button";editBtn.textContent="Spiel bearbeiten";editBtn.onclick=()=>editGame(g);actionCell.append(venueBtn,editBtn,del);row.append(actionCell);tbody.append(row);mobileList.append(mobileGameCard(g))
  }
  if(!visible.length)mobileList.append(mobileElement("p","mobile-card-empty","Keine Spiele für diesen Filter gefunden."));
  status.textContent=games.length?games.length+" Spiel(e) vorhanden.":"Noch keine Spiele vorhanden.";
