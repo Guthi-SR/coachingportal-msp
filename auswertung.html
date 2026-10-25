@@ -22,6 +22,8 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 #overview td:nth-child(2),#overview th:nth-child(2){text-align:center}
 #overview td:nth-child(3),#overview th:nth-child(3){text-align:right}
 #overview td:nth-child(4),#overview th:nth-child(4){text-align:right}
+#overview td:nth-child(5),#overview th:nth-child(5){text-align:right}
+#overview td:nth-child(6),#overview th:nth-child(6){text-align:right}
 #overview .selected{background:#eaf2fa}
 #overview .coach-name{font-weight:650}
 #overview .detail-btn{padding:9px 13px;min-height:42px}
@@ -48,10 +50,11 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
  #overview tr:last-child{border-bottom:0}
  #overview td{border:0;padding:0;text-align:left!important}
  #overview td:nth-child(1){grid-column:1/-1;font-size:16px}
- #overview td:nth-child(2):before{content:"Spiele: ";color:#607589;font-weight:500}
- #overview td:nth-child(3):before{content:"Kilometer: ";color:#607589;font-weight:500}
- #overview td:nth-child(4){grid-column:1/-1}
- #overview td:nth-child(4) button{width:100%;min-height:44px}
+ #overview td:nth-child(2):before{content:"Spiele im Zeitraum: ";color:#607589;font-weight:500}
+ #overview td:nth-child(3):before{content:"Geplant: ";color:#607589;font-weight:500}
+ #overview td:nth-child(4):before{content:"Kilometer: ";color:#607589;font-weight:500}
+ #overview td:nth-child(5){grid-column:1/-1}
+ #overview td:nth-child(5) button{width:100%;min-height:44px}
  .details-table{min-width:0}
  .details-table td,.details-table th{padding:10px 5px;font-size:13px}
  .summary{min-width:0}
@@ -101,8 +104,8 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
  </div>
 </div>
 <div class="tablebox">
-<table id="overview" aria-label="Alle Coaches mit Spielanzahl und Kilometern">
-<thead><tr><th>Coach / Beobachter</th><th>Anzahl Spiele</th><th>Kilometer gesamt</th><th>Einzelaufstellung</th></tr></thead>
+<table id="overview" aria-label="Alle Coaches mit Spielen im Zeitraum, geplanten Spielen und Kilometern">
+<thead><tr><th>Coach / Beobachter</th><th>Spiele im Zeitraum</th><th>Geplant</th><th>Kilometer gesamt</th><th>Einzelaufstellung</th></tr></thead>
 <tbody id="overview-rows"></tbody>
 </table></div>
 </div>
@@ -110,14 +113,17 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 <h3 id="details-heading">Einzelaufstellung</h3>
 <p class="hint" id="details-subtitle"></p>
 <div class="tablebox"><table class="summary">
-<thead><tr><th>Coach</th><th>Anzahl Spiele</th><th>Kilometer gesamt</th></tr></thead>
-<tbody><tr><td id="coach-name"></td><td id="game-count"></td><td id="km-total"></td></tr></tbody></table></div>
+<thead><tr><th>Coach</th><th>Spiele im Zeitraum</th><th>Geplant</th><th>Kilometer gesamt</th></tr></thead>
+<tbody><tr><td id="coach-name"></td><td id="game-count"></td><td id="planned-count"></td><td id="km-total"></td></tr></tbody></table></div>
 <p><button id="export-excel" type="button" disabled>Excel exportieren (.xlsx)</button></p>
-<h3>Details der Coachings</h3>
+<h3>Spiele im ausgewählten Zeitraum</h3>
 <div class="tablebox"><table class="details-table">
 <thead><tr><th>Datum</th><th>Coaching</th><th>Einsatzart</th><th>Km hin und zurück</th><th>Fahrtkosten</th><th>Spesen</th><th>Gesamt</th></tr></thead>
 <tbody id="detail-rows"></tbody></table></div>
 <p class="hint" id="km-note"></p>
+<h3>Geplante zukünftige Spiele</h3>
+<div class="tablebox"><table class="details-table"><thead><tr><th>Datum</th><th>Coaching</th><th>Einsatzart</th><th>Status</th></tr></thead><tbody id="planned-rows"></tbody></table></div>
+<p class="hint" id="planned-note">Geplante Spiele zeigen alle künftig zugeordneten Spiele, unabhängig vom ausgewählten Auswertungszeitraum.</p>
 </div>
 
 </main></div>
@@ -156,13 +162,19 @@ function effectiveRange(){
 }
 function matchingGames(p,from,to){
  const name=displayName(p).toLocaleLowerCase("de");
- return games.filter(g=>!g.is_test&&g.match_date>=from&&g.match_date<=to
+ return games.filter(g=>!g.is_test&&g.match_date<=today&&g.match_date>=from&&g.match_date<=to
   &&(String(g.coach_id||"")===String(p.id)||(!g.coach_id&&String(g.coach_name||"").trim().toLocaleLowerCase("de")===name)))
   .sort((a,b)=>String(a.match_date).localeCompare(String(b.match_date))||String(a.kickoff||"").localeCompare(String(b.kickoff||"")));
 }
+function coachMatches(p,g){
+ const name=displayName(p).toLocaleLowerCase("de");
+ return String(g.coach_id||"")===String(p.id)||(!g.coach_id&&String(g.coach_name||"").trim().toLocaleLowerCase("de")===name);
+}
 function summarize(p,from,to){
  const rows=matchingGames(p,from,to);
- return{name:displayName(p),from,to,games:rows,
+ const planned=games.filter(g=>!g.is_test&&g.match_date>today&&coachMatches(p,g))
+  .sort((a,b)=>String(a.match_date).localeCompare(String(b.match_date))||String(a.kickoff||"").localeCompare(String(b.kickoff||"")));
+ return{name:displayName(p),from,to,games:rows,plannedGames:planned,
   sum:rows.reduce((s,g)=>s+(distance(g.kilometers_text)??0),0),
   missing:rows.filter(g=>String(g.kilometers_text||"").trim()&&distance(g.kilometers_text)===null).length};
 }
@@ -179,6 +191,7 @@ function showCoachDetails(id){
  selectedCoachId=id;lastResult=current;
  $("coach-name").textContent=current.name;
  $("game-count").textContent=current.games.length;
+ $("planned-count").textContent=current.plannedGames.length;
  $("km-total").textContent=labelKm(current.sum);
  $("details-heading").textContent="Einzelaufstellung: "+current.name;
  $("details-subtitle").textContent="Zeitraum "+dateDE(from)+" bis "+dateDE(to);
@@ -193,6 +206,13 @@ function showCoachDetails(id){
   const row=document.createElement("tr"),td=document.createElement("td");td.colSpan=7;td.textContent="Keine Spiele im gewählten Zeitraum.";row.append(td);tbody.append(row);
  }
  $("km-note").textContent=current.missing?current.missing+" Kilometerangabe(n) sind nicht numerisch und wurden nicht zur Summe addiert.":"";
+ const plannedBody=$("planned-rows");plannedBody.replaceChildren();
+ for(const game of current.plannedGames){
+  const tr=document.createElement("tr");
+  for(const val of [dateDE(game.match_date),[game.home,game.away].filter(Boolean).join(" – ")||"Coaching",expenseLabel(game.expense_type||"coaching_gruppe"),"Geplant"]){const td=document.createElement("td");td.textContent=val;tr.append(td)}
+  plannedBody.append(tr);
+ }
+ if(!current.plannedGames.length){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=4;td.textContent="Keine zukünftigen Spiele geplant.";tr.append(td);plannedBody.append(tr)}
  $("details-result").hidden=false;
  $("export-excel").disabled=false;
  renderOverview();
@@ -228,6 +248,7 @@ function renderOverview(){
   name.append(document.createTextNode(result.name||"Unbenannt"));
   const count=document.createElement("td");count.textContent=String(result.games.length);
   if(!result.games.length)count.className="zero";
+  const planned=document.createElement("td");planned.textContent=String(result.plannedGames.length);if(!result.plannedGames.length)planned.className="zero";
   const km=document.createElement("td");km.textContent=labelKm(result.sum);
   const action=document.createElement("td"),btn=document.createElement("button");
   btn.className="detail-btn";btn.type="button";
@@ -236,12 +257,12 @@ function renderOverview(){
   btn.setAttribute("aria-expanded",String(opened));
   btn.setAttribute("aria-controls","details-result");
   btn.addEventListener("click",()=>showCoachDetails(String(coach.id)));
-  action.append(btn);tr.append(name,count,km,action);tbody.append(tr);
+  action.append(btn);tr.append(name,count,planned,km,action);tbody.append(tr);
  }
  if(!ordered.length){
-  const row=document.createElement("tr"),cell=document.createElement("td");cell.colSpan=4;cell.textContent="Noch keine Coaches angelegt.";row.append(cell);tbody.append(row);
+  const row=document.createElement("tr"),cell=document.createElement("td");cell.colSpan=5;cell.textContent="Noch keine Coaches angelegt.";row.append(cell);tbody.append(row);
  }
- $("overview-total").textContent=ordered.length+" Coaches · "+totalGames+" Spiele · "+labelKm(totalKm);
+ $("overview-total").textContent=ordered.length+" Coaches · "+totalGames+" Spiele im Zeitraum · "+games.filter(g=>!g.is_test&&g.match_date>today).length+" geplante Spiele insgesamt · "+labelKm(totalKm);
  updateCoachExportStatus();
  $("status").textContent="Zeitraum: "+dateDE(from)+" bis "+dateDE(to)+". "+ordered.length+" Coaches angezeigt.";
 }
