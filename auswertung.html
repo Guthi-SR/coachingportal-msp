@@ -348,7 +348,7 @@ try{
  const{user}=await requireAdmin();
  const [list,gameResult]=await Promise.all([
   cloudPeople(user.id,"coach"),
-  sb.from("portal_games").select("game_key,match_date,kickoff,home,away,league,coach_id,coach_name,is_test,kilometers_text").eq("owner_id",user.id)
+  sb.from("portal_games").select("game_key,match_date,kickoff,home,away,league,coach_id,coach_name,is_test,kilometers_text,expense_type").eq("owner_id",user.id)
  ]);
  if(gameResult.error)throw gameResult.error;
  games=gameResult.data||[];
