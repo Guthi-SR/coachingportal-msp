@@ -733,6 +733,18 @@ function renderRouteOverview(){
   item.append(actions);list.append(item);
  }
 }
+async function reconcileConfirmedVenues(){
+ const {data:confirmed,error}=await sb.from("portal_confirmed_venues").select("venue_name,verified_address").eq("owner_id",userId);
+ if(error)throw error;
+ const byName=new Map((confirmed||[]).map(v=>[String(v.venue_name||"").trim().toLocaleLowerCase("de-DE"),v.verified_address]));
+ for(const g of games){
+  const address=byName.get(String(g.venue||"").trim().toLocaleLowerCase("de-DE"));
+  if(!address||String(g.venue_route_address||"").trim()===address)continue;
+  const {error:updateError}=await sb.from("portal_games").update({venue_route_address:address}).eq("owner_id",userId).eq("game_key",g.game_key);
+  if(updateError){console.warn("Bestätigte Spielstätte konnte nicht übernommen werden",g.game_key,updateError);continue}
+  g.venue_route_address=address;
+ }
+}
 async function loadRouteAttempts(){
  const {data,error}=await sb.from("portal_game_route_attempts").select("game_key,status,error_message,attempted_at").eq("owner_id",userId);
  if(error)throw error;
@@ -883,7 +895,7 @@ try{
  const coachSelect=$("coach-filter");for(const p of [...coaches].sort((a,b)=>fullName(a).localeCompare(fullName(b),"de")))coachSelect.add(new Option(fullName(p),p.id));
  const requestedCoach=new URLSearchParams(location.search).get("coach");
  if(requestedCoach&&coaches.some(p=>String(p.id)===requestedCoach)){coachFilter=requestedCoach;coachSelect.value=requestedCoach;}
- games=await syncGames(userId);docs=await syncObservations(userId);await loadRouteAttempts();
+ games=await syncGames(userId);docs=await syncObservations(userId);await reconcileConfirmedVenues();await loadRouteAttempts();
  if(await associateUniqueObservations(userId,games,docs))games=await syncGames(userId);
  render();void startRouteReview()
 }catch(error){status.textContent="Laden fehlgeschlagen: "+error.message}
