@@ -53,6 +53,10 @@ body.dashboard-active .dash-page{border:0;border-radius:0;min-width:0;max-width:
 .dash-plan-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
 .dash-plan-card{display:flex;flex-direction:column;gap:8px;min-width:0;min-height:130px;padding:16px;border:1px solid #dce5ee;border-radius:11px;background:#fbfcfe;color:#142b46;text-decoration:none}
 .dash-plan-card:hover,.dash-plan-card:focus-visible{border-color:#92aec8;background:#f3f8fd}
+.dash-plan-card.unconfirmed-alert{background:#fff0ee;border:2px solid #d92d20;color:#8f1d17;box-shadow:0 0 0 2px #d92d201a}
+.dash-plan-card.unconfirmed-alert span,.dash-plan-card.unconfirmed-alert strong{color:#a32020}
+.dash-plan-card.unconfirmed-alert small{color:#8f1d17;font-weight:650}
+.dash-plan-card.unconfirmed-alert strong{font-size:38px}
 .dash-plan-card span{font-size:14px;font-weight:650;line-height:1.3}
 .dash-plan-card strong{font-size:34px;line-height:1.1}
 .dash-plan-card small{font-size:12px;color:#60758b;line-height:1.4}
@@ -106,7 +110,7 @@ body.dashboard-active .dash-page{border:0;border-radius:0;min-width:0;max-width:
    <div class="dash-plan-grid" aria-label="Einteilungsstatus der anstehenden Coachingspiele">
     <a class="dash-plan-card" href="/coachingplanung.html?status=offen"><span>Offen</span><strong id="dash-plan-open">–</strong><small>Noch keine Einteilung festgelegt</small></a>
     <a class="dash-plan-card" href="/coachingplanung.html?status=voreingeteilt"><span>Voreingeteilt</span><strong id="dash-plan-preassigned">–</strong><small>Coach vorläufig vorgesehen</small></a>
-    <a class="dash-plan-card" href="/coachingplanung.html?status=eingeteilt"><span>Eingeteilt</span><strong id="dash-plan-assigned">–</strong><small>Einteilung noch nicht bestätigt</small></a>
+    <a class="dash-plan-card" id="dash-plan-unconfirmed-card" href="/coachingplanung.html?status=eingeteilt" aria-label="Eingeteilte Spiele, noch nicht vom Coach bestätigt"><span>🔴 Eingeteilt · Bestätigung offen</span><strong id="dash-plan-assigned">–</strong><small>Coach-Bestätigung steht noch aus</small></a>
     <a class="dash-plan-card" href="/coachingplanung.html?status=bestaetigt"><span>Vom Coach bestätigt</span><strong id="dash-plan-confirmed">–</strong><small>Deine Bestätigung ist hinterlegt</small></a>
    </div>
   </div>
@@ -242,6 +246,9 @@ async function loadDashboard(userId){
   number("dash-plan-open")(planningCounts.offen);
   number("dash-plan-preassigned")(planningCounts.voreingeteilt);
   number("dash-plan-assigned")(planningCounts.eingeteilt);
+  const unconfirmedCard=el("dash-plan-unconfirmed-card");
+  unconfirmedCard.classList.toggle("unconfirmed-alert",planningCounts.eingeteilt>0);
+  unconfirmedCard.setAttribute("aria-label",planningCounts.eingeteilt>0?planningCounts.eingeteilt+" eingeteilte Spiele warten auf Coach-Bestätigung":"Keine eingeteilten Spiele ohne Coach-Bestätigung");
   number("dash-plan-confirmed")(planningCounts.bestaetigt);
   number("dash-games")(games.length);
   number("dash-coaches")(coaches.length);
