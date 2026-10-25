@@ -22,6 +22,7 @@ if(!nav){
 }
 
 
+if(nav)nav.style.visibility="hidden";
 /* Mobile navigation: the main content remains full width while the menu is off-canvas. */
 const mobileNavCss=document.createElement("style");
 mobileNavCss.textContent=String.raw`
@@ -211,6 +212,8 @@ if(nav){
  for(const submenu of nav.querySelectorAll(".person-submenu:not(.template-submenu)")){if(!submenu.closest("#portal-administration-menu"))submenu.remove();}
 }
 
+/* Menü erst vollständig sortieren, danach genau einmal Berechtigungen anwenden. */
+await import("/menu-editor.js");
 /* Einmalig geladene Berechtigungen und konsistente Menüdarstellung. */
 const permissionPaths={
  "/spiele.html":"games_view","/spiele-anlegen.html":"games_create",
@@ -259,10 +262,7 @@ if(nav){
  };
  apply();
  nav.classList.remove("portal-permissions-pending");
- new MutationObserver(records=>{
-  if(!records.some(r=>r.addedNodes.length||r.removedNodes.length))return;
-  apply();
- }).observe(nav,{childList:true,subtree:true});
+ nav.style.visibility="";
 }
 /* Gemeinsame mobile Tabellenansicht: jede Zeile als lesbare Karte. */
 const mobileTables=document.createElement("style");
@@ -272,4 +272,3 @@ const markMobileTables=()=>{for(const table of document.querySelectorAll("table"
 markMobileTables();
 new MutationObserver(()=>{if(!document.hidden)markMobileTables()}).observe(document.body,{childList:true,subtree:true});
 
-await import("/menu-editor.js");
