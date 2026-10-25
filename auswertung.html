@@ -24,6 +24,10 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 #overview td:nth-child(4),#overview th:nth-child(4){text-align:right}
 #overview td:nth-child(5),#overview th:nth-child(5),#overview td:nth-child(6),#overview th:nth-child(6),#overview td:nth-child(7),#overview th:nth-child(7){text-align:right}
 #overview .selected{background:#eaf2fa}
+#overview .unconfirmed-row{background:#fde8e8!important}
+#overview .unconfirmed-row td{border-color:#f1b5b5}
+#overview .unconfirmed-row .coach-name,#overview .unconfirmed-row td:nth-child(5){color:#a32020;font-weight:700}
+#overview .unconfirmed-row .detail-btn{border-color:#d96a6a}
 #overview .coach-name{font-weight:650}
 #overview .detail-btn{padding:9px 13px;min-height:42px}
 #overview .detail-btn[aria-expanded="true"]{background:#e8f0f8;color:#142b46}
@@ -244,7 +248,8 @@ function renderOverview(){
   const result=summarize(coach,from,to);
   totalGames+=result.games.length;totalKm+=result.sum;
   const tr=document.createElement("tr");
-  if(String(coach.id)===selectedCoachId)tr.className="selected";
+  if(result.unconfirmedGames.length>0)tr.classList.add("unconfirmed-row");
+  if(String(coach.id)===selectedCoachId)tr.classList.add("selected");
   const name=document.createElement("td");name.className="coach-name";
   if(coachScope==="selected"){
    const select=document.createElement("input");select.type="checkbox";
