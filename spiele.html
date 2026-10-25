@@ -59,7 +59,17 @@
   dialog{box-sizing:border-box;max-width:calc(100vw - 24px);padding:18px}
   dialog .actions{flex-wrap:wrap}
   dialog .actions button{min-height:44px;flex:1 1 135px}
-}</style></head><body>
+}</style><style id="game-edit-style">
+#game-edit-dialog{width:min(720px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;border:1px solid #dce5ee;border-radius:14px;padding:22px;box-sizing:border-box}
+#game-edit-dialog::backdrop{background:rgba(9,25,42,.55)}
+#game-edit-dialog .game-edit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}
+#game-edit-dialog label{display:flex;flex-direction:column;gap:5px;min-width:0;font-weight:600}
+#game-edit-dialog input,#game-edit-dialog textarea{box-sizing:border-box;min-width:0;width:100%;font-weight:400}
+#game-edit-dialog .game-edit-wide{grid-column:1/-1}
+#game-edit-dialog #ge-key{background:#f0f3f7;color:#526277}
+#game-edit-error{color:#9b2634}
+@media(max-width:650px){#game-edit-dialog{padding:14px}#game-edit-dialog .game-edit-grid{grid-template-columns:minmax(0,1fr)}#game-edit-dialog .game-edit-wide{grid-column:auto}}
+</style></head><body>
 <header><h1>Coachingportal MSP</h1></header><div class="shell"><nav aria-label="Hauptmenü"><strong>Menü</strong><a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html" aria-current="page">Spiele</a><a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav>
 <main><section><h2>Spiele und Bogenstatus</h2><p id="status" role="status">Spiele und Bögen werden geladen …</p>
 <div class="legend"><span><i class="dot green"></i>Grün: Bogen versendet</span><span><i class="dot yellow"></i>Gelb: Spiel in den nächsten 5 Tagen</span><span><i class="dot red"></i>Rot: 5 Tage nach Spiel noch kein Bogen eingegangen</span></div>
@@ -68,6 +78,27 @@
 <div class="scroll"><table><thead><tr><th>Datum</th><th>Uhrzeit</th><th>Spielkennung</th><th>Heim</th><th>Gast</th><th>Liga</th><th>Spielstätte</th><th>Kilometer</th><th>Einteilung</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Bogen</th><th>Eingegangen</th><th>Geprüft</th><th>Versand</th><th>Aktion</th></tr></thead><tbody id="rows"></tbody></table></div>
 <p><a href="/spiele-anlegen.html">Neues Spiel anlegen</a> · <a href="/beobachtungsboegen.html">Alle Beobachtungsbögen</a></p>
 <p class="small">Automatische E-Mails benötigen die serverseitige Absender-Konfiguration. Status und Zuordnungen werden zusätzlich im Portal gespeichert. Bereits vorhandene lokale Datensätze bleiben erhalten.</p></section></main></div>
+<dialog id="game-edit-dialog" aria-labelledby="game-edit-heading">
+ <form id="game-edit-form">
+  <h2 id="game-edit-heading">Spiel bearbeiten</h2>
+  <p class="small">Alle Spieldaten können angepasst werden. Die Spielkennung bleibt erhalten, damit die Zuordnung zu vorhandenen Bögen bestehen bleibt.</p>
+  <div class="game-edit-grid">
+   <label>Spielkennung <input id="ge-key" readonly></label>
+   <label>Spieldatum <input id="ge-date" type="date" required></label>
+   <label>Anstoßzeit <input id="ge-kickoff" type="time"></label>
+   <label>Heimmannschaft <input id="ge-home" required></label>
+   <label>Gastmannschaft <input id="ge-away" required></label>
+   <label>Liga / Wettbewerb <input id="ge-league"></label>
+   <label class="game-edit-wide">Spielstätte (möglichst vollständige Anschrift) <textarea id="ge-venue" rows="2"></textarea></label>
+   <label>Spieltag <input id="ge-spieltag"></label>
+   <label>Spielgebiet <input id="ge-spielgebiet"></label>
+   <label>Staffelbezeichnung <input id="ge-staffel"></label>
+   <label>Staffel-Kurzbezeichnung <input id="ge-staffel-kurz"></label>
+  </div>
+  <p id="game-edit-error" role="status" aria-live="polite"></p>
+  <div class="actions"><button type="button" id="game-edit-cancel">Abbrechen</button><button type="submit" class="primary" id="game-edit-save">Änderungen speichern</button></div>
+ </form>
+</dialog>
 <dialog id="manual"><form method="dialog" id="manual-form"><h2>Bogen bereits versendet</h2><p>Hier kannst du einen Versand dokumentieren, der außerhalb des Portals stattgefunden hat. Es wird keine E-Mail versendet.</p><label>Versanddatum <input type="date" id="manual-date" required></label><label>Notiz zum Versandweg oder Grund <textarea id="manual-note" required placeholder="Beispiel: am 12.10.2026 per E-Mail von meiner bisherigen Adresse verschickt"></textarea></label><p id="manual-error" role="status"></p><div class="actions"><button type="button" id="cancel-manual">Abbrechen</button><button type="submit" class="primary">Als bereits versendet speichern</button></div></form></dialog>
 <dialog id="mail"><form method="dialog" id="mail-form"><h2 id="mail-head">E-Mail versenden</h2><label id="test-recipient-wrap" hidden>Testempfänger
 <select id="test-recipient-mode"><option value="admin">An mich selbst (Admin)</option><option value="assigned">An den zugeordneten Coach / Schiedsrichter</option></select>
@@ -94,6 +125,58 @@ function confirmProtectedEdit(g,description){
  if(!attached)return true;
  return confirm("ACHTUNG: Für dieses Spiel liegt bereits ein Beobachtungsbogen vor.\\n\\n"+description+"\\n\\nDer bestehende Bogen bleibt unverändert und wird NICHT automatisch neu zugeordnet.\\n\\nÄnderung als Administrator ausdrücklich durchführen?");
 }
+const gameEditDialog=$("game-edit-dialog");
+const gameEditFields={match_date:"ge-date",kickoff:"ge-kickoff",home:"ge-home",away:"ge-away",league:"ge-league",venue:"ge-venue",spieltag:"ge-spieltag",spielgebiet:"ge-spielgebiet",staffel_bezeichnung:"ge-staffel",staffel_kurz:"ge-staffel-kurz"};
+let editingGame=null;
+function editGame(g){
+ editingGame=g;
+ $("ge-key").value=g.game_key||"";
+ for(const [key,id] of Object.entries(gameEditFields))$(id).value=g[key]??"";
+ $("game-edit-error").textContent="";
+ $("game-edit-save").disabled=false;
+ gameEditDialog.showModal();
+}
+$("game-edit-cancel").addEventListener("click",()=>gameEditDialog.close());
+gameEditDialog.addEventListener("close",()=>{editingGame=null});
+$("game-edit-form").addEventListener("submit",async event=>{
+ event.preventDefault();
+ const g=editingGame;if(!g)return;
+ if(!$("game-edit-form").reportValidity())return;
+ const patch={};
+ for(const [key,id] of Object.entries(gameEditFields)){
+  const value=$(id).value.trim();
+  const normalized=value||null;
+  if((g[key]||null)!==normalized)patch[key]=normalized;
+ }
+ if(!Object.keys(patch).length){gameEditDialog.close();return}
+ const day=patch.match_date??g.match_date;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(day||"")||new Date(day+"T12:00:00").toISOString().slice(0,10)!==day){
+  $("game-edit-error").textContent="Bitte ein gültiges Spieldatum wählen.";return;
+ }
+ const time=patch.kickoff??g.kickoff;
+ if(time&&!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)){
+  $("game-edit-error").textContent="Bitte eine gültige Anstoßzeit wählen.";return;
+ }
+ if(!(patch.home??g.home)?.trim()||!(patch.away??g.away)?.trim()){
+  $("game-edit-error").textContent="Heim- und Gastmannschaft sind erforderlich.";return;
+ }
+ const reason=protectedReason(g,"Spiel bearbeiten");if(reason===null)return;
+ if(reason)patch.protected_change_reason=reason;
+ if(Object.hasOwn(patch,"venue")){
+  Object.assign(patch,{venue_route_address:null,planned_one_way_km:null,route_origin:null,route_destination:null,route_checked_at:null});
+  if(g.kilometers_source==="route"){patch.kilometers_text=null;patch.kilometers_source="manual"}
+ }
+ const save=$("game-edit-save");save.disabled=true;
+ try{
+  const updated=await updateGame(userId,g.game_key,patch);
+  Object.assign(g,updated);
+  gameEditDialog.close();
+  render();
+  status.textContent="Spieldaten gespeichert."+("venue" in patch?" Die Routenentfernung muss für die neue Spielstätte neu berechnet werden.":"");
+ }catch(error){
+  $("game-edit-error").textContent="Speichern fehlgeschlagen: "+error.message;
+ }finally{save.disabled=false}
+});
 async function editGameDate(g){
  const next=prompt("Neues Spieldatum eingeben (JJJJ-MM-TT):",g.match_date||"");
  if(next===null)return;
@@ -386,7 +469,7 @@ function render(){
   del.type="button";del.textContent="Spiel löschen";
   del.setAttribute("aria-label","Spiel "+g.game_key+" löschen");
   del.onclick=()=>deleteGame(g,del);
-  const editBtn=document.createElement("button");editBtn.type="button";editBtn.textContent="Spiel bearbeiten";editBtn.onclick=()=>editGameDate(g);actionCell.append(editBtn,del);row.append(actionCell);tbody.append(row);mobileList.append(mobileGameCard(g))
+  const editBtn=document.createElement("button");editBtn.type="button";editBtn.textContent="Spiel bearbeiten";editBtn.onclick=()=>editGame(g);actionCell.append(editBtn,del);row.append(actionCell);tbody.append(row);mobileList.append(mobileGameCard(g))
  }
  if(!visible.length)mobileList.append(mobileElement("p","mobile-card-empty","Keine Spiele für diesen Filter gefunden."));
  status.textContent=games.length?games.length+" Spiel(e) vorhanden.":"Noch keine Spiele vorhanden.";
