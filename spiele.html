@@ -95,10 +95,11 @@
 <header><h1>Coachingportal MSP</h1></header><div class="shell"><nav aria-label="Hauptmenü"><strong>Menü</strong><a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html" aria-current="page">Spiele</a><a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav>
 <main><section><h2>Spiele und Bogenstatus</h2><p id="status" role="status">Spiele und Bögen werden geladen …</p>
 <div class="legend"><span><i class="dot green"></i>Grün: Bogen versendet</span><span><i class="dot yellow"></i>Gelb: Spiel in den nächsten 5 Tagen</span><span><i class="dot red"></i>Rot: 5 Tage nach Spiel noch kein Bogen eingegangen</span></div>
-<div class="card" style="margin:12px 0;padding:14px">
+<div class="card" id="global-route-setting-card" style="margin:12px 0;padding:14px">
  <label style="display:flex;gap:10px;align-items:flex-start;font-weight:650"><input id="global-route-consent" type="checkbox" style="width:20px;height:20px;flex:none"> Automatische Routenberechnung für alle meine Spiele erlauben</label>
- <p class="small" style="margin:7px 0 0">Einmalige Zustimmung auf diesem Gerät: Bei der Routenberechnung werden Coach-Wohnadresse und bestätigte Spielstätte an OpenStreetMap/Nominatim und OSRM übertragen. Die Strecke wird erst nach deiner Kontrolle gespeichert. Du kannst die Zustimmung jederzeit hier widerrufen.</p>
+ <p class="small" style="margin:7px 0 0">Diese zentrale Admin-Einstellung wird in Supabase gespeichert und gilt auf allen Geräten. Für die Routenberechnung werden Coach-Wohnadresse und bestätigte Spielstätte an die Kartendienste übertragen. Kilometer werden erst nach deiner Kontrolle gespeichert.</p>
  <p id="global-route-consent-status" class="small" aria-live="polite"></p>
+ <button type="button" id="global-route-consent-revoke" hidden>Routenzustimmung widerrufen</button>
 </div>
 <details class="game-filter-details"><summary>Filter anzeigen / einklappen</summary><div class="game-filters" role="group" aria-label="Spiele filtern"><button type="button" class="active" data-game-filter="all" aria-pressed="true">Alle Spiele</button><button type="button" data-game-filter="future" aria-pressed="false">Zukünftige Spiele</button><button type="button" data-game-filter="without" aria-pressed="false">Spiele ohne Bogen</button></div><div class="game-sort"><label for="referee-filter">Schiedsrichter filtern:</label><select id="referee-filter"><option value="">Alle Schiedsrichter</option></select><label for="coach-filter">Coach / Beobachter filtern:</label><select id="coach-filter"><option value="">Alle Coaches / Beobachter</option></select><label for="game-sort-field">Sortieren nach:</label><select id="game-sort-field"><option value="date">Datum</option><option value="referee">Schiedsrichter</option><option value="coach">Coach / Beobachter</option></select><button type="button" id="game-sort-direction" aria-label="Sortierreihenfolge ändern">Neueste zuerst ↓</button></div></details><p id="filter-count" class="small"></p>
 <p class="mobile-list-hint">Tippe bei einem Spiel auf „Details &amp; Bearbeiten“, um weitere Angaben und Aktionen zu öffnen.</p><div id="mobile-game-list" class="mobile-game-list" aria-label="Spiele als Karten"></div>
@@ -245,22 +246,38 @@ $("game-edit-form").addEventListener("submit",async event=>{
 // Spielstätte bestätigen und wiederverwenden.
 let venueGame=null,venueCandidates=[];
 const venueDialog=$("venue-check-dialog");
-const routeConsentKey=()=> "msp-route-consent-"+userId;
-const hasRouteConsent=()=>{
- try{return !!userId&&localStorage.getItem(routeConsentKey())==="yes"}catch{return false}
-};
-function setRouteConsent(allowed){
- try{localStorage.setItem(routeConsentKey(),allowed?"yes":"no");$("global-route-consent-status").textContent=allowed?"Für alle Spiele auf diesem Gerät aktiviert.":"Automatische Routenberechnung deaktiviert."}
- catch(e){$("global-route-consent-status").textContent="Einstellung konnte nicht gespeichert werden."}
+let routeConsentEnabled=false;
+const hasRouteConsent=()=>routeConsentEnabled;
+async function loadRouteConsent(){
+ const {data,error}=await sb.from("portal_route_settings").select("route_consent_enabled").eq("owner_id",userId).maybeSingle();
+ if(error)throw error;
+ routeConsentEnabled=data?.route_consent_enabled===true;
+ $("global-route-consent").checked=routeConsentEnabled;
+ $("global-route-setting-card").hidden=routeConsentEnabled;
+ $("global-route-consent-revoke").hidden=!routeConsentEnabled;
+ $("global-route-consent-status").textContent=routeConsentEnabled?"Zentrale Admin-Zustimmung ist in Supabase gespeichert.":"";
 }
-$("global-route-consent").addEventListener("change",()=>{
- const allowed=$("global-route-consent").checked;
- setRouteConsent(allowed);
- $("venue-check-consent").checked=allowed;
- if(allowed&&venueDialog.open&&venueGame?.coach_id&&venueGame?.venue_route_address&&!venueGame.route_checked_at){
-  $("venue-check-consent").dispatchEvent(new Event("change"));
- }
-});
+async function saveRouteConsent(allowed){
+ const status=$("global-route-consent-status"),toggle=$("global-route-consent");
+ toggle.disabled=true;
+ try{
+  const {data:{user}}=await sb.auth.getUser();
+  const {data:adminProfile,error:profileError}=await sb.from("portal_profiles").select("role").eq("user_id",user.id).maybeSingle();
+  if(profileError)throw profileError;
+  if(adminProfile?.role!=="admin")throw Error("Nur der Administrator kann diese zentrale Einstellung ändern.");
+  const {error}=await sb.from("portal_route_settings").upsert({owner_id:userId,route_consent_enabled:allowed,updated_at:new Date().toISOString()},{onConflict:"owner_id"});
+  if(error)throw error;
+  routeConsentEnabled=allowed;
+  toggle.checked=allowed;
+  $("global-route-setting-card").hidden=allowed;
+  $("global-route-consent-revoke").hidden=!allowed;
+  status.textContent=allowed?"Zustimmung zentral in Supabase gespeichert.":"Zentrale Routenzustimmung widerrufen.";
+  $("venue-check-consent").checked=allowed;
+ }catch(e){toggle.checked=routeConsentEnabled;status.textContent="Speichern fehlgeschlagen: "+e.message}
+ finally{toggle.disabled=false}
+}
+$("global-route-consent").addEventListener("change",()=>void saveRouteConsent($("global-route-consent").checked));
+$("global-route-consent-revoke").addEventListener("click",()=>void saveRouteConsent(false));
 function openVenueCheck(g){
  venueGame=g;venueCandidates=[];
  $("venue-check-game").textContent=(g.home||"–")+" – "+(g.away||"–")+" · "+dateDE(g.match_date);
@@ -742,7 +759,7 @@ $("mail-form").onsubmit=async e=>{
  catch(error){$("mail-error").textContent=error.message;button.disabled=false}
 };
 try{
- const{user,ownerId}=await requirePermission("games_view");userId=ownerId;userEmail=user.email||"";$("global-route-consent").checked=hasRouteConsent();refs=await cloudPeople(userId,"referee");coaches=await cloudPeople(userId,"coach");
+ const{user,ownerId}=await requirePermission("games_view");userId=ownerId;userEmail=user.email||"";await loadRouteConsent();refs=await cloudPeople(userId,"referee");coaches=await cloudPeople(userId,"coach");
  const refFilter=$("referee-filter");for(const p of [...refs].sort((a,b)=>fullName(a).localeCompare(fullName(b),"de")))refFilter.add(new Option(fullName(p),p.id));
  const requestedReferee=new URLSearchParams(location.search).get("referee");
  if(requestedReferee&&refs.some(p=>String(p.id)===requestedReferee)){refereeFilter=requestedReferee;refFilter.value=requestedReferee;}
