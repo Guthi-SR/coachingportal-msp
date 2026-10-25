@@ -95,6 +95,11 @@
 <header><h1>Coachingportal MSP</h1></header><div class="shell"><nav aria-label="Hauptmenü"><strong>Menü</strong><a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html" aria-current="page">Spiele</a><a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav>
 <main><section><h2>Spiele und Bogenstatus</h2><p id="status" role="status">Spiele und Bögen werden geladen …</p>
 <div class="legend"><span><i class="dot green"></i>Grün: Bogen versendet</span><span><i class="dot yellow"></i>Gelb: Spiel in den nächsten 5 Tagen</span><span><i class="dot red"></i>Rot: 5 Tage nach Spiel noch kein Bogen eingegangen</span></div>
+<div class="card" style="margin:12px 0;padding:14px">
+ <label style="display:flex;gap:10px;align-items:flex-start;font-weight:650"><input id="global-route-consent" type="checkbox" style="width:20px;height:20px;flex:none"> Automatische Routenberechnung für alle meine Spiele erlauben</label>
+ <p class="small" style="margin:7px 0 0">Einmalige Zustimmung auf diesem Gerät: Bei der Routenberechnung werden Coach-Wohnadresse und bestätigte Spielstätte an OpenStreetMap/Nominatim und OSRM übertragen. Die Strecke wird erst nach deiner Kontrolle gespeichert. Du kannst die Zustimmung jederzeit hier widerrufen.</p>
+ <p id="global-route-consent-status" class="small" aria-live="polite"></p>
+</div>
 <details class="game-filter-details"><summary>Filter anzeigen / einklappen</summary><div class="game-filters" role="group" aria-label="Spiele filtern"><button type="button" class="active" data-game-filter="all" aria-pressed="true">Alle Spiele</button><button type="button" data-game-filter="future" aria-pressed="false">Zukünftige Spiele</button><button type="button" data-game-filter="without" aria-pressed="false">Spiele ohne Bogen</button></div><div class="game-sort"><label for="referee-filter">Schiedsrichter filtern:</label><select id="referee-filter"><option value="">Alle Schiedsrichter</option></select><label for="coach-filter">Coach / Beobachter filtern:</label><select id="coach-filter"><option value="">Alle Coaches / Beobachter</option></select><label for="game-sort-field">Sortieren nach:</label><select id="game-sort-field"><option value="date">Datum</option><option value="referee">Schiedsrichter</option><option value="coach">Coach / Beobachter</option></select><button type="button" id="game-sort-direction" aria-label="Sortierreihenfolge ändern">Neueste zuerst ↓</button></div></details><p id="filter-count" class="small"></p>
 <p class="mobile-list-hint">Tippe bei einem Spiel auf „Details &amp; Bearbeiten“, um weitere Angaben und Aktionen zu öffnen.</p><div id="mobile-game-list" class="mobile-game-list" aria-label="Spiele als Karten"></div>
 <div class="scroll"><table><thead><tr><th>Datum</th><th>Uhrzeit</th><th>Spielkennung</th><th>Heim</th><th>Gast</th><th>Liga</th><th>Spielstätte</th><th>Kilometer</th><th>Einteilung</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Bogen</th><th>Eingegangen</th><th>Geprüft</th><th>Versand</th><th>Aktion</th></tr></thead><tbody id="rows"></tbody></table></div>
@@ -240,11 +245,27 @@ $("game-edit-form").addEventListener("submit",async event=>{
 // Spielstätte bestätigen und wiederverwenden.
 let venueGame=null,venueCandidates=[];
 const venueDialog=$("venue-check-dialog");
+const routeConsentKey=()=> "msp-route-consent-"+userId;
+const hasRouteConsent=()=>{
+ try{return !!userId&&localStorage.getItem(routeConsentKey())==="yes"}catch{return false}
+};
+function setRouteConsent(allowed){
+ try{localStorage.setItem(routeConsentKey(),allowed?"yes":"no");$("global-route-consent-status").textContent=allowed?"Für alle Spiele auf diesem Gerät aktiviert.":"Automatische Routenberechnung deaktiviert."}
+ catch(e){$("global-route-consent-status").textContent="Einstellung konnte nicht gespeichert werden."}
+}
+$("global-route-consent").addEventListener("change",()=>{
+ const allowed=$("global-route-consent").checked;
+ setRouteConsent(allowed);
+ $("venue-check-consent").checked=allowed;
+ if(allowed&&venueDialog.open&&venueGame?.coach_id&&venueGame?.venue_route_address&&!venueGame.route_checked_at){
+  $("venue-check-consent").dispatchEvent(new Event("change"));
+ }
+});
 function openVenueCheck(g){
  venueGame=g;venueCandidates=[];
  $("venue-check-game").textContent=(g.home||"–")+" – "+(g.away||"–")+" · "+dateDE(g.match_date);
  $("venue-check-query").value=g.venue_route_address||g.venue||"";
- $("venue-check-consent").checked=false;
+ $("venue-check-consent").checked=hasRouteConsent();
  $("venue-check-status").textContent="";
  $("venue-check-results").replaceChildren();
  $("venue-route-calc").disabled=!g.coach_id||!g.venue_route_address;
@@ -336,6 +357,7 @@ async function calculateConfirmedVenueRoute(g){
 let venueRouteBusy=false;
 $("venue-route-calc").addEventListener("click",()=>{void calculateConfirmedVenueRoute(venueGame)});
 $("venue-check-consent").addEventListener("change",async()=>{
+ if(venueGame){setRouteConsent($("venue-check-consent").checked);$("global-route-consent").checked=hasRouteConsent()}
  const g=venueGame;if(!g||!$("venue-check-consent").checked||!g.coach_id||g.route_checked_at)return;
  try{
   const {data,error}=await sb.from("portal_confirmed_venues").select("verified_address").eq("owner_id",userId).eq("venue_name",String(g.venue||"").trim()).maybeSingle();
@@ -720,7 +742,7 @@ $("mail-form").onsubmit=async e=>{
  catch(error){$("mail-error").textContent=error.message;button.disabled=false}
 };
 try{
- const{user,ownerId}=await requirePermission("games_view");userId=ownerId;userEmail=user.email||"";refs=await cloudPeople(userId,"referee");coaches=await cloudPeople(userId,"coach");
+ const{user,ownerId}=await requirePermission("games_view");userId=ownerId;userEmail=user.email||"";$("global-route-consent").checked=hasRouteConsent();refs=await cloudPeople(userId,"referee");coaches=await cloudPeople(userId,"coach");
  const refFilter=$("referee-filter");for(const p of [...refs].sort((a,b)=>fullName(a).localeCompare(fullName(b),"de")))refFilter.add(new Option(fullName(p),p.id));
  const requestedReferee=new URLSearchParams(location.search).get("referee");
  if(requestedReferee&&refs.some(p=>String(p.id)===requestedReferee)){refereeFilter=requestedReferee;refFilter.value=requestedReferee;}
