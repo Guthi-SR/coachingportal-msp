@@ -22,8 +22,7 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 #overview td:nth-child(2),#overview th:nth-child(2){text-align:center}
 #overview td:nth-child(3),#overview th:nth-child(3){text-align:right}
 #overview td:nth-child(4),#overview th:nth-child(4){text-align:right}
-#overview td:nth-child(5),#overview th:nth-child(5){text-align:right}
-#overview td:nth-child(6),#overview th:nth-child(6){text-align:right}
+#overview td:nth-child(5),#overview th:nth-child(5),#overview td:nth-child(6),#overview th:nth-child(6),#overview td:nth-child(7),#overview th:nth-child(7){text-align:right}
 #overview .selected{background:#eaf2fa}
 #overview .coach-name{font-weight:650}
 #overview .detail-btn{padding:9px 13px;min-height:42px}
@@ -105,7 +104,7 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 </div>
 <div class="tablebox">
 <table id="overview" aria-label="Alle Coaches mit Spielen im Zeitraum, geplanten Spielen und Kilometern">
-<thead><tr><th>Coach / Beobachter</th><th>Spiele im Zeitraum</th><th>Geplant</th><th>Kilometer gesamt</th><th>Einzelaufstellung</th></tr></thead>
+<thead><tr><th>Coach / Beobachter</th><th>Spiele im Zeitraum</th><th>Geplant (Zukunft)</th><th>Kilometer gesamt</th><th>Kilometer geplant</th><th>Spiele insgesamt</th><th>Kilometer insgesamt</th><th>Einzelaufstellung</th></tr></thead>
 <tbody id="overview-rows"></tbody>
 </table></div>
 </div>
@@ -113,8 +112,8 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 <h3 id="details-heading">Einzelaufstellung</h3>
 <p class="hint" id="details-subtitle"></p>
 <div class="tablebox"><table class="summary">
-<thead><tr><th>Coach</th><th>Spiele im Zeitraum</th><th>Geplant</th><th>Kilometer gesamt</th></tr></thead>
-<tbody><tr><td id="coach-name"></td><td id="game-count"></td><td id="planned-count"></td><td id="km-total"></td></tr></tbody></table></div>
+<thead><tr><th>Coach</th><th>Spiele im Zeitraum</th><th>Geplant (Zukunft)</th><th>Kilometer gesamt</th><th>Kilometer geplant</th><th>Spiele insgesamt</th><th>Kilometer insgesamt</th></tr></thead>
+<tbody><tr><td id="coach-name"></td><td id="game-count"></td><td id="planned-count"></td><td id="km-total"></td><td id="planned-km-total"></td><td id="overall-game-count"></td><td id="overall-km-total"></td></tr></tbody></table></div>
 <p><button id="export-excel" type="button" disabled>Excel exportieren (.xlsx)</button></p>
 <h3>Spiele im ausgewählten Zeitraum</h3>
 <div class="tablebox"><table class="details-table">
@@ -174,9 +173,12 @@ function summarize(p,from,to){
  const rows=matchingGames(p,from,to);
  const planned=games.filter(g=>!g.is_test&&g.match_date>today&&coachMatches(p,g))
   .sort((a,b)=>String(a.match_date).localeCompare(String(b.match_date))||String(a.kickoff||"").localeCompare(String(b.kickoff||"")));
- return{name:displayName(p),from,to,games:rows,plannedGames:planned,
-  sum:rows.reduce((s,g)=>s+(distance(g.kilometers_text)??0),0),
-  missing:rows.filter(g=>String(g.kilometers_text||"").trim()&&distance(g.kilometers_text)===null).length};
+ const sum=rows.reduce((s,g)=>s+(distance(g.kilometers_text)??0),0);
+ const plannedSum=planned.reduce((s,g)=>s+(distance(g.kilometers_text)??0),0);
+ return{name:displayName(p),from,to,games:rows,plannedGames:planned,sum,plannedSum,
+  totalGames:rows.length+planned.length,totalKm:sum+plannedSum,
+  missing:rows.filter(g=>String(g.kilometers_text||"").trim()&&distance(g.kilometers_text)===null).length,
+  plannedMissing:planned.filter(g=>distance(g.kilometers_text)===null).length};
 }
 function clearDetails(){
  selectedCoachId=null;lastResult=null;
@@ -192,6 +194,9 @@ function showCoachDetails(id){
  $("coach-name").textContent=current.name;
  $("game-count").textContent=current.games.length;
  $("planned-count").textContent=current.plannedGames.length;
+ $("planned-km-total").textContent=labelKm(current.plannedSum);
+ $("overall-game-count").textContent=current.totalGames;
+ $("overall-km-total").textContent=labelKm(current.totalKm);
  $("km-total").textContent=labelKm(current.sum);
  $("details-heading").textContent="Einzelaufstellung: "+current.name;
  $("details-subtitle").textContent="Zeitraum "+dateDE(from)+" bis "+dateDE(to);
@@ -250,6 +255,9 @@ function renderOverview(){
   if(!result.games.length)count.className="zero";
   const planned=document.createElement("td");planned.textContent=String(result.plannedGames.length);if(!result.plannedGames.length)planned.className="zero";
   const km=document.createElement("td");km.textContent=labelKm(result.sum);
+  const plannedKm=document.createElement("td");plannedKm.textContent=labelKm(result.plannedSum);if(!result.plannedSum)plannedKm.className="zero";
+  const totalCount=document.createElement("td");totalCount.textContent=String(result.totalGames);
+  const totalKm=document.createElement("td");totalKm.textContent=labelKm(result.totalKm);
   const action=document.createElement("td"),btn=document.createElement("button");
   btn.className="detail-btn";btn.type="button";
   const opened=String(coach.id)===selectedCoachId;
@@ -257,10 +265,10 @@ function renderOverview(){
   btn.setAttribute("aria-expanded",String(opened));
   btn.setAttribute("aria-controls","details-result");
   btn.addEventListener("click",()=>showCoachDetails(String(coach.id)));
-  action.append(btn);tr.append(name,count,planned,km,action);tbody.append(tr);
+  action.append(btn);tr.append(name,count,planned,km,plannedKm,totalCount,totalKm,action);tbody.append(tr);
  }
  if(!ordered.length){
-  const row=document.createElement("tr"),cell=document.createElement("td");cell.colSpan=5;cell.textContent="Noch keine Coaches angelegt.";row.append(cell);tbody.append(row);
+  const row=document.createElement("tr"),cell=document.createElement("td");cell.colSpan=8;cell.textContent="Noch keine Coaches angelegt.";row.append(cell);tbody.append(row);
  }
  $("overview-total").textContent=ordered.length+" Coaches · "+totalGames+" Spiele im Zeitraum · "+games.filter(g=>!g.is_test&&g.match_date>today).length+" geplante Spiele insgesamt · "+labelKm(totalKm);
  updateCoachExportStatus();
