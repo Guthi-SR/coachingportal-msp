@@ -157,7 +157,6 @@ $("game-edit-form").addEventListener("submit",async event=>{
   const normalized=value||null;
   if((g[key]||null)!==normalized)patch[key]=normalized;
  }
- if(!Object.keys(patch).length){gameEditDialog.close();return}
  const day=patch.match_date??g.match_date;
  if(!/^\d{4}-\d{2}-\d{2}$/.test(day||"")||new Date(day+"T12:00:00").toISOString().slice(0,10)!==day){
   $("game-edit-error").textContent="Bitte ein gültiges Spieldatum wählen.";return;
@@ -183,7 +182,8 @@ $("game-edit-form").addEventListener("submit",async event=>{
  const selectedPlanning=$("ge-planning").value;
  const coachId=patch.coach_id!==undefined?patch.coach_id:g.coach_id;
  if(selectedPlanning!=="offen"&&!coachId){$("game-edit-error").textContent="Für diesen Einteilungsstatus zuerst einen Coach auswählen.";return}
- if(selectedPlanning!==(patch.planning_status??g.planning_status??"offen"))patch.planning_status=selectedPlanning;
+ if(selectedPlanning!==(g.planning_status||"offen"))patch.planning_status=selectedPlanning;
+ else if(Object.hasOwn(patch,"coach_id"))patch.planning_status=patch.coach_id?"voreingeteilt":"offen";
  if(!Object.keys(patch).length){gameEditDialog.close();return}
  const reason=protectedReason(g,"Spiel bearbeiten");if(reason===null)return;
  if(reason)patch.protected_change_reason=reason;
