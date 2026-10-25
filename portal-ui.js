@@ -23,38 +23,70 @@ if(!nav){
 
 
 if(nav)nav.style.visibility="hidden";
-/* Gemeinsame Begrüßung, auch bei verzögertem Login auf der Startseite. */
+/* Einheitlicher Kopfbereich auf allen Portal-Seiten. */
 const portalHeader=document.querySelector("body > header");
 if(portalHeader){
+ const previousTitle=portalHeader.querySelector("h1");
+ const branding=document.createElement("div");
+ branding.className="portal-header-brand";
+ const logo=document.createElement("img");
+ logo.src="/portal-logo.svg";
+ logo.alt="Logo SRG Main-Spessart";
+ logo.className="portal-header-logo";
+ const title=document.createElement("span");
+ title.className="portal-header-title";
+ title.textContent="Coachingportal MSP";
+ branding.append(logo,title);
  const greeting=document.createElement("span");
- greeting.className="portal-greeting";
+ greeting.className="portal-header-hello";
+ greeting.textContent="Hallo Benutzer";
  greeting.setAttribute("aria-live","polite");
- portalHeader.append(greeting);
- const greetingStyle=document.createElement("style");
- greetingStyle.textContent=`
- body > header{position:relative}
- body > header .portal-greeting{display:block;position:absolute;right:18px;top:50%;transform:translateY(-50%);color:#fff;font:600 15px system-ui,sans-serif;text-align:right;z-index:2;max-width:40%;overflow-wrap:anywhere}
- @media(max-width:767px){body > header .portal-greeting{position:static;transform:none;max-width:none;margin-top:8px;font-size:14px;text-align:center}}
+ const top=document.createElement("div");
+ top.className="portal-header-row";
+ top.append(branding,greeting);
+ // Bestehende Kopfbereichs-Inhalte behalten, aber nur die einheitliche Kopfzeile zeigen.
+ portalHeader.replaceChildren(top);
+ const css=document.createElement("style");
+ css.textContent=`
+ body > header{background:#142b46!important;color:#fff!important;padding:14px 20px!important;text-align:left!important;min-height:72px!important}
+ body > header .portal-header-row{display:flex;align-items:center;justify-content:space-between;gap:18px;width:100%;max-width:100%;min-width:0}
+ body > header .portal-header-brand{display:flex;align-items:center;gap:12px;min-width:0}
+ body > header .portal-header-logo{display:block;width:48px;height:48px;object-fit:contain;flex:none;border-radius:8px}
+ body > header .portal-header-title{font:700 clamp(18px,2vw,24px)/1.2 system-ui,sans-serif;color:#fff}
+ body > header .portal-header-hello{font:600 16px/1.3 system-ui,sans-serif;color:#fff;text-align:right;white-space:nowrap;margin-left:auto}
+ @media(max-width:767px){
+  body.portal-mobile-nav > header{padding:10px 12px 10px 64px!important;min-height:64px!important}
+  body > header .portal-header-row{gap:8px}
+  body > header .portal-header-brand{gap:7px}
+  body > header .portal-header-logo{width:36px;height:36px}
+  body > header .portal-header-title{font-size:clamp(15px,4vw,19px)}
+  body > header .portal-header-hello{font-size:12px;white-space:normal;max-width:35%;overflow-wrap:anywhere}
+ }
  `;
- document.head.append(greetingStyle);
+ document.head.append(css);
  const{sb}=await import("/portal-workflow.js");
- const updateGreeting=async(user)=>{
-  if(!user){greeting.textContent="";return;}
-  const fallback=(user.user_metadata?.first_name||user.user_metadata?.name||user.email?.split("@")[0]?.split(/[._-]/)[0]||"").trim();
-  // Die Begrüßung sofort sichtbar machen; anschließend den korrekten Vornamen nachladen.
-  greeting.textContent=fallback?"Hallo "+fallback:"Hallo";
+ let lastUserId="";
+ async function updateGreeting(user){
+  if(!user){greeting.textContent="Hallo Benutzer";lastUserId="";return;}
+  const thisUserId=user.id;
+  const fallback=String(user.user_metadata?.first_name||user.user_metadata?.name||user.email?.split("@")[0]?.split(/[._-]/)[0]||"Benutzer").trim();
+  greeting.textContent="Hallo "+fallback;
+  if(lastUserId===thisUserId&&greeting.dataset.fullName==="1")return;
+  lastUserId=thisUserId;
   try{
-   const{data,error}=await sb.from("portal_user_access").select("first_name,username").eq("user_id",user.id).maybeSingle();
+   const{data,error}=await sb.from("portal_user_access").select("first_name,username").eq("user_id",thisUserId).maybeSingle();
    if(error)throw error;
+   if(lastUserId!==thisUserId)return;
    const first=String(data?.first_name||data?.username?.split("_")[0]||fallback).trim();
-   greeting.textContent=first?"Hallo "+first:"Hallo";
-  }catch(e){console.warn("Vorname nicht abrufbar",e)}
- };
- const{data:{user}}=await sb.auth.getUser();
- await updateGreeting(user);
+   greeting.textContent="Hallo "+(first||"Benutzer");
+   greeting.dataset.fullName="1";
+  }catch(e){console.warn("Begrüßungsname konnte nicht geladen werden",e)}
+ }
+ const {data:{user}}=await sb.auth.getUser();
+ void updateGreeting(user);
  sb.auth.onAuthStateChange((event,session)=>{
   if(event==="SIGNED_IN"||event==="INITIAL_SESSION"||event==="SIGNED_OUT"){
-   void updateGreeting(session?.user||null);
+   queueMicrotask(()=>{void updateGreeting(session?.user||null)});
   }
  });
 }
