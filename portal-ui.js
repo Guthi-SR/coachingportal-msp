@@ -263,6 +263,7 @@ if(nav){
  apply();
  nav.classList.remove("portal-permissions-pending");
  nav.style.visibility="";
+ document.body.classList.add("portal-menu-ready");
 }
 /* Gemeinsame mobile Tabellenansicht: jede Zeile als lesbare Karte. */
 const mobileTables=document.createElement("style");
