@@ -62,11 +62,19 @@ $("manual-save").addEventListener("click",async()=>{const id=normalizeGameId($("
  if(existingCloud){$("status").textContent="⚠️ Doppeltes Spiel verhindert: Die Spielkennung "+game.id+" existiert bereits in der Spieleverwaltung. Es wurde kein weiteres Spiel angelegt.";return}
  const personLists=await Promise.all([cloudPeople(user.id,"referee"),cloudPeople(user.id,"coach")]);
  const ref=personLists[0].find(p=>p.id===game.referee),coach=personLists[1].find(p=>p.id===game.coach);
- let resolvedVenue=game.venue||null,venueWarning="";
- if(resolvedVenue){try{const resp=await fetch("/api/venue-resolve?venue="+encodeURIComponent(resolvedVenue));if(resp.ok){const info=await resp.json();if(info.resolved&&info.address)resolvedVenue=info.address;else venueWarning="Spielstätte nicht eindeutig erkannt: Bitte Adresse in Spiele bearbeiten prüfen."}else venueWarning="Spielstättenadresse konnte nicht überprüft werden."}catch(e){venueWarning="Adressdienst nicht erreichbar; Adresse bitte prüfen."}}
+ // Bestätigte Sportplätze ausschließlich bei identischem Namen automatisch übernehmen.
+ // Nicht bestätigte Treffer werden niemals als geprüfte Sportstätte markiert.
+ let confirmedAddress=null,venueWarning="";
+ if(game.venue){
+  const {data:verified,error:venueError}=await sb.from("portal_confirmed_venues")
+   .select("verified_address").eq("owner_id",user.id).eq("venue_name",game.venue).maybeSingle();
+  if(venueError)throw venueError;
+  confirmedAddress=verified?.verified_address||null;
+  if(!confirmedAddress)venueWarning="Spielstätte noch nicht bestätigt. Unter „Spiele und Bogenstatus“ bitte prüfen.";
+ }
  const {error:writeErr}=await sb.from("portal_games").insert({
   owner_id:user.id,game_key:game.id,match_date:game.date,kickoff:game.kickoff||null,is_test:game.isTest,kilometers_text:game.kilometersText||null,
-  home:game.home,away:game.away,league:game.league||null,venue:resolvedVenue,
+  home:game.home,away:game.away,league:game.league||null,venue:game.venue||null,venue_route_address:confirmedAddress,
   spieltag:game.spieltag||null,spielgebiet:game.region||null,staffel_bezeichnung:game.staffelName||null,staffel_kurz:game.staffelShort||null,
   referee_id:game.referee||null,referee_name:ref?.name||null,referee_email:ref?.mail||ref?.email||null,
   coach_id:game.coach||null,coach_name:coach?.name||null,coach_first_name:coach?.first||null,
