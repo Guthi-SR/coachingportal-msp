@@ -34,10 +34,37 @@ export default async function handler(req,res){
   if(!game)return json(res,404,{error:"Spiel nicht gefunden."});
   const search=query||game.venue_route_address||game.venue;
   if(!search)return json(res,422,{error:"Keine Spielstätte hinterlegt. Bitte zuerst eine genaue Adresse eingeben."});
-  const u="https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&countrycodes=de&q="+encodeURIComponent(search);
-  const results=await getJSON(u);
-  const candidates=(Array.isArray(results)?results:[]).map(p=>({label:String(p.display_name||""),lat:Number(p.lat),lon:Number(p.lon),type:String(p.type||""),category:String(p.category||p.class||""),address:p.address||{}})).filter(p=>p.label&&Number.isFinite(p.lat)&&Number.isFinite(p.lon));
-  if(!candidates.length)return json(res,200,{resolved:false,query:search,candidates:[],message:"Keine eindeutige Position gefunden. Bitte Straße, Hausnummer, PLZ und Ort ergänzen."});
+  const houseMatch=search.match(/(?:^|\\s)(\\d+[a-zA-Z]?(?:\\s*[-/]\\s*\\d+[a-zA-Z]?)?)(?=\\s*(?:,|$))/);
+  const requestedHouse=houseMatch?.[1]?.replace(/\\s+/g,"").toLocaleLowerCase("de-DE")||null;
+  const postalMatch=search.match(/\\b(\\d{5})\\b/),requestedPostal=postalMatch?.[1]||null;
+  const parts=search.split(",").map(x=>x.trim()).filter(Boolean);
+  const street=parts[0]||search;
+  const streetNumber=street.match(/^(.*?\\S)\\s+(\\d+[a-zA-Z]?(?:\\s*[-/]\\s*\\d+[a-zA-Z]?)?)$/);
+  const baseStreet=streetNumber?.[1]||street;
+  const number=streetNumber?.[2]||requestedHouse;
+  const location=parts.slice(1).join(", ");
+  const urls=[];
+  // Prefer a structured search with separate street and house number.
+  if(number&&location)urls.push("https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=10&countrycodes=de&street="+encodeURIComponent(baseStreet+" "+number)+"&city="+encodeURIComponent(location));
+  urls.push("https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=10&countrycodes=de&q="+encodeURIComponent(search));
+  let raw=[];
+  for(const url of urls){try{const result=await getJSON(url);if(Array.isArray(result))raw.push(...result)}catch(e){if(!raw.length)throw e}}
+  const unique=new Map();
+  for(const p of raw){
+   const a=p.address||{},house=String(a.house_number||"").replace(/\\s+/g,"").toLocaleLowerCase("de-DE");
+   if(requestedHouse&&house!==requestedHouse)continue;
+   if(requestedPostal&&String(a.postcode||"")&&String(a.postcode)!==requestedPostal)continue;
+   const label=String(p.display_name||"");
+   if(!label||!Number.isFinite(Number(p.lat))||!Number.isFinite(Number(p.lon)))continue;
+   unique.set(String(p.lat)+","+String(p.lon),{label,lat:Number(p.lat),lon:Number(p.lon),type:String(p.type||""),category:String(p.category||p.class||""),address:a,houseNumberMatched:!requestedHouse||house===requestedHouse});
+  }
+  const candidates=[...unique.values()].slice(0,5);
+  if(!candidates.length){
+   const fallback=raw.map(p=>({p,a:p.address||{}})).find(x=>!requestedPostal||!x.a.postcode||String(x.a.postcode)===requestedPostal);
+   return json(res,200,{resolved:false,query:search,candidates:[],message:requestedHouse
+    ?"Die Straße wurde möglicherweise gefunden, aber keine bestätigte Adresse mit Hausnummer "+requestedHouse+" wurde geliefert. Bitte Hausnummer, PLZ und Ort prüfen oder die Adresse manuell verifizieren."
+    :"Keine eindeutige Position gefunden. Bitte Straße, Hausnummer, PLZ und Ort ergänzen."});
+  }
   return json(res,200,{resolved:true,query:search,gameKey,candidates});
  }catch(e){return json(res,503,{error:String(e?.message||"Spielstättenprüfung fehlgeschlagen.").slice(0,300)});}
 }
