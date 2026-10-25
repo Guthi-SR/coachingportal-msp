@@ -308,9 +308,30 @@ function venueWords(input){
  const stop=new Set(["sportgelaende","sportplatz","sportzentrum","stadion","platz","am","an","der","die","das","im","in","bei","auf","des","und","main","landkreis","bayern","deutschland","strasse","sport","zentrum","gelände"]);
  return normalized.split(/\s+/).filter(w=>w.length>=4&&!stop.has(w)&&!/^\d+$/.test(w));
 }
+function venuePostalCode(input){
+ const m=String(input||"").match(/\b(\d{5})\s+[\p{L}]/u);
+ return m?m[1]:null;
+}
+function venueTown(input){
+ const s=String(input||"").toLocaleLowerCase("de-DE")
+  .replace(/ß/g,"ss").replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue");
+ const m=s.match(/\b\d{5}\s+([\p{L}][\p{L}\s.-]*?)(?:,|\s+(?:deutschland|bayern)\b|$)/u);
+ return m?m[1].trim().replace(/\s+/g," "):null;
+}
+function venueLocationCompatible(source,candidate){
+ const sourceZip=venuePostalCode(source),candidateZip=venuePostalCode(candidate);
+ // If the game address identifies a postcode, never suggest a different postcode.
+ if(sourceZip&&candidateZip&&sourceZip!==candidateZip)return false;
+ if(sourceZip&&!candidateZip)return false;
+ const sourceTown=venueTown(source),candidateTown=venueTown(candidate);
+ // If both town names are known, they must match; uncertain/missing town data is not enough to overrule a postcode mismatch.
+ if(sourceTown&&candidateTown&&sourceTown!==candidateTown)return false;
+ if(sourceTown&&!candidateTown&&!sourceZip)return false;
+ return true;
+}
 function venueSimilarity(source,candidate){
  const a=venueWords(source),b=venueWords(candidate);
- if(!a.length||!b.length)return 0;
+ if(!a.length||!b.length||!venueLocationCompatible(source,candidate))return 0;
  const match=(x,y)=>x===y||(x.length>=6&&y.length>=6&&(x.startsWith(y)||y.startsWith(x)));
  const shared=a.filter(w=>b.some(v=>match(w,v)));
  // Mindestens ein gemeinsamer markanter Teil des Spielstättennamens
@@ -324,7 +345,10 @@ async function showSimilarVenues(g){
  if(error)throw error;
  if(venueGame!==g)return;
  const matches=(data||[]).filter(v=>String(v.venue_name||"").trim().toLocaleLowerCase("de-DE")!==String(g.venue||"").trim().toLocaleLowerCase("de-DE"))
-  .map(v=>({...v,score:Math.max(venueSimilarity(g.venue,v.venue_name),venueSimilarity(g.venue,v.verified_address))}))
+  .map(v=>({...v,score:Math.max(
+    venueSimilarity([g.venue,g.venue_route_address].filter(Boolean).join(" "),v.venue_name+" "+v.verified_address),
+    venueSimilarity([g.venue,g.venue_route_address].filter(Boolean).join(" "),v.verified_address+" "+v.venue_name)
+   )}))
   .filter(v=>v.score>=3).sort((a,b)=>b.score-a.score).slice(0,5);
  if(!matches.length)return;
  const heading=document.createElement("h3");heading.textContent="Ähnliche bestätigte Spielstätten";box.append(heading);
