@@ -291,7 +291,7 @@ async function exportBatchCoaches(){
   const bytes=await book.xlsx.writeBuffer(),blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="Coaches_Auswertung_"+from+"_bis_"+to+".xlsx";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);$("coach-export-status").textContent="Excel-Auswertung mit Einsatzarten und Entschädigungen erstellt.";
  }catch(error){$("coach-export-status").textContent="Excel-Export fehlgeschlagen: "+error.message}finally{button.textContent=previous;updateCoachExportStatus()}
 }
-addEventListener("click",exportBatchCoaches);
+$("export-coaches").addEventListener("click",exportBatchCoaches);
 
 
 function loadExcelLibrary(){
@@ -322,7 +322,7 @@ async function exportExcel(){
   const bytes=await book.xlsx.writeBuffer(),blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="Coaching_Auswertung_"+current.from+"_bis_"+current.to+".xlsx";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
  }catch(error){$("km-note").textContent="Excel-Export fehlgeschlagen: "+error.message}finally{button.textContent=oldLabel;button.disabled=false}
 }
-addEventListener("click",exportExcel);
+$("export-excel").addEventListener("click",exportExcel);
 try{
  const{user}=await requireAdmin();
  const [list,gameResult]=await Promise.all([
