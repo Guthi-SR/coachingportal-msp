@@ -34,37 +34,60 @@ export default async function handler(req,res){
   if(!game)return json(res,404,{error:"Spiel nicht gefunden."});
   const search=query||game.venue_route_address||game.venue;
   if(!search)return json(res,422,{error:"Keine Spielstätte hinterlegt. Bitte zuerst eine genaue Adresse eingeben."});
-  const houseMatch=search.match(/(?:^|\\s)(\\d+[a-zA-Z]?(?:\\s*[-/]\\s*\\d+[a-zA-Z]?)?)(?=\\s*(?:,|$))/);
-  const requestedHouse=houseMatch?.[1]?.replace(/\\s+/g,"").toLocaleLowerCase("de-DE")||null;
-  const postalMatch=search.match(/\\b(\\d{5})\\b/),requestedPostal=postalMatch?.[1]||null;
+  // Parse exact house number and postcode from the requested address.
   const parts=search.split(",").map(x=>x.trim()).filter(Boolean);
   const street=parts[0]||search;
-  const streetNumber=street.match(/^(.*?\\S)\\s+(\\d+[a-zA-Z]?(?:\\s*[-/]\\s*\\d+[a-zA-Z]?)?)$/);
+  const streetNumber=street.match(/^(.*?\S)\s+(\d+[a-zA-Z]?(?:\s*[-/]\s*\d+[a-zA-Z]?)?)$/);
+  const requestedHouse=(streetNumber?.[2]||"").replace(/\s+/g,"").toLocaleLowerCase("de-DE")||null;
   const baseStreet=streetNumber?.[1]||street;
-  const number=streetNumber?.[2]||requestedHouse;
+  const postalMatch=search.match(/\b(\d{5})\b/),requestedPostal=postalMatch?.[1]||null;
   const location=parts.slice(1).join(", ");
+  const town=location.replace(/\b\d{5}\b/g,"").split(",")[0].trim();
   const urls=[];
-  // Prefer a structured search with separate street and house number.
-  if(number&&location)urls.push("https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=10&countrycodes=de&street="+encodeURIComponent(baseStreet+" "+number)+"&city="+encodeURIComponent(location));
+  if(requestedHouse&&location)urls.push("https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=10&countrycodes=de&street="+encodeURIComponent(baseStreet+" "+requestedHouse)+"&city="+encodeURIComponent(location));
   urls.push("https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=10&countrycodes=de&q="+encodeURIComponent(search));
-  let raw=[];
-  for(const url of urls){try{const result=await getJSON(url);if(Array.isArray(result))raw.push(...result)}catch(e){if(!raw.length)throw e}}
+  let raw=[],nominatimError=null;
+  for(const url of urls){
+   try{const result=await getJSON(url);if(Array.isArray(result))raw.push(...result)}
+   catch(e){nominatimError=e}
+  }
   const unique=new Map();
-  for(const p of raw){
-   const a=p.address||{},house=String(a.house_number||"").replace(/\\s+/g,"").toLocaleLowerCase("de-DE");
-   if(requestedHouse&&house!==requestedHouse)continue;
-   if(requestedPostal&&String(a.postcode||"")&&String(a.postcode)!==requestedPostal)continue;
+  const addNominatim=(p)=>{
+   const a=p.address||{},house=String(a.house_number||"").replace(/\s+/g,"").toLocaleLowerCase("de-DE");
+   if(requestedHouse&&house!==requestedHouse)return;
+   if(requestedPostal&&String(a.postcode||"")&&String(a.postcode)!==requestedPostal)return;
    const label=String(p.display_name||"");
-   if(!label||!Number.isFinite(Number(p.lat))||!Number.isFinite(Number(p.lon)))continue;
-   unique.set(String(p.lat)+","+String(p.lon),{label,lat:Number(p.lat),lon:Number(p.lon),type:String(p.type||""),category:String(p.category||p.class||""),address:a,houseNumberMatched:!requestedHouse||house===requestedHouse});
+   if(!label||!Number.isFinite(Number(p.lat))||!Number.isFinite(Number(p.lon)))return;
+   unique.set(String(p.lat)+","+String(p.lon),{label,lat:Number(p.lat),lon:Number(p.lon),type:String(p.type||""),category:String(p.category||p.class||""),address:a,provider:"OpenStreetMap / Nominatim",houseNumberMatched:!requestedHouse||house===requestedHouse});
+  };
+  raw.forEach(addNominatim);
+  // Free secondary lookup through Photon (Komoot), based on OpenStreetMap data.
+  // Only use it when Nominatim did not return an exact enough result.
+  let photonError=null;
+  if(!unique.size){
+   try{
+    const photonUrl="https://photon.komoot.io/api/?limit=10&lang=de&q="+encodeURIComponent(search);
+    const photon=await getJSON(photonUrl);
+    for(const feature of (photon?.features||[])){
+     const p=feature.properties||{},coords=feature.geometry?.coordinates||[];
+     const house=String(p.housenumber||"").replace(/\s+/g,"").toLocaleLowerCase("de-DE");
+     if(requestedHouse&&house!==requestedHouse)continue;
+     if(requestedPostal&&p.postcode&&String(p.postcode)!==requestedPostal)continue;
+     if(town&&p.city&&String(p.city).toLocaleLowerCase("de-DE")!==town.toLocaleLowerCase("de-DE"))continue;
+     if(coords.length<2||!Number.isFinite(Number(coords[0]))||!Number.isFinite(Number(coords[1])))continue;
+     const label=[p.name,p.street&&p.housenumber?p.street+" "+p.housenumber:p.street,p.postcode,p.city,p.state].filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).join(", ");
+     if(!label)continue;
+     unique.set(String(coords[0])+","+String(coords[1]),{label,lat:Number(coords[1]),lon:Number(coords[0]),type:String(p.type||""),category:String(p.osm_key||""),address:{house_number:p.housenumber||"",road:p.street||"",postcode:p.postcode||"",city:p.city||""},provider:"Photon / OpenStreetMap",houseNumberMatched:!requestedHouse||house===requestedHouse});
+    }
+   }catch(e){photonError=e}
   }
   const candidates=[...unique.values()].slice(0,5);
   if(!candidates.length){
-   const fallback=raw.map(p=>({p,a:p.address||{}})).find(x=>!requestedPostal||!x.a.postcode||String(x.a.postcode)===requestedPostal);
-   return json(res,200,{resolved:false,query:search,candidates:[],message:requestedHouse
-    ?"Die Straße wurde möglicherweise gefunden, aber keine bestätigte Adresse mit Hausnummer "+requestedHouse+" wurde geliefert. Bitte Hausnummer, PLZ und Ort prüfen oder die Adresse manuell verifizieren."
-    :"Keine eindeutige Position gefunden. Bitte Straße, Hausnummer, PLZ und Ort ergänzen."});
+   const message=requestedHouse
+    ?"Kein Kartendienst konnte eine Adresse mit der exakt passenden Hausnummer "+requestedHouse+" bestätigen. Die Straße allein wird nicht als exakter Treffer angeboten. Bitte Adresse prüfen oder manuell verifizieren."
+    :"Keine eindeutige Adresse gefunden. Bitte Straße, Hausnummer, PLZ und Ort ergänzen.";
+   return json(res,200,{resolved:false,query:search,candidates:[],message,providersTried:["OpenStreetMap / Nominatim","Photon / OpenStreetMap"],providerErrors:[nominatimError?.message,photonError?.message].filter(Boolean)});
   }
-  return json(res,200,{resolved:true,query:search,gameKey,candidates});
+  return json(res,200,{resolved:true,query:search,gameKey,candidates,providersTried:["OpenStreetMap / Nominatim",...(candidates.some(x=>x.provider==="Photon / OpenStreetMap")?["Photon / OpenStreetMap"]:[])]});
  }catch(e){return json(res,503,{error:String(e?.message||"Spielstättenprüfung fehlgeschlagen.").slice(0,300)});}
 }
