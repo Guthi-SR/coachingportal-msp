@@ -2,31 +2,34 @@
 <nav id="toolbar" aria-label="PDF-Navigation"><a id="back" href="/beobachtungsboegen.html">← Zurück zu den Beobachtungsbögen</a><div id="review" role="group" aria-label="Prüfstatus"><button type="button" id="inProgress">In Bearbeitung</button><button type="button" id="approved">Geprüft</button><span id="reviewMsg" role="status"></span></div></nav>
 <div id="pages" aria-label="PDF-Seiten"></div><p id="status" role="status">Beobachtungsbogen wird geöffnet …</p><iframe id="view" title="Beobachtungsbogen PDF"></iframe>
 <script type="module">
-import{requireAdmin,viewPdfBlob,observationAssignments,sb,syncGames,updateGame}from"/portal-workflow.js";
+import{requirePermission,viewPdfBlob,observationAssignments,sb,updateGame}from"/portal-workflow.js";
 const status=document.getElementById("status"),frame=document.getElementById("view"),pages=document.getElementById("pages");
 try{
  const id=new URLSearchParams(location.search).get("pdf");
  if(!id||!(/^[0-9a-f-]{36}$/i.test(id)))throw Error("Kein gültiger Beobachtungsbogen ausgewählt.");
- const{user}=await requireAdmin();
- const allowedLocal=observationAssignments(user.id).some(x=>x.id===id);
- const{data:found,error:lookupError}=await sb.from("portal_observations").select("document_id").eq("owner_id",user.id).eq("document_id",id).maybeSingle();
+ const{user,ownerId,profile}=await requirePermission("reports_view");
+ const{data:canEdit}=profile.role==="admin"?{data:true}:await sb.rpc("portal_has_permission",{check_id:user.id,permission_key:"reports_edit"});
+ const allowedLocal=observationAssignments(ownerId).some(x=>x.id===id);
+ const{data:found,error:lookupError}=await sb.from("portal_observations").select("document_id").eq("owner_id",ownerId).eq("document_id",id).maybeSingle();
  if(lookupError)throw lookupError;
  if(!allowedLocal&&!found)throw Error("Für diesen Bogen besteht keine Zuordnung.");
- const games=await syncGames(user.id);
- const game=games.find(g=>g.pdf_id===id||observationAssignments(user.id).some(x=>x.id===id&&x.gameKey===g.game_key));
+ const{data:games,error:gamesError}=await sb.from("portal_games").select("*").eq("owner_id",ownerId);
+ if(gamesError)throw gamesError;
+ const game=games.find(g=>g.pdf_id===id||observationAssignments(ownerId).some(x=>x.id===id&&x.gameKey===g.game_key));
  const progress=document.getElementById("inProgress"),approved=document.getElementById("approved"),reviewMsg=document.getElementById("reviewMsg");
+ if(!canEdit)document.getElementById("review").hidden=true;
  const refreshReview=()=>{progress.setAttribute("aria-pressed",String(!game?.checked_at));approved.setAttribute("aria-pressed",String(!!game?.checked_at))};
- if(!game){progress.disabled=true;approved.disabled=true;reviewMsg.textContent="Bitte zuerst einem Spiel zuordnen."}
+ if(!canEdit||!game){progress.disabled=true;approved.disabled=true;reviewMsg.textContent="Bitte zuerst einem Spiel zuordnen."}
  else{
   refreshReview();
   for(const [button,checked] of [[progress,false],[approved,true]])button.addEventListener("click",async()=>{
    progress.disabled=approved.disabled=true;reviewMsg.textContent="Speichern …";
-   try{const updated=await updateGame(user.id,game.game_key,{checked_at:checked?new Date().toISOString():null});Object.assign(game,updated);refreshReview();reviewMsg.textContent="Gespeichert"}
+   try{const updated=await updateGame(ownerId,game.game_key,{checked_at:checked?new Date().toISOString():null});Object.assign(game,updated);refreshReview();reviewMsg.textContent="Gespeichert"}
    catch(e){reviewMsg.textContent="Fehler: "+e.message}
    finally{progress.disabled=approved.disabled=false}
   });
  }
- const blob=await viewPdfBlob(user.id,id);
+ const blob=await viewPdfBlob(ownerId,id);
  if(!(blob instanceof Blob))throw Error("Der Beobachtungsbogen konnte nicht geladen werden.");
  const url=URL.createObjectURL(blob);
  if(matchMedia("(max-width:700px)").matches){
