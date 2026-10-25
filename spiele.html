@@ -96,7 +96,7 @@
 <main><section><h2>Spiele und Bogenstatus</h2><p id="status" role="status">Spiele und Bögen werden geladen …</p>
 <div class="legend"><span><i class="dot green"></i>Grün: Bogen versendet</span><span><i class="dot yellow"></i>Gelb: Spiel in den nächsten 5 Tagen</span><span><i class="dot red"></i>Rot: 5 Tage nach Spiel noch kein Bogen eingegangen</span></div>
 <div class="card" id="global-route-setting-card" style="margin:12px 0;padding:14px">
- <label style="display:flex;gap:10px;align-items:flex-start;font-weight:650"><input id="global-route-consent" type="checkbox" style="width:20px;height:20px;flex:none"> Automatische Routenberechnung für alle meine Spiele erlauben</label>
+ <label id="global-route-consent-label" style="display:flex;gap:10px;align-items:flex-start;font-weight:650"><input id="global-route-consent" type="checkbox" style="width:20px;height:20px;flex:none"> Automatische Routenberechnung für alle meine Spiele erlauben</label>
  <p class="small" style="margin:7px 0 0">Diese zentrale Admin-Einstellung wird in Supabase gespeichert und gilt auf allen Geräten. Für die Routenberechnung werden Coach-Wohnadresse und bestätigte Spielstätte an die Kartendienste übertragen. Kilometer werden erst nach deiner Kontrolle gespeichert.</p>
  <p id="global-route-consent-status" class="small" aria-live="polite"></p>
  <button type="button" id="global-route-consent-revoke" hidden>Routenzustimmung widerrufen</button>
@@ -253,7 +253,7 @@ async function loadRouteConsent(){
  if(error)throw error;
  routeConsentEnabled=data?.route_consent_enabled===true;
  $("global-route-consent").checked=routeConsentEnabled;
- $("global-route-setting-card").hidden=routeConsentEnabled;
+ $("global-route-consent-label").hidden=routeConsentEnabled;
  $("global-route-consent-revoke").hidden=!routeConsentEnabled;
  $("global-route-consent-status").textContent=routeConsentEnabled?"Zentrale Admin-Zustimmung ist in Supabase gespeichert.":"";
 }
