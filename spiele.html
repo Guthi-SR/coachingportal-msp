@@ -159,6 +159,7 @@
  <label class="venue-consent"><input id="venue-check-consent" type="checkbox"> Ich stimme zu, dass die Spielstätte für die Adresssuche an OpenStreetMap/Nominatim übertragen wird. Sobald die Spielstätte bestätigt und ein Coach zugeordnet ist, wird die Fahrtstrecke automatisch über Kartendienste berechnet. Dabei wird auch die Wohnadresse des Coaches übertragen. Die Kilometer werden erst nach meiner Bestätigung gespeichert.</label>
  <div class="venue-actions"><button type="button" id="venue-check-search">Adresse suchen</button><button type="button" id="venue-route-calc" disabled>Fahrtstrecke berechnen</button></div>
  <p id="venue-check-status" role="status" aria-live="polite"></p>
+ <div id="venue-similar-suggestions" aria-live="polite"></div>
  <div id="venue-check-results"></div>
  <p class="small">Bitte prüfe, ob die gefundene Position wirklich zum Sportplatz gehört. Eine Kartenadresse allein ist noch keine Bestätigung.</p>
 </dialog>
@@ -299,6 +300,49 @@ async function saveRouteConsent(allowed){
 }
 $("global-route-consent").addEventListener("change",()=>void saveRouteConsent($("global-route-consent").checked));
 $("global-route-consent-revoke").addEventListener("click",()=>void saveRouteConsent(false));
+// Nur Spielstätten vergleichen, niemals die Spielpaarung.
+function venueWords(input){
+ const normalized=String(input||"").toLocaleLowerCase("de-DE")
+  .replace(/ß/g,"ss").replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue")
+  .replace(/str(?:asse|aße|\.)?/g,"strasse").replace(/[^a-z0-9]+/g," ").trim();
+ const stop=new Set(["sportgelaende","sportplatz","sportzentrum","stadion","platz","am","an","der","die","das","im","in","bei","auf","des","und","main","landkreis","bayern","deutschland","strasse","sport","zentrum","gelände"]);
+ return normalized.split(/\s+/).filter(w=>w.length>=4&&!stop.has(w)&&!/^\d+$/.test(w));
+}
+function venueSimilarity(source,candidate){
+ const a=venueWords(source),b=venueWords(candidate);
+ if(!a.length||!b.length)return 0;
+ const match=(x,y)=>x===y||(x.length>=6&&y.length>=6&&(x.startsWith(y)||y.startsWith(x)));
+ const shared=a.filter(w=>b.some(v=>match(w,v)));
+ // Mindestens ein gemeinsamer markanter Teil des Spielstättennamens
+ const distinctive=shared.filter(w=>w.length>=7&&!["marktheidenfeld","wuerzburg","aschaffenburg","gemuenden"].includes(w));
+ if(!distinctive.length)return 0;
+ return 3*distinctive.length+shared.length/Math.max(a.length,b.length);
+}
+async function showSimilarVenues(g){
+ const box=$("venue-similar-suggestions");box.replaceChildren();
+ const {data,error}=await sb.from("portal_confirmed_venues").select("venue_name,verified_address,lat,lon").eq("owner_id",userId);
+ if(error)throw error;
+ if(venueGame!==g)return;
+ const matches=(data||[]).filter(v=>String(v.venue_name||"").trim().toLocaleLowerCase("de-DE")!==String(g.venue||"").trim().toLocaleLowerCase("de-DE"))
+  .map(v=>({...v,score:Math.max(venueSimilarity(g.venue,v.venue_name),venueSimilarity(g.venue,v.verified_address))}))
+  .filter(v=>v.score>=3).sort((a,b)=>b.score-a.score).slice(0,5);
+ if(!matches.length)return;
+ const heading=document.createElement("h3");heading.textContent="Ähnliche bestätigte Spielstätten";box.append(heading);
+ const hint=document.createElement("p");hint.className="small";hint.textContent="Nur Vorschläge anhand ähnlicher Spielstättennamen und Adressen – keine automatische Zuordnung. Bitte vor Übernahme vergleichen.";box.append(hint);
+ for(const v of matches){
+  const item=document.createElement("div");item.className="venue-candidate";
+  const label=document.createElement("strong");label.textContent=v.venue_name;item.append(label);
+  const address=document.createElement("p");address.className="small";address.textContent="Bestätigte Adresse: "+v.verified_address;item.append(address);
+  if(v.lat!=null&&v.lon!=null){
+   const map=document.createElement("a");map.className="venue-map";
+   map.href="https://www.openstreetmap.org/?mlat="+encodeURIComponent(v.lat)+"&mlon="+encodeURIComponent(v.lon)+"#map=18/"+encodeURIComponent(v.lat)+"/"+encodeURIComponent(v.lon);
+   map.target="_blank";map.rel="noopener noreferrer";map.textContent="Auf Karte prüfen";item.append(map);
+  }
+  const button=document.createElement("button");button.type="button";button.textContent="Diese bestätigte Spielstätte übernehmen";
+  button.addEventListener("click",()=>{if(venueGame===g)void confirmVenue({label:v.verified_address,lat:v.lat,lon:v.lon})});
+  item.append(button);box.append(item);
+ }
+}
 function openVenueCheck(g){
  venueGame=g;venueCandidates=[];
  $("venue-check-game").textContent=(g.home||"–")+" – "+(g.away||"–")+" · "+dateDE(g.match_date);
@@ -306,9 +350,11 @@ function openVenueCheck(g){
  $("venue-check-consent").checked=hasRouteConsent();
  $("venue-check-status").textContent="";
  $("venue-check-results").replaceChildren();
+ $("venue-similar-suggestions").replaceChildren();
  $("venue-route-calc").disabled=!g.coach_id||!g.venue_route_address;
  venueDialog.showModal();
  void loadConfirmedVenue(g);
+ void showSimilarVenues(g).catch(e=>{$("venue-check-status").textContent="Ähnliche Spielstätten konnten nicht geladen werden: "+e.message});
 }
 async function loadConfirmedVenue(g){
  try{
