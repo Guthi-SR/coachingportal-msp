@@ -390,9 +390,9 @@ async function calculateConfirmedVenueRoute(g){
   if(!g.kilometers_text||g.kilometers_source==="route"){
    patch.kilometers_text=String(data.roundTripKm);patch.kilometers_source="route";
   }
-  Object.assign(g,await updateGame(userId,key,patch));render();
+  Object.assign(g,await updateGame(userId,key,patch));await recordRouteAttempt(g,"success");render();
   $("venue-check-status").textContent="Route bestätigt: "+data.oneWayKm+" km einfach / "+data.roundTripKm+" km hin und zurück."+(patch.kilometers_text===undefined?" Manuell eingetragene Kilometer bleiben unverändert.":"");
- }catch(e){$("venue-check-status").textContent="Routenberechnung fehlgeschlagen: "+e.message}
+ }catch(e){await recordRouteAttempt(g,"failed",e.message);render();$("venue-check-status").textContent="Routenberechnung fehlgeschlagen: "+e.message}
  finally{venueRouteBusy=false;button.disabled=!g.coach_id}
 }
 let batchRouteRunning=false,batchQueue=[],batchTotal=0,batchDone=0;
@@ -695,6 +695,58 @@ function mobileGameCard(g){
  del.onclick=()=>deleteGame(g,del);actions.append(del);
  inner.append(actions);details.append(inner);card.append(details);
  return card;
+}
+
+function routeStatus(g){
+ const attempt=routeAttempts.find(x=>x.game_key===g.game_key);
+ if(!String(g.venue||"").trim()||!String(g.venue_route_address||"").trim())return "venue";
+ if(attempt?.status==="failed")return "failed";
+ if(g.planned_one_way_km==null&&!String(g.kilometers_text||"").trim())return "missing";
+ return "done";
+}
+function routeStatusLabel(key){
+ return ({venue:"Spielstätte ungeprüft",failed:"Route fehlgeschlagen",missing:"Kilometer fehlen",done:"Vollständig"})[key]||"";
+}
+function renderRouteOverview(){
+ const counts={venue:0,failed:0,missing:0,done:0};
+ for(const g of games)counts[routeStatus(g)]++;
+ const cards=$("venue-route-counts");cards.replaceChildren();
+ for(const [key,label] of [["venue","Spielstätte ungeprüft"],["failed","Route fehlgeschlagen"],["missing","Kilometer fehlen"],["done","Alles vollständig"]]){
+  const card=document.createElement("div");card.className="venue-route-count";
+  const number=document.createElement("strong");number.textContent=counts[key];card.append(number);
+  const text=document.createElement("span");text.textContent=label;card.append(text);cards.append(card);
+ }
+ const filter=$("venue-route-filter").value;
+ const subset=games.filter(g=>filter==="all"?routeStatus(g)!=="done":routeStatus(g)===filter).sort(compareGames);
+ const list=$("venue-route-issues");list.replaceChildren();
+ if(!subset.length){list.textContent=filter==="all"?"Alle Spiele sind vollständig.":"Keine Spiele in dieser Kategorie.";return}
+ for(const g of subset){
+  const item=document.createElement("div");item.className="venue-route-issue";
+  const head=document.createElement("div");head.className="venue-route-issue-head";
+  const name=document.createElement("strong");name.textContent=dateDE(g.match_date)+" · "+(g.home||"–")+" – "+(g.away||"–");head.append(name);
+  const state=document.createElement("span");state.className="venue-status venue-status-"+({venue:"pending",failed:"missing",missing:"unknown",done:"confirmed"}[routeStatus(g)]);state.textContent=routeStatusLabel(routeStatus(g));head.append(state);item.append(head);
+  const detail=document.createElement("div");detail.className="small";detail.textContent=(g.venue||"Spielstätte fehlt")+(g.venue_route_address?" · "+g.venue_route_address:"")+(g.coach_name?" · Coach: "+g.coach_name:" · Kein Coach zugeordnet");item.append(detail);
+  if(routeStatus(g)==="failed"){const attempt=routeAttempts.find(x=>x.game_key===g.game_key);if(attempt?.error_message){const error=document.createElement("p");error.className="small";error.textContent="Letzter Fehler: "+attempt.error_message;item.append(error)}}
+  const actions=document.createElement("div");actions.className="venue-route-issue-actions";
+  const venueButton=document.createElement("button");venueButton.type="button";venueButton.textContent=routeStatus(g)==="venue"?"Spielstätte prüfen":"Route prüfen / erneut berechnen";venueButton.addEventListener("click",()=>{openVenueCheck(g);if(routeStatus(g)!=="venue"&&hasRouteConsent()&&g.coach_id&&g.venue_route_address)setTimeout(()=>void calculateConfirmedVenueRoute(g),0)});actions.append(venueButton);
+  if(!g.coach_id){const coachButton=document.createElement("button");coachButton.type="button";coachButton.textContent="Spiel bearbeiten / Coach zuordnen";coachButton.addEventListener("click",()=>editGame(g));actions.append(coachButton)}
+  item.append(actions);list.append(item);
+ }
+}
+async function loadRouteAttempts(){
+ const {data,error}=await sb.from("portal_game_route_attempts").select("game_key,status,error_message,attempted_at").eq("owner_id",userId);
+ if(error)throw error;
+ routeAttempts=data||[];
+}
+async function recordRouteAttempt(g,result,errorMessage=""){
+ try{
+  const row={owner_id:userId,game_key:String(g.game_key),status:result,error_message:errorMessage?String(errorMessage).slice(0,450):null,attempted_at:new Date().toISOString()};
+  const {error}=await sb.from("portal_game_route_attempts").upsert(row,{onConflict:"owner_id,game_key"});
+  if(error)throw error;
+  const existing=routeAttempts.find(x=>x.game_key===g.game_key);
+  const item={game_key:g.game_key,status:result,error_message:row.error_message,attempted_at:row.attempted_at};
+  if(existing)Object.assign(existing,item);else routeAttempts.push(item);
+ }catch(e){console.warn("Routenstatus konnte nicht gespeichert werden",e)}
 }
 
 function render(){
