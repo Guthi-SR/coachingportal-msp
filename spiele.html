@@ -59,7 +59,17 @@
   dialog{box-sizing:border-box;max-width:calc(100vw - 24px);padding:18px}
   dialog .actions{flex-wrap:wrap}
   dialog .actions button{min-height:44px;flex:1 1 135px}
-}</style><style id="game-edit-style">
+}</style><style id="venue-route-overview-style">
+.venue-route-counts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px}
+.venue-route-count{border:1px solid #d9e2ec;border-radius:10px;padding:10px;min-width:0}
+.venue-route-count strong{display:block;font-size:22px;line-height:1.2}
+.venue-route-count span{display:block;font-size:12px;color:#526277;margin-top:4px}
+.venue-route-issue{border:1px solid #d9e2ec;border-radius:10px;padding:10px;margin:8px 0}
+.venue-route-issue-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap}
+.venue-route-issue-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.venue-route-issue button{min-height:36px}
+@media(max-width:600px){.venue-route-counts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style><style id="game-edit-style">
 #game-edit-dialog{width:min(720px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;border:1px solid #dce5ee;border-radius:14px;padding:22px;box-sizing:border-box}
 #game-edit-dialog::backdrop{background:rgba(9,25,42,.55)}
 #game-edit-dialog .game-edit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}
@@ -101,6 +111,16 @@
  <p id="global-route-consent-status" class="small" aria-live="polite"></p>
  <button type="button" id="global-route-consent-revoke" hidden>Routenzustimmung widerrufen</button>
 </div>
+<details id="venue-route-overview" open style="margin:12px 0;border:1px solid #d9e2ec;border-radius:12px;padding:12px">
+ <summary style="font-weight:750;cursor:pointer">Spielstätten &amp; Kilometer – Übersicht</summary>
+ <p class="small">Statusübersicht über alle Spiele. „Route fehlgeschlagen“ wird nur angezeigt, wenn ein Berechnungsversuch tatsächlich einen Fehler gemeldet hat.</p>
+ <div id="venue-route-counts" class="venue-route-counts"></div>
+ <label for="venue-route-filter" style="display:block;margin-top:12px">Spiele filtern</label>
+ <select id="venue-route-filter" style="width:100%;max-width:440px">
+  <option value="all">Alle Spiele</option><option value="venue">Spielstätte noch nicht zugeordnet / bestätigt</option><option value="failed">Routenberechnung fehlgeschlagen</option><option value="missing">Kilometer fehlen</option><option value="done">Alles vollständig</option>
+ </select>
+ <div id="venue-route-issues" style="margin-top:12px"></div>
+</details>
 <details class="game-filter-details"><summary>Filter anzeigen / einklappen</summary><div class="game-filters" role="group" aria-label="Spiele filtern"><button type="button" class="active" data-game-filter="all" aria-pressed="true">Alle Spiele</button><button type="button" data-game-filter="future" aria-pressed="false">Zukünftige Spiele</button><button type="button" data-game-filter="without" aria-pressed="false">Spiele ohne Bogen</button></div><div class="game-sort"><label for="referee-filter">Schiedsrichter filtern:</label><select id="referee-filter"><option value="">Alle Schiedsrichter</option></select><label for="coach-filter">Coach / Beobachter filtern:</label><select id="coach-filter"><option value="">Alle Coaches / Beobachter</option></select><label for="game-sort-field">Sortieren nach:</label><select id="game-sort-field"><option value="date">Datum</option><option value="referee">Schiedsrichter</option><option value="coach">Coach / Beobachter</option></select><button type="button" id="game-sort-direction" aria-label="Sortierreihenfolge ändern">Neueste zuerst ↓</button></div></details><p id="filter-count" class="small"></p>
 <p class="mobile-list-hint">Tippe bei einem Spiel auf „Details &amp; Bearbeiten“, um weitere Angaben und Aktionen zu öffnen.</p><div id="mobile-game-list" class="mobile-game-list" aria-label="Spiele als Karten"></div>
 <div class="scroll"><table><thead><tr><th>Datum</th><th>Uhrzeit</th><th>Spielkennung</th><th>Heim</th><th>Gast</th><th>Liga</th><th>Spielstätte</th><th>Kilometer</th><th>Einteilung</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Bogen</th><th>Eingegangen</th><th>Geprüft</th><th>Versand</th><th>Aktion</th></tr></thead><tbody id="rows"></tbody></table></div>
@@ -150,7 +170,7 @@
 <label id="test-confirm-wrap" hidden style="display:flex;gap:10px;align-items:flex-start"><input id="test-confirm" type="checkbox" style="width:19px;height:19px;flex:none"> Ich bestätige den ausdrücklich gewünschten Versand dieser TEST-E-Mail an die angezeigte Empfängeradresse.</label><p id="mail-error" role="status"></p><div class="actions"><button type="button" id="cancel-mail">Abbrechen</button><button type="submit" id="mail-submit" class="primary">E-Mail jetzt senden</button></div></form></dialog>
 <script type="module">import {cloudPeople} from "/portal-people.js";
 import{sb,requirePermission,localGames,localPeople,syncGames,syncObservations,associateUniqueObservations,updateGame,updatePlanningStatus,gameColor,dateDE,reminderBody,sendBody,sendMail}from"/portal-workflow.js";
-const $=id=>document.getElementById(id),status=$("status");let userId="",userEmail="",games=[],docs=[],refs=[],coaches=[],selected=null,mailKind="",gameFilter="all",refereeFilter="",coachFilter="",sortKey="date",sortDir="desc";
+const $=id=>document.getElementById(id),status=$("status");let userId="",userEmail="",games=[],docs=[],refs=[],coaches=[],selected=null,mailKind="",gameFilter="all",refereeFilter="",coachFilter="",sortKey="date",sortDir="desc",routeAttempts=[];
 const currentIso=()=>{const t=new Date();return [t.getFullYear(),String(t.getMonth()+1).padStart(2,"0"),String(t.getDate()).padStart(2,"0")].join("-")};
 function person(people,id){return people.find(x=>x.id===id||x.name===id)}
 function fullName(p){return p?.name||[p?.first,p?.last].filter(Boolean).join(" ")||""}
@@ -678,9 +698,11 @@ function mobileGameCard(g){
 }
 
 function render(){
+ renderRouteOverview();
  const tbody=$("rows");tbody.replaceChildren();const mobileList=$("mobile-game-list");mobileList.replaceChildren();
  const today=currentIso();
- const visible=games.filter(g=>(!refereeFilter||g.referee_id===refereeFilter)&&(!coachFilter||g.coach_id===coachFilter)&&(gameFilter==="future"?g.match_date>=today:gameFilter==="without"?!hasBogen(g):true)).sort(compareGames);
+ const routeFilter=$("venue-route-filter").value;
+ const visible=games.filter(g=>(!refereeFilter||g.referee_id===refereeFilter)&&(!coachFilter||g.coach_id===coachFilter)&&(gameFilter==="future"?g.match_date>=today:gameFilter==="without"?!hasBogen(g):true)&&(routeFilter==="all"||routeStatus(g)===routeFilter)).sort(compareGames);
  $("filter-count").textContent=visible.length+" von "+games.length+" Spielen angezeigt.";
  for(const g of visible){
   const row=document.createElement("tr");const cls=g.is_test?"":gameColor(g);if(cls)row.className=cls;
@@ -777,6 +799,7 @@ function openMail(g,kind){
  if(g.is_test)updateTestMailRecipient();
  $("mail").showModal()
 }
+$("venue-route-filter").addEventListener("change",()=>{renderRouteOverview();render()});
 document.querySelectorAll("[data-game-filter]").forEach(btn=>btn.addEventListener("click",()=>{gameFilter=btn.dataset.gameFilter;document.querySelectorAll("[data-game-filter]").forEach(b=>{const active=b===btn;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active))});render()}));
 $("game-sort-field").addEventListener("change",()=>{sortKey=$("game-sort-field").value;sortDir=sortKey==="date"?"desc":"asc";updateSortDirectionLabel();render()});
 $("game-sort-direction").addEventListener("click",()=>{sortDir=sortDir==="asc"?"desc":"asc";updateSortDirectionLabel();render()});
@@ -808,7 +831,7 @@ try{
  const coachSelect=$("coach-filter");for(const p of [...coaches].sort((a,b)=>fullName(a).localeCompare(fullName(b),"de")))coachSelect.add(new Option(fullName(p),p.id));
  const requestedCoach=new URLSearchParams(location.search).get("coach");
  if(requestedCoach&&coaches.some(p=>String(p.id)===requestedCoach)){coachFilter=requestedCoach;coachSelect.value=requestedCoach;}
- games=await syncGames(userId);docs=await syncObservations(userId);
+ games=await syncGames(userId);docs=await syncObservations(userId);await loadRouteAttempts();
  if(await associateUniqueObservations(userId,games,docs))games=await syncGames(userId);
  render();void startRouteReview()
 }catch(error){status.textContent="Laden fehlgeschlagen: "+error.message}
