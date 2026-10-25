@@ -130,7 +130,7 @@
  <p id="venue-check-game" class="small"></p>
  <label for="venue-check-query">Sportplatzname oder vollständige Adresse</label>
  <input id="venue-check-query" type="text" maxlength="240" placeholder="Sportplatz, Straße, PLZ und Ort">
- <label class="venue-consent"><input id="venue-check-consent" type="checkbox"> Ich bin einverstanden, dass die eingegebene Spielstätte zur Adresssuche an OpenStreetMap/Nominatim übertragen wird. Für eine Fahrtstrecke werden zusätzlich die Coach-Adresse und die Spielstätte an Kartendienste übertragen.</label>
+ <label class="venue-consent"><input id="venue-check-consent" type="checkbox"> Ich stimme zu, dass die Spielstätte für die Adresssuche an OpenStreetMap/Nominatim übertragen wird. Sobald die Spielstätte bestätigt und ein Coach zugeordnet ist, wird die Fahrtstrecke automatisch über Kartendienste berechnet. Dabei wird auch die Wohnadresse des Coaches übertragen. Die Kilometer werden erst nach meiner Bestätigung gespeichert.</label>
  <div class="venue-actions"><button type="button" id="venue-check-search">Adresse suchen</button><button type="button" id="venue-route-calc" disabled>Fahrtstrecke berechnen</button></div>
  <p id="venue-check-status" role="status" aria-live="polite"></p>
  <div id="venue-check-results"></div>
@@ -259,6 +259,7 @@ async function loadConfirmedVenue(g){
    $("venue-check-status").textContent="Bereits bestätigte Spielstätte gefunden: "+data.verified_address;
    if(!g.venue_route_address||g.venue_route_address!==data.verified_address)$("venue-check-query").value=data.verified_address;
    renderVenueCandidates([{label:data.verified_address,lat:data.lat,lon:data.lon,category:"confirmed",type:"confirmed",address:{}}],true);
+   if(g.coach_id&&g.venue_route_address===data.verified_address&&!g.route_checked_at)$("venue-check-status").textContent+=" · Coach vorhanden. Zustimmung anhaken, um die Fahrtstrecke automatisch zu berechnen.";
   }
  }catch(e){$("venue-check-status").textContent="Gespeicherte Bestätigung konnte nicht geladen werden: "+e.message}
 }
@@ -304,23 +305,43 @@ async function confirmVenue(p){
   render();
   $("venue-check-status").textContent="Spielstätte bestätigt und gespeichert. Die Adresse kann für weitere Spiele mit demselben Sportplatz wiederverwendet werden.";
   $("venue-route-calc").disabled=!g.coach_id;
+  if(g.coach_id&&$("venue-check-consent").checked)void calculateConfirmedVenueRoute(g);
  }catch(e){$("venue-check-status").textContent="Speichern fehlgeschlagen: "+e.message}
 }
-$("venue-route-calc").addEventListener("click",async()=>{
- const g=venueGame;if(!g?.coach_id)return;
- if(!$("venue-check-consent").checked){$("venue-check-status").textContent="Bitte der Übertragung der Coach-Adresse und Spielstätte an die Kartendienste zustimmen.";return}
- const button=$("venue-route-calc");button.disabled=true;$("venue-check-status").textContent="Fahrtstrecke wird berechnet …";
+async function calculateConfirmedVenueRoute(g){
+ if(!g?.coach_id){$("venue-check-status").textContent="Bitte zuerst einen Coach zuordnen.";return}
+ if(!$("venue-check-consent").checked){$("venue-check-status").textContent="Bitte zuerst der Übertragung der Adressen an die Kartendienste zustimmen.";return}
+ if(!g.venue_route_address){$("venue-check-status").textContent="Bitte zuerst die Spielstätte bestätigen.";return}
+ if(venueRouteBusy)return;
+ const key=g.game_key,coachId=String(g.coach_id),target=g.venue_route_address;
+ venueRouteBusy=true;
+ const button=$("venue-route-calc");button.disabled=true;$("venue-check-status").textContent="Fahrtstrecke wird automatisch berechnet …";
  try{
   const {data:{session}}=await sb.auth.getSession();if(!session?.access_token)throw Error("Bitte erneut anmelden.");
-  const response=await fetch("/api/coach-route",{method:"POST",headers:{"content-type":"application/json",Authorization:"Bearer "+session.access_token},body:JSON.stringify({gameKey:g.game_key,coachId:String(g.coach_id)})});
+  const response=await fetch("/api/coach-route",{method:"POST",headers:{"content-type":"application/json",Authorization:"Bearer "+session.access_token},body:JSON.stringify({gameKey:key,coachId})});
   const data=await response.json();if(!response.ok)throw Error(data.error||"Routenberechnung fehlgeschlagen.");
-  const message="Gefundene Route:\nStart: "+data.originResult+"\nZiel: "+data.destinationResult+"\n\nEinfache Fahrt: "+data.oneWayKm+" km\nHin und zurück: "+data.roundTripKm+" km\n\nRoute übernehmen?";
-  if(!confirm(message)){$("venue-check-status").textContent="Route nicht übernommen. Prüfe gegebenenfalls Adresse und Coach-Stammdaten.";return}
-  const patch={planned_one_way_km:data.oneWayKm,route_origin:data.origin,route_destination:data.destination,route_checked_at:new Date().toISOString(),kilometers_text:String(data.roundTripKm),kilometers_source:"route"};
-  Object.assign(g,await updateGame(userId,g.game_key,patch));render();
-  $("venue-check-status").textContent="Route gespeichert: "+data.oneWayKm+" km einfach / "+data.roundTripKm+" km hin und zurück.";
+  if(venueGame!==g||String(g.coach_id)!==coachId||g.venue_route_address!==target){$("venue-check-status").textContent="Spiel oder Coach wurde zwischenzeitlich geändert. Bitte erneut berechnen.";return}
+  const message="Gefundene Route:\\nStart: "+data.originResult+"\\nZiel: "+data.destinationResult+"\\n\\nEinfache Fahrt: "+data.oneWayKm+" km\\nHin und zurück: "+data.roundTripKm+" km\\n\\nBitte Start und Sportplatz kontrollieren. Kilometer übernehmen?";
+  if(!confirm(message)){$("venue-check-status").textContent="Route nicht übernommen. Du kannst sie später erneut berechnen.";return}
+  const patch={planned_one_way_km:data.oneWayKm,route_origin:data.origin,route_destination:data.destination,route_checked_at:new Date().toISOString()};
+  // Handgeschriebene Kilometer niemals automatisch überschreiben.
+  if(!g.kilometers_text||g.kilometers_source==="route"){
+   patch.kilometers_text=String(data.roundTripKm);patch.kilometers_source="route";
+  }
+  Object.assign(g,await updateGame(userId,key,patch));render();
+  $("venue-check-status").textContent="Route bestätigt: "+data.oneWayKm+" km einfach / "+data.roundTripKm+" km hin und zurück."+(patch.kilometers_text===undefined?" Manuell eingetragene Kilometer bleiben unverändert.":"");
  }catch(e){$("venue-check-status").textContent="Routenberechnung fehlgeschlagen: "+e.message}
- finally{button.disabled=false}
+ finally{venueRouteBusy=false;button.disabled=!g.coach_id}
+}
+let venueRouteBusy=false;
+$("venue-route-calc").addEventListener("click",()=>{void calculateConfirmedVenueRoute(venueGame)});
+$("venue-check-consent").addEventListener("change",async()=>{
+ const g=venueGame;if(!g||!$("venue-check-consent").checked||!g.coach_id||g.route_checked_at)return;
+ try{
+  const {data,error}=await sb.from("portal_confirmed_venues").select("verified_address").eq("owner_id",userId).eq("venue_name",String(g.venue||"").trim()).maybeSingle();
+  if(error)throw error;
+  if(data?.verified_address===g.venue_route_address)void calculateConfirmedVenueRoute(g);
+ }catch(e){$("venue-check-status").textContent="Spielstättenstatus konnte nicht geprüft werden: "+e.message}
 });
 
 async function editGameDate(g){
