@@ -414,7 +414,8 @@ async function reload(){
  finally{$("reload").disabled=false}
 }
 try{
- const{user,ownerId}=await requirePermission("coaching_planning_view");
+ const access=await requirePermission("coaching_planning_view");
+ ownerId=access.ownerId;
  $("route-consent").checked=localStorage.getItem(consentKey())==="yes";
  coaches=(await cloudPeople(ownerId,"coach")).sort((a,b)=>collator.compare(coachName(a),coachName(b)));
  await reload();
