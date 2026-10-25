@@ -104,7 +104,7 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 </div>
 <div class="tablebox">
 <table id="overview" aria-label="Alle Coaches mit Spielen im Zeitraum, geplanten Spielen und Kilometern">
-<thead><tr><th>Coach / Beobachter</th><th>Spiele im Zeitraum</th><th>Geplant (Zukunft)</th><th>Kilometer gesamt</th><th>Kilometer geplant</th><th>Spiele insgesamt</th><th>Kilometer insgesamt</th><th>Einzelaufstellung</th></tr></thead>
+<thead><tr><th>Coach / Beobachter</th><th>Spiele gesamt</th><th>Spiele im Zeitraum</th><th>Spiele in Zukunft</th><th>Kilometer gesamt</th><th>Kilometer im Zeitraum</th><th>Kilometer Zukunft</th><th>Einzelaufstellung</th></tr></thead>
 <tbody id="overview-rows"></tbody>
 </table></div>
 </div>
@@ -265,7 +265,7 @@ function renderOverview(){
   btn.setAttribute("aria-expanded",String(opened));
   btn.setAttribute("aria-controls","details-result");
   btn.addEventListener("click",()=>showCoachDetails(String(coach.id)));
-  action.append(btn);tr.append(name,count,planned,km,plannedKm,totalCount,totalKmCell,action);tbody.append(tr);
+  action.append(btn);tr.append(name,totalCount,count,planned,totalKmCell,km,plannedKm,action);tbody.append(tr);
  }
  if(!ordered.length){
   const row=document.createElement("tr"),cell=document.createElement("td");cell.colSpan=8;cell.textContent="Noch keine Coaches angelegt.";row.append(cell);tbody.append(row);
