@@ -92,6 +92,7 @@
 #venue-check-dialog .venue-candidate strong{display:block;margin-bottom:6px}
 #venue-check-dialog .venue-map{display:inline-block;margin:5px 12px 5px 0}
 @media(max-width:600px){#venue-check-dialog{padding:14px}}
+#return-observer-dialog{max-width:560px;width:calc(100% - 28px);border:0;border-radius:14px;padding:22px;box-shadow:0 18px 60px #0003}#return-observer-dialog::backdrop{background:#142b4680}#return-observer-form{display:grid;gap:12px}#return-observer-form textarea{width:100%;min-height:120px;box-sizing:border-box} .return-observer-state{display:block;color:#a32020;font-size:12px;font-weight:700;margin:4px 0;white-space:normal} .return-observer-button{border-color:#d92d20;color:#a32020;font-weight:700;white-space:normal;margin-top:4px} .return-observer-note{font-size:12px;white-space:pre-wrap;max-width:260px;color:#8b1e1e;margin:4px 0}
 </style><style id="venue-status-style">
 .venue-status{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:4px 8px;font-size:12px;font-weight:700;line-height:1.25;margin-top:5px;white-space:normal}
 .venue-status-confirmed{background:#e0f4e8;color:#17683b}
@@ -123,7 +124,7 @@
 </details>
 <details class="game-filter-details"><summary>Filter anzeigen / einklappen</summary><div class="game-filters" role="group" aria-label="Spiele filtern"><button type="button" class="active" data-game-filter="all" aria-pressed="true">Alle Spiele</button><button type="button" data-game-filter="future" aria-pressed="false">Zukünftige Spiele</button><button type="button" data-game-filter="without" aria-pressed="false">Spiele ohne Bogen</button></div><div class="game-sort"><label for="referee-filter">Schiedsrichter filtern:</label><select id="referee-filter"><option value="">Alle Schiedsrichter</option></select><label for="coach-filter">Coach / Beobachter filtern:</label><select id="coach-filter"><option value="">Alle Coaches / Beobachter</option></select><label for="game-sort-field">Sortieren nach:</label><select id="game-sort-field"><option value="date">Datum</option><option value="referee">Schiedsrichter</option><option value="coach">Coach / Beobachter</option></select><button type="button" id="game-sort-direction" aria-label="Sortierreihenfolge ändern">Neueste zuerst ↓</button></div></details><p id="filter-count" class="small"></p>
 <p class="mobile-list-hint">Tippe bei einem Spiel auf „Details &amp; Bearbeiten“, um weitere Angaben und Aktionen zu öffnen.</p><div id="mobile-game-list" class="mobile-game-list" aria-label="Spiele als Karten"></div>
-<div class="scroll"><table><thead><tr><th>Datum</th><th>Uhrzeit</th><th>Spielkennung</th><th>Heim</th><th>Gast</th><th>Liga</th><th>Einsatzart</th><th>Spielstätte</th><th>Kilometer</th><th>Einteilung</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Bogen</th><th>Eingegangen</th><th>Geprüft</th><th>Versand</th><th>Aktion</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div class="scroll"><table><thead><tr><th>Datum</th><th>Uhrzeit</th><th>Spielkennung</th><th>Heim</th><th>Gast</th><th>Liga</th><th>Einsatzart</th><th>Spielstätte</th><th>Kilometer</th><th>Einteilung</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Bogen</th><th>Eingegangen</th><th>Zurück an Beobachter</th><th>Geprüft</th><th>Versand</th><th>Aktion</th></tr></thead><tbody id="rows"></tbody></table></div>
 <p><a href="/spiele-anlegen.html">Neues Spiel anlegen</a> · <a href="/beobachtungsboegen.html">Alle Beobachtungsbögen</a></p>
 <p class="small">Automatische E-Mails benötigen die serverseitige Absender-Konfiguration. Status und Zuordnungen werden zusätzlich im Portal gespeichert. Bereits vorhandene lokale Datensätze bleiben erhalten.</p></section></main></div>
 <dialog id="game-edit-dialog" aria-labelledby="game-edit-heading">
@@ -164,6 +165,7 @@
  <div id="venue-check-results"></div>
  <p class="small">Bitte prüfe, ob die gefundene Position wirklich zum Sportplatz gehört. Eine Kartenadresse allein ist noch keine Bestätigung.</p>
 </dialog>
+<dialog id="return-observer-dialog"><form id="return-observer-form"><h2>Bogen zur Überarbeitung zurückgeben</h2><p id="return-observer-game" class="small"></p><p>Trage hier ein, was der Beobachter am Bogen korrigieren oder ergänzen soll. Die Notiz wird zusammen mit dem Spiel gespeichert.</p><label>Notiz an den Beobachter <textarea id="return-observer-note" required minlength="3" rows="6" placeholder="Bitte ergänze …"></textarea></label><p id="return-observer-error" role="status" aria-live="polite"></p><div class="actions"><button type="button" id="cancel-return-observer">Abbrechen</button><button type="submit" id="save-return-observer" class="primary">Rückgabe speichern</button></div></form></dialog>
 <dialog id="manual"><form method="dialog" id="manual-form"><h2>Bogen bereits versendet</h2><p>Hier kannst du einen Versand dokumentieren, der außerhalb des Portals stattgefunden hat. Es wird keine E-Mail versendet.</p><label>Versanddatum <input type="date" id="manual-date" required></label><label>Notiz zum Versandweg oder Grund <textarea id="manual-note" required placeholder="Beispiel: am 12.10.2026 per E-Mail von meiner bisherigen Adresse verschickt"></textarea></label><p id="manual-error" role="status"></p><div class="actions"><button type="button" id="cancel-manual">Abbrechen</button><button type="submit" class="primary">Als bereits versendet speichern</button></div></form></dialog>
 <dialog id="mail"><form method="dialog" id="mail-form"><h2 id="mail-head">E-Mail versenden</h2><label id="test-recipient-wrap" hidden>Testempfänger
 <select id="test-recipient-mode"><option value="admin">An mich selbst (Admin)</option><option value="assigned">An den zugeordneten Coach / Schiedsrichter</option></select>
@@ -172,7 +174,7 @@
 <label id="test-confirm-wrap" hidden style="display:flex;gap:10px;align-items:flex-start"><input id="test-confirm" type="checkbox" style="width:19px;height:19px;flex:none"> Ich bestätige den ausdrücklich gewünschten Versand dieser TEST-E-Mail an die angezeigte Empfängeradresse.</label><p id="mail-error" role="status"></p><div class="actions"><button type="button" id="cancel-mail">Abbrechen</button><button type="submit" id="mail-submit" class="primary">E-Mail jetzt senden</button></div></form></dialog>
 <script type="module">import {cloudPeople} from "/portal-people.js";
 import{sb,requirePermission,localGames,localPeople,syncGames,syncObservations,associateUniqueObservations,updateGame,updatePlanningStatus,gameColor,dateDE,reminderBody,sendBody,sendMail}from"/portal-workflow.js";
-const $=id=>document.getElementById(id),status=$("status");let userId="",userEmail="",games=[],docs=[],refs=[],coaches=[],selected=null,mailKind="",gameFilter="all",refereeFilter="",coachFilter="",sortKey="date",sortDir="desc",routeAttempts=[];
+const $=id=>document.getElementById(id),status=$("status");let userId="",userEmail="",games=[],docs=[],refs=[],coaches=[],selected=null,returningGame=null,mailKind="",gameFilter="all",refereeFilter="",coachFilter="",sortKey="date",sortDir="desc",routeAttempts=[];
 const currentIso=()=>{const t=new Date();return [t.getFullYear(),String(t.getMonth()+1).padStart(2,"0"),String(t.getDate()).padStart(2,"0")].join("-")};
 function person(people,id){return people.find(x=>x.id===id||x.name===id)}
 function fullName(p){return p?.name||[p?.first,p?.last].filter(Boolean).join(" ")||""}
@@ -540,6 +542,26 @@ async function editVenue(g){
  try{Object.assign(g,await updateGame(userId,g.game_key,patch));render();status.textContent="Spielstätte gespeichert. Navigationsziel automatisch übernommen."}
  catch(e){status.textContent="Spielstätte konnte nicht gespeichert werden: "+e.message}
 }
+function openReturnObserver(g){
+ returningGame=g;selected=g;
+ $("return-observer-game").textContent=[dateDE(g.match_date),g.home,g.away].filter(Boolean).join(" · ");
+ $("return-observer-note").value=g.return_note||"";
+ $("return-observer-error").textContent="";
+ $("save-return-observer").disabled=false;
+ $("return-observer-dialog").showModal();
+}
+$("cancel-return-observer").addEventListener("click",()=> $("return-observer-dialog").close());
+$("return-observer-form").addEventListener("submit",async event=>{
+ event.preventDefault();const g=returningGame;if(!g)return;
+ const note=$("return-observer-note").value.trim();if(note.length<3){$("return-observer-error").textContent="Bitte gib eine kurze, konkrete Notiz ein.";return}
+ const button=$("save-return-observer");button.disabled=true;$("return-observer-error").textContent="Rückgabe wird gespeichert …";
+ try{
+  const patch={returned_to_observer_at:new Date().toISOString(),return_note:note};
+  if(!g.received_at)patch.received_at=new Date().toISOString();
+  Object.assign(g,await updateGame(userId,g.game_key,patch));
+  $("return-observer-dialog").close();render();status.textContent="Bogen zur Überarbeitung zurückgegeben. Die Notiz wurde gespeichert.";
+ }catch(error){$("return-observer-error").textContent="Speichern fehlgeschlagen: "+error.message;button.disabled=false}
+});
 async function change(g,patch){
  const reason=protectedReason(g,"Spieldaten ändern");if(reason===null)return;if(reason)patch.protected_change_reason=reason;
  try{const updated=await updateGame(userId,g.game_key,patch);Object.assign(g,updated);render();status.textContent="Änderung gespeichert."}
@@ -743,6 +765,9 @@ function mobileGameCard(g){
   checkLabel.append(input,document.createTextNode(label));checks.append(checkLabel);
  }
  const reviewStatus=mobileElement("div","small",g.checked_at?"✓ Bogen geprüft":"Bogen in Bearbeitung");checks.append(reviewStatus);inner.append(checks);
+ const returnBox=mobileElement("div","mobile-detail-field");returnBox.append(mobileElement("small","","Rückgabe an Beobachter"));
+ if(g.returned_to_observer_at){returnBox.append(mobileElement("strong","return-observer-state","↩ Zur Überarbeitung zurückgegeben"));if(g.return_note)returnBox.append(mobileElement("div","return-observer-note",g.return_note))}
+ const returnBtn=mobileElement("button","return-observer-button",g.returned_to_observer_at?"Rückgabe / Notiz bearbeiten":"Bogen zurück an Beobachter");returnBtn.type="button";returnBtn.onclick=()=>openReturnObserver(g);returnBox.append(returnBtn);inner.append(returnBox);
  const actions=mobileElement("div","mobile-actions");
  if(!g.is_test){
   const manual=mobileElement("button","",g.sent_manual_at?"Versandnotiz ändern":"Bereits versendet");
@@ -885,6 +910,9 @@ function render(){
    input.addEventListener("change",()=>change(g,field==="received_at"?{received_at:input.checked?new Date().toISOString():null,...(!input.checked?{checked_at:null}:{})}:{checked_at:input.checked?new Date().toISOString():null}));
    td.append(input);row.append(td)
   }
+  const returnCell=document.createElement("td");
+  if(g.returned_to_observer_at){const returned=document.createElement("span");returned.className="return-observer-state";returned.textContent="↩ Zur Überarbeitung zurückgegeben";returnCell.append(returned);if(g.return_note){const note=document.createElement("div");note.className="return-observer-note";note.textContent=g.return_note;returnCell.append(note)}}
+  const returnButton=document.createElement("button");returnButton.type="button";returnButton.className="return-observer-button";returnButton.textContent=g.returned_to_observer_at?"Rückgabe / Notiz bearbeiten":"Bogen zurück an Beobachter";returnButton.addEventListener("click",()=>openReturnObserver(g));returnCell.append(returnButton);row.append(returnCell);
   const checkedCell=document.createElement("td");checkedCell.textContent=g.checked_at?"✓ Geprüft":"In Bearbeitung";checkedCell.className="small";row.append(checkedCell);
   const sendCell=document.createElement("td");const sent=!!(g.sent_at||g.sent_manual_at);
   const label=document.createElement("div");label.textContent=g.is_test?"Testspiel – Test-E-Mail möglich":sent?"✓ Versendet":g.received_at?"Bogen eingegangen":"Noch nicht versendet";label.className="small";sendCell.append(label);
