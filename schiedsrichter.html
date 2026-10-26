@@ -17,24 +17,29 @@ if(!user){
     const seasonYear=today.getMonth()>=6?today.getFullYear():today.getFullYear()-1;
     const seasonStart=seasonYear+"-07-01",seasonEnd=(seasonYear+1)+"-07-01";
     const todayISO=[today.getFullYear(),String(today.getMonth()+1).padStart(2,"0"),String(today.getDate()).padStart(2,"0")].join("-");
-    const [{data:seasonGames,error:gamesError},{data:seasonDocs,error:docsError},{data:futureGames,error:futureError}]=await Promise.all([
-      sb.from("portal_games").select("game_key,referee_id,match_date").eq("owner_id",user.id).gte("match_date",seasonStart).lt("match_date",seasonEnd),
-      sb.from("portal_observations").select("document_id,game_key,referee_id").eq("owner_id",user.id).not("game_key","is",null),
-      sb.from("portal_games").select("game_key,referee_id,match_date").eq("owner_id",user.id).gte("match_date",todayISO)
-    ]);
+    // Spielzählung ausschließlich nach Spieldatum in der aktuellen Saison:
+    // Vergangenheit = beobachtet, heute und Zukunft = geplant.
+    // Ein eingegangener, geprüfter oder versendeter Bogen spielt hier keine Rolle.
+    const {data:seasonGames,error:gamesError}=await sb.from("portal_games")
+      .select("game_key,referee_id,match_date")
+      .eq("owner_id",user.id)
+      .gte("match_date",seasonStart)
+      .lt("match_date",seasonEnd);
     const observationCounts=new Map(),plannedCounts=new Map();
-    if(futureError)console.error("Geplante Beobachtungen:",futureError);
-    for(const game of futureGames||[]){if(!game.referee_id)continue;const key=String(game.referee_id);plannedCounts.set(key,(plannedCounts.get(key)||0)+1)}
-    if(gamesError||docsError){console.error("Beobachtungszählung:",gamesError||docsError);}
+    if(gamesError)console.error("Schiedsrichter-Spielzählung:",gamesError);
     else{
-      const gamesByKey=new Map((seasonGames||[]).map(g=>[String(g.game_key),g]));
       const seen=new Set();
-      for(const doc of seasonDocs||[]){
-        const game=gamesByKey.get(String(doc.game_key));
-        if(!game?.referee_id||String(doc.referee_id||"")!==String(game.referee_id)||seen.has(doc.document_id))continue;
-        seen.add(doc.document_id);
+      for(const game of seasonGames||[]){
+        if(!game.referee_id||!game.match_date)continue;
         const key=String(game.referee_id);
-        observationCounts.set(key,(observationCounts.get(key)||0)+1);
+        // Falls ein Spiel versehentlich doppelt zurückkommt, nicht doppelt zählen.
+        if(game.game_key){
+          const unique=key+"\u0000"+String(game.game_key);
+          if(seen.has(unique))continue;
+          seen.add(unique);
+        }
+        const bucket=game.match_date<todayISO?observationCounts:plannedCounts;
+        bucket.set(key,(bucket.get(key)||0)+1);
       }
     }
     const sortSelect=$("referee-sort");
@@ -57,7 +62,7 @@ if(!user){
       for(const r of filtered){
         const name=r.name||[r.first,r.last].filter(Boolean).join(" ")||"Unbenannt";
         const card=document.createElement("details");card.className="ref-card";
-        const summary=document.createElement("summary");const initials=document.createElement("div");initials.className="coach-initials";initials.textContent=[r.first,r.last].filter(Boolean).map(x=>String(x).charAt(0).toUpperCase()).join("")||name.split(/\\s+/).map(x=>x[0]).slice(0,2).join("").toUpperCase();summary.append(initials);if(r.photoPath){const {data:photo,error:photoError}=await sb.storage.from("portal-coach-photos").createSignedUrl(r.photoPath,3600);if(!photoError&&photo?.signedUrl){const img=document.createElement("img");img.className="coach-thumb";img.alt="Profilfoto von "+name;img.src=photo.signedUrl;img.onerror=()=>{img.replaceWith(initials);initials.hidden=false};initials.hidden=true;summary.append(img)}}const title=document.createElement("div");title.className="coach-card-title";const bold=document.createElement("strong");bold.textContent=name;title.append(bold);const sub=document.createElement("small");sub.textContent=[r.club,r.city].filter(Boolean).join(" · ")||"Qualifikation: "+(r.qualification||r.qualifikation||"nicht hinterlegt");title.append(sub);const count=document.createElement("span");count.textContent=(gamesError||docsError?"–":(observationCounts.get(String(r.id))||0))+" beobachtet · "+(futureError?"–":(plannedCounts.get(String(r.id))||0))+" geplant · Saison "+seasonYear+"/"+String(seasonYear+1).slice(-2);title.append(count);summary.append(title);summary.setAttribute("aria-label",name+": "+count.textContent);card.append(summary);
+        const summary=document.createElement("summary");const initials=document.createElement("div");initials.className="coach-initials";initials.textContent=[r.first,r.last].filter(Boolean).map(x=>String(x).charAt(0).toUpperCase()).join("")||name.split(/\\s+/).map(x=>x[0]).slice(0,2).join("").toUpperCase();summary.append(initials);if(r.photoPath){const {data:photo,error:photoError}=await sb.storage.from("portal-coach-photos").createSignedUrl(r.photoPath,3600);if(!photoError&&photo?.signedUrl){const img=document.createElement("img");img.className="coach-thumb";img.alt="Profilfoto von "+name;img.src=photo.signedUrl;img.onerror=()=>{img.replaceWith(initials);initials.hidden=false};initials.hidden=true;summary.append(img)}}const title=document.createElement("div");title.className="coach-card-title";const bold=document.createElement("strong");bold.textContent=name;title.append(bold);const sub=document.createElement("small");sub.textContent=[r.club,r.city].filter(Boolean).join(" · ")||"Qualifikation: "+(r.qualification||r.qualifikation||"nicht hinterlegt");title.append(sub);const count=document.createElement("span");count.textContent=(gamesError?"–":(observationCounts.get(String(r.id))||0))+" beobachtet · "+(gamesError?"–":(plannedCounts.get(String(r.id))||0))+" geplant · Saison "+seasonYear+"/"+String(seasonYear+1).slice(-2);title.append(count);summary.append(title);summary.setAttribute("aria-label",name+": "+count.textContent);card.append(summary);
         
         const contact=document.createElement("div");contact.className="contact";
         const phone=r.phoneMobile||r.phonePrivate||r.phoneBusiness||r.phone||"";
