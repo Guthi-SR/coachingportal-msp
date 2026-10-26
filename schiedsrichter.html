@@ -88,6 +88,7 @@ if(!user){
         for(const [label,value] of [["Straße",[r.street,r.houseNumber].filter(Boolean).join(" ")],["PLZ",r.zip],["Verein",r.club],["Schiedsrichter seit",r.since]]){
           if(!value)continue;const p=document.createElement("p");p.textContent=label+": "+value;more.append(p);
         }
+        const analysisLink=document.createElement("a");analysisLink.className="edit";analysisLink.href="/pdf-auswerten.html?referee="+encodeURIComponent(r.id);analysisLink.textContent="Coaching-Zusammenfassung";more.append(analysisLink);
         const gamesLink=document.createElement("a");gamesLink.className="edit";gamesLink.href="/spiele.html?referee="+encodeURIComponent(r.id);gamesLink.textContent="Zeig mir Spiele";more.append(gamesLink);
         const edit=document.createElement("a");edit.className="edit";edit.href="/verwaltung.html";edit.textContent="Bearbeiten";more.append(edit);
         const summaryBox=document.createElement("div");summaryBox.className="details";const summaryTitle=document.createElement("h3");summaryTitle.textContent="Coaching-Zusammenfassungen";summaryBox.append(summaryTitle);
