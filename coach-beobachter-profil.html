@@ -22,7 +22,22 @@ $("details").hidden=false;const {data:cloudDocs,error:docsError}=await sb.from("
  $("observations-status").textContent=observationRows.length?observationRows.length+" intern gespeicherte(r) Bogen/Bögen in Supabase.":"Noch keine Bögen zugeordnet.";for(const o of observationRows){const li=document.createElement("li"),link=document.createElement("a");link.href="/beobachtungsbogen-ansehen.html?pdf="+encodeURIComponent(o.id);link.target="_blank";link.rel="noopener noreferrer";link.textContent=o.fileName||"Beobachtungsbogen";li.append(link,document.createTextNode(" · Schiedsrichter: "+(o.refereeName||"–")+" · "+new Date(o.createdAt).toLocaleDateString("de-DE")));$("observations-list").append(li)}const {data:cloudGames,error:gamesError}=await sb.from("portal_games").select("*").eq("owner_id",user.id).eq("coach_id",r.id);if(gamesError)throw gamesError;
  const games=(cloudGames||[]).map(g=>({id:g.game_key,date:g.match_date,kickoff:g.kickoff,home:g.home,away:g.away,league:g.league,venue:g.venue,pdfId:g.pdf_id,referee:g.referee_id,coach:g.coach_id}));
  const referees=await cloudPeople(user.id,"referee");
- const assigned=games.filter(g=>g.coach===r.id||g.coach===r.name).sort((a,b)=>(a.date||"").localeCompare(b.date||""));$("games-status").textContent=assigned.length?assigned.length+" zugeordnetes Spiel(e).":"Noch keine Spiele zugeordnet.";for(const g of assigned){const tr=document.createElement("tr");const referee=referees.find(x=>x.id===g.referee||x.name===g.referee);for(const value of [formatPortalDate(g.date),g.kickoff,g.id,g.home,g.away,g.league,g.venue,referee?.name||g.referee]){const td=document.createElement("td");td.textContent=value||"–";td.style.padding="10px";td.style.borderBottom="1px solid #e5ebf2";tr.append(td)}const cell=document.createElement("td");
+ const assigned=games.filter(g=>g.coach===r.id||g.coach===r.name).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+ const todayISO=new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Berlin",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+ const year=Number(todayISO.slice(0,4)),seasonYear=year-(todayISO.slice(5)<"07-01"?1:0);
+ const seasonStart=seasonYear+"-07-01",seasonEnd=(seasonYear+1)+"-07-01";
+ const seen=new Set();let observed=0,planned=0;
+ for(const game of assigned){
+  if(!game.date||game.date<seasonStart||game.date>=seasonEnd)continue;
+  if(game.id){
+   const gameKey=String(r.id)+"\u0000"+String(game.id);
+   if(seen.has(gameKey))continue;
+   seen.add(gameKey);
+  }
+  if(game.date<todayISO)observed++;else planned++;
+ }
+ $("games-status").textContent=observed+" beobachtet · "+planned+" geplant · Saison "+seasonYear+"/"+String(seasonYear+1).slice(-2)+" · "+assigned.length+" Einträge aus allen Spielzeiten in der Tabelle.";
+ for(const g of assigned){const tr=document.createElement("tr");const referee=referees.find(x=>x.id===g.referee||x.name===g.referee);for(const value of [formatPortalDate(g.date),g.kickoff,g.id,g.home,g.away,g.league,g.venue,referee?.name||g.referee]){const td=document.createElement("td");td.textContent=value||"–";td.style.padding="10px";td.style.borderBottom="1px solid #e5ebf2";tr.append(td)}const cell=document.createElement("td");
  const matching=observationRows.find(o=>o.id===g.pdfId||o.gameKey===g.id);
  if(matching){
   const link=document.createElement("a");link.href="/beobachtungsbogen-ansehen.html?pdf="+encodeURIComponent(matching.id);link.target="_blank";link.rel="noopener noreferrer";link.textContent="📘";link.title="Beobachtungsbogen zum Spiel öffnen";link.setAttribute("aria-label","Beobachtungsbogen zum Spiel öffnen");link.style.fontSize="24px";cell.append(link);
