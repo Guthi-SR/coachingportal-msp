@@ -353,7 +353,8 @@ function makeTransfer(successes,ev,missing,unreadable,errors){
  "",
  "SCHIEDSRICHTER: "+(successes[0]?name(successes[0].game):$("referee").selectedOptions[0]?.textContent||"–"),
  "ZEITRAUM: "+dateDE($("from").value)+" bis "+dateDE($("to").value),
- "DATENLAGE: "+successes.length+" lesbare PDF-Bögen; "+missing.length+" Spiele ohne PDF; "+unreadable.length+" nicht auslesbar; "+errors.length+" Lesefehler.",
+ "DATENLAGE: "+successes.length+" lesbare PDF-Bögen; "+missing.length+" Spiele ohne PDF; "+unreadable.length+" nicht auslesbar; "+errors.length+" Lesefehler; "+successes.filter(x=>x.pages.some(p=>p.ocr)).length+" durch OCR erkannt.",
+ "OCR-HINWEIS: Die automatische Texterkennung kann Fehler enthalten. Bei OCR-markierten Seiten Namen, Spielminuten, Vergehen und Bewertungen mit der Original-PDF abgleichen. Keine unsicheren Angaben erfinden.",
  "",
  "THEMATISCH VORSORTIERTE TEXTZUSAMMENFASSUNG"
  ];
@@ -371,7 +372,7 @@ function makeTransfer(successes,ev,missing,unreadable,errors){
  lines.push("","VOLLSTÄNDIGE ORIGINALTEXTE ZUR FACHLICHEN PRÜFUNG");
  for(const x of successes){
   lines.push("","--- "+displayGame(x.game)+" | Coach: "+(x.game.coach_name||"nicht angegeben")+" | "+(x.doc.file_name||"PDF")+" ---");
-  for(const p of x.pages)lines.push("PDF-Seite "+p.page+":\n"+p.text);
+  for(const p of x.pages)lines.push("PDF-Seite "+p.page+(p.ocr?" [OCR-Texterkennung – Lesefehler möglich]":"")+":\n"+p.text);
  }
  return lines.join("\n");
 }
@@ -438,7 +439,8 @@ function addCell(tr,content,klass){
 function printCoverage(associated,successes,unreadable,errors){
  const st=$("coverage-stats");st.replaceChildren();
  const withPdf=associated.filter(x=>x.docs.length>0).length,readableGames=new Set(successes.map(x=>x.game.game_key)).size;
- for(const [label,count] of [["Spiele",associated.length],["Mit PDF",withPdf],["Lesbare Spiele",readableGames],["Ohne PDF",associated.length-withPdf]]){
+ const ocrGames=new Set(successes.filter(x=>x.pages.some(p=>p.ocr)).map(x=>x.game.game_key)).size;
+ for(const [label,count] of [["Spiele",associated.length],["Mit PDF",withPdf],["Lesbare Spiele",readableGames],["Durch OCR erkannt",ocrGames],["Ohne PDF",associated.length-withPdf]]){
   const el=document.createElement("div");el.className="stat";
   const strong=document.createElement("strong");strong.textContent=String(count);
   const name=document.createElement("span");name.textContent=label;
@@ -454,7 +456,8 @@ function printCoverage(associated,successes,unreadable,errors){
    const successCount=successes.filter(x=>x.game.game_key===entry.game.game_key).length;
    const scanCount=unreadable.filter(x=>x.game.game_key===entry.game.game_key).length;
    const errorCount=errors.filter(x=>x.game.game_key===entry.game.game_key).length;
-   addCell(tr,successCount?"Text auslesbar ("+successCount+")":scanCount?"PDF ohne Textebene":errorCount?"Lesefehler":"PDF vorhanden",successCount?"state yes":scanCount||errorCount?"state err":"state no");
+   const ocrCount=successes.filter(x=>x.game.game_key===entry.game.game_key&&x.pages.some(p=>p.ocr)).length;
+   addCell(tr,successCount?(ocrCount?"OCR-Text erkannt ("+ocrCount+") · bitte prüfen":"Text auslesbar ("+successCount+")"):scanCount?"Auch durch OCR nicht auslesbar":errorCount?"Lesefehler / OCR fehlgeschlagen":"PDF vorhanden",successCount?"state yes":scanCount||errorCount?"state err":"state no");
    const links=document.createElement("div");
    for(const doc of entry.docs){
     const a=document.createElement("a");a.href="/beobachtungsbogen-ansehen.html?pdf="+encodeURIComponent(doc.document_id);
@@ -488,8 +491,8 @@ function showEvidence(successes,ev){
  const raw=$("raw-pdfs");raw.replaceChildren();
  for(const r of successes){
   const item=document.createElement("details"),summary=document.createElement("summary"),body=document.createElement("pre");
-  summary.textContent=displayGame(r.game)+" · "+(r.doc.file_name||"PDF");
-  body.textContent=r.pages.map(p=>"--- Seite "+p.page+" ---\n"+p.text).join("\n\n");
+  summary.textContent=displayGame(r.game)+" · "+(r.doc.file_name||"PDF")+(r.pages.some(p=>p.ocr)?" · OCR-Texterkennung":"");
+  body.textContent=r.pages.map(p=>"--- Seite "+p.page+(p.ocr?" (OCR – vor Übernahme prüfen)":"")+" ---\n"+p.text).join("\n\n");
   item.append(summary,body);raw.append(item);
  }
 }
@@ -510,8 +513,8 @@ async function run(){
   for(let i=0;i<tasks.length;i++){
    const item=tasks[i];setStatus("Lese PDF "+(i+1)+" von "+tasks.length+": "+displayGame(item.game));
    try{
-    const pages=await readPdf(pdfjs,item.doc);
-    if(pages.reduce((sum,p)=>sum+p.text.replace(/\s/g,"").length,0)<90)
+    const pages=await readPdf(pdfjs,item.doc,setStatus);
+    if(pages.reduce((sum,p)=>sum+meaningfulChars(p.text),0)<MIN_TEXT_CHARS)
       unreadable.push({...item,pages});
     else successes.push({...item,pages});
    }catch(e){errors.push({...item,message:e?.message||"Unbekannter Lesefehler"});}
@@ -524,9 +527,10 @@ async function run(){
   printCoverage(entries,successes,unreadable,errors);
   showEvidence(successes,ev);
   $("report-section").hidden=false;
-  setStatus("ChatGPT-Vorlage erstellt. "+successes.length+" lesbare PDF(s), "+missing.length+" Spiel(e) ohne PDF, "+unreadable.length+" nicht auslesbar, "+errors.length+" Lesefehler.");
+  const ocrCount=successes.filter(x=>x.pages.some(p=>p.ocr)).length;
+  setStatus("ChatGPT-Vorlage erstellt. "+successes.length+" lesbare PDF(s), davon "+ocrCount+" durch OCR erkannt; "+missing.length+" Spiel(e) ohne PDF, "+unreadable.length+" trotz OCR nicht auslesbar, "+errors.length+" Lesefehler. "+(ocrCount?"OCR-Text bitte auf Namen, Spielminuten und Bewertungen prüfen.":""));
  }catch(error){setStatus("Auswertung fehlgeschlagen: "+(error?.message||error));}
- finally{running=false;$("analyze").disabled=false;}
+ finally{await releaseOcrWorker();running=false;$("analyze").disabled=false;}
 }
 
 // Rückimport des in ChatGPT fertig formulierten Sichtungsbogens.
