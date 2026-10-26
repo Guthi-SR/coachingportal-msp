@@ -367,7 +367,7 @@ async function exportBatchCoaches(){
   coachHeaders.forEach((header,i)=>overview.getRow(7).getCell(i+1).value=header);
   for(const [i,item] of snapshot.entries()){
    const row=overview.getRow(8+i);
-   const e=compensationTotals(item);const values=[item.name,item.totalGames,item.games.length,item.plannedGames.length,item.unconfirmedGames.length,item.totalKm,item.sum,item.plannedSum,...moneyValues(item)];if(e.overall.missing){row.getCell(13).note=euroNote(e.overall.missing);row.getCell(14).note=euroNote(e.period.missing);row.getCell(15).note=euroNote(e.future.missing);}
+   const e=compensationTotals(item);const values=[item.name,item.totalGames,item.games.length,item.plannedGames.length,item.unconfirmedGames.length,item.totalKm,item.sum,item.plannedSum,...moneyValues(item)];if(e.overall.missing){row.getCell(13).note=euroNote(e.overall.missing);if(e.period.missing)row.getCell(14).note=euroNote(e.period.missing);if(e.future.missing)row.getCell(15).note=euroNote(e.future.missing);}
    values.forEach((value,j)=>row.getCell(j+1).value=value);
   }
   const total=overview.getRow(8+snapshot.length);total.getCell(1).value="GESAMT";
