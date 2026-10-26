@@ -205,7 +205,7 @@ async function dismissDuplicate(id){
  if(error)throw error;
  duplicateNotices=duplicateNotices.filter(n=>n.id!==id);
  renderDuplicateNotices();
- for(const item of $("batch-results").children){if(item.dataset.noticeId===id)item.remove();}
+ for(const item of [...$("batch-results").children]){if(item.dataset.noticeId===id)item.remove();}
  $("duplicate-status").textContent="Doppelter Upload ausgeblendet. Die Originaldatei bleibt erhalten.";
 }
 $("hide-all-duplicates").onclick=async()=>{
