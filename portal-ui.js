@@ -237,6 +237,26 @@ if(nav){
    if(location.pathname==="/textvorlagen.html")group.open=true;
    templatesLink.replaceWith(group);
  }
+ // JSON: Hauptmenü mit zwei Unterpunkten, zunächst ohne Dateiimport oder Auswertung.
+ if(!nav.querySelector("#portal-json-menu")){
+   const group=document.createElement("details");
+   group.id="portal-json-menu";
+   const heading=document.createElement("summary");
+   heading.textContent="JSON";
+   const submenu=document.createElement("div");
+   submenu.className="person-submenu json-submenu";
+   submenu.setAttribute("aria-label","JSON-Untermenü");
+   for(const [href,label] of [["/json-auswerten.html","JSON auswerten"],["/json-ansehen.html","JSON ansehen"]]){
+     const link=document.createElement("a");
+     link.href=href;
+     link.textContent=label;
+     if(location.pathname===href){link.setAttribute("aria-current","page");group.open=true;}
+     submenu.append(link);
+   }
+   group.append(heading,submenu);
+   const after=nav.querySelector('a[href="/auswertung.html"]');
+   if(after)after.insertAdjacentElement("afterend",group);else nav.append(group);
+ }
  // Doppelte Hauptmenü-Links entfernen (auch wenn andere Skripte sie erneut eingefügt haben).
  const dedupeMenu=()=>{const seen=new Set();for(const a of nav.querySelectorAll(':scope > a')){const href=a.getAttribute("href");if(!href)continue;const key=new URL(href,location.origin).pathname;if(seen.has(key))a.remove();else seen.add(key)}};
  // Hauptmenüpunkte auch auf Seiten ergänzen, deren HTML sie noch nicht enthält.
@@ -277,7 +297,7 @@ if(nav){
  const navObserver=new MutationObserver(()=>dedupeMenu());
  navObserver.observe(nav,{childList:true});
  // Die Personen werden in den jeweiligen Seitenkacheln angezeigt, nicht im Seitenmenü.
- for(const submenu of nav.querySelectorAll(".person-submenu:not(.template-submenu)")){if(!submenu.closest("#portal-administration-menu"))submenu.remove();}
+ for(const submenu of nav.querySelectorAll(".person-submenu:not(.template-submenu):not(.json-submenu)")){if(!submenu.closest("#portal-administration-menu"))submenu.remove();}
 }
 
 /* Menü erst vollständig sortieren, danach genau einmal Berechtigungen anwenden. */
