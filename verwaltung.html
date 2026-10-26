@@ -71,7 +71,92 @@
 </select></label></div><p id="ref-list-count" role="status"></p><table class="ref-list"><thead><tr><th>Name</th><th>E-Mail</th><th>Aktion</th></tr></thead><tbody id="ref-rows"></tbody></table></div></div></main></div></div><script type="module">import {attachPersonDateInputs} from "/portal-date-input.js";
 import {cloudPeople,saveCloudPerson,deleteCloudPerson} from "/portal-people.js";
 import{createClient}from"https://esm.sh/@supabase/supabase-js@2.57.4";const sb=createClient("https://izuwixrvuxrhviyabgom.supabase.co","sb_publishable_2Cep_1Pu93JXSKVrYzyRQA_5Nbq9XEZ");const $=id=>document.getElementById(id);attachPersonDateInputs();
-const parseRefereeText=()=>{const raw=$("ref-import-text").value.trim();if(!raw){$("ref-import-result").textContent="Bitte zuerst einen Text einfügen.";return}const lines=raw.split(/\n/).map(x=>x.replace(/\\([\\-])/g,"$1").replace(/^\\*\\*(.*?)\\*\\*$/,"$1").trim()).filter(x=>x&&x!=="---"&&x.toLowerCase()!=="svg");const values={};const labelMap={"name, vorname":"fullName","straße, nr.":"address","strasse, nr.":"address","plz, ort":"postalCity","geburtsdatum":"birth","e-mail":"mail","telefon (privat)":"phonePrivate","telefon (geschäftlich)":"phoneBusiness","telefon (mobil)":"phoneMobile","vorname":"first","nachname":"last","verein":"club","ausweisnummer":"cardNumber","schiedsrichter seit":"since"};for(let i=0;i<lines.length-1;i++){const label=lines[i].toLowerCase().replace(/:$/,"").trim();const id=labelMap[label];if(!id)continue;const value=lines[i+1];if(!value||/^(?:-|–|—|keine angabe)$/i.test(value))continue;if(id==="fullName"){const parts=value.split(",");if(parts.length===2){values.last=parts[0].trim();values.first=parts[1].trim()}}else if(id==="address"){const m=value.match(/^(.+?)\\s+(\\d+[a-zA-Z]?)$/);if(m){values.street=m[1];values.houseNumber=m[2]}else values.street=value}else if(id==="postalCity"){const m=value.match(/^(\\d{5})\\s*[,;]?\\s*(.+)$/);if(m){values.zip=m[1];values.city=m[2].trim()}}else values[id]=value;i++}const patterns={first:/^(?:vorname)\s*[:：-]\s*(.+)$/i,last:/^(?:nachname|familienname)\s*[:：-]\s*(.+)$/i,birth:/^(?:geburtsdatum|geboren(?: am)?)\s*[:：-]\s*(.+)$/i,street:/^straße\s*[:：-]\s*(.+)$/i,houseNumber:/^hausnummer\s*[:：-]\s*(.+)$/i,zip:/^(?:plz|postleitzahl)\s*[:：-]\s*(.+)$/i,city:/^(?:ort|wohnort|stadt)\s*[:：-]\s*(.+)$/i,mail:/^(?:e-?mail(?:-adresse)?)\s*[:：-]\s*(.+)$/i,phonePrivate:/^(?:telefon(?: privat)?|festnetz)\s*[:：-]\s*(.+)$/i,phoneBusiness:/^(?:telefon geschäftlich|dienstlich)\s*[:：-]\s*(.+)$/i,phoneMobile:/^(?:mobil|handy|mobile)\s*[:：-]\s*(.+)$/i,since:/^schiedsrichter seit\s*[:：-]\s*(.+)$/i,club:/^verein\s*[:：-]\s*(.+)$/i,cardNumber:/^(?:ausweisnummer|sr-nummer)\s*[:：-]\s*(.+)$/i};for(const line of lines){let matched=false;for(const [id,re] of Object.entries(patterns)){const m=line.match(re);if(m){values[id]=m[1].trim();matched=true;break}}if(matched)continue;const email=line.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);if(email&&!values.mail)values.mail=email[0];const addr=line.match(/(?:^|[,;]\s*)([^,;\n]+?\s+)(\d+[a-zA-Z]?)\s*[,;]\s*(\d{5})\s+(.+)$/);if(addr){values.street??=addr[1].trim();values.houseNumber??=addr[2];values.zip??=addr[3];values.city??=addr[4].trim()}}if(!values.first&&!values.last){const candidate=lines.find(l=>/^[\p{L}.'-]+\s+[\p{L}.'-]+$/u.test(l));if(candidate){const parts=candidate.split(/\s+/);values.first=parts.shift();values.last=parts.join(" ")}}let count=0;for(const [id,val] of Object.entries(values)){if($(id)&&val){$(id).value=val;$(id).dispatchEvent(new Event("input",{bubbles:true}));count++}}$("ref-import-result").textContent=count?count+" Angaben übernommen. Bitte kontrollieren und anschließend auf Hinzufügen bzw. Speichern klicken.":"Keine eindeutigen Angaben erkannt. Verwende Beschriftungen wie Vorname:, Nachname:, E-Mail: oder Mobil:."};$("ref-import").addEventListener("click",parseRefereeText);
+function parseRefereeImport(raw){
+  const lines=String(raw||"").split(/\r?\n/).map(line=>line.trim().replace(/^\*\*(.*?)\*\*$/,"$1").replace(/^\\([-*])$/,"$1")).filter(line=>line&&line!=="---"&&line.toLowerCase()!=="svg");
+  const values={};
+  const labelMap={
+    "name, vorname":"fullName","vorname":"first","nachname":"last","familienname":"last",
+    "straße, nr.":"address","strasse, nr.":"address","straße, nr":"address","strasse, nr":"address",
+    "straße und hausnummer":"address","strasse und hausnummer":"address","straße mit hausnummer":"address",
+    "strasse mit hausnummer":"address","anschrift":"address","adresse":"address",
+    "straße":"street","strasse":"street","hausnummer":"houseNumber","nr.":"houseNumber",
+    "plz, ort":"postalCity","plz / ort":"postalCity","postleitzahl, ort":"postalCity",
+    "plz":"zip","postleitzahl":"zip","ort":"city","wohnort":"city","stadt":"city",
+    "geburtsdatum":"birth","geboren am":"birth","e-mail":"mail","email":"mail","e-mail-adresse":"mail",
+    "telefon (privat)":"phonePrivate","telefon privat":"phonePrivate","telefon":"phonePrivate","festnetz":"phonePrivate",
+    "telefon (geschäftlich)":"phoneBusiness","telefon geschäftlich":"phoneBusiness",
+    "telefon (mobil)":"phoneMobile","telefon mobil":"phoneMobile","mobil":"phoneMobile","handy":"phoneMobile",
+    "verein":"club","schiedsrichter seit":"since",
+    "ausweisnummer":"cardNumber","sr-ausweisnummer":"cardNumber","sr-nummer":"cardNumber"
+  };
+  const cleanLabel=line=>line.toLowerCase().replace(/\s+/g," ").replace(/:$/,"").trim();
+  const isMissing=value=>/^(?:-|–|—|keine angabe|k\.?\s?a\.?)$/i.test(value);
+  const splitStreet=value=>{
+    const match=value.match(/^(.+?)\s+(\d{1,3}\s?[a-zA-Z]?(?:[/-]\d{1,3}[a-zA-Z]?)?)$/u);
+    if(!match)return false;
+    values.street=match[1].trim();values.houseNumber=match[2].trim();return true;
+  };
+  const splitPostal=value=>{
+    const match=value.match(/^(\d{5})(?:\s*[,;]\s*|\s+)([\p{L}].*)$/u);
+    if(match){values.zip=match[1];values.city=match[2].trim();return true;}
+    if(/^\d{5}$/.test(value)){values.zip=value;return true;}
+    return false;
+  };
+  const combinedAddress=value=>{
+    const match=value.match(/^(.+?)\s+(\d{1,3}\s?[a-zA-Z]?(?:[/-]\d{1,3}[a-zA-Z]?)?)[,;]\s*(\d{5})\s*[,;]?\s*([\p{L}].*)$/u);
+    if(!match)return false;
+    values.street=match[1].trim();values.houseNumber=match[2].trim();values.zip=match[3];values.city=match[4].trim();
+    return true;
+  };
+  const apply=(id,rawValue)=>{
+    const value=String(rawValue||"").trim();
+    if(!value||isMissing(value))return;
+    if(id==="fullName"){
+      const parts=value.split(/\s*,\s*/);
+      if(parts.length===2&&parts.every(Boolean)){values.last=parts[0];values.first=parts[1];}
+      else{const name=value.match(/^(\S+)\s+(.+)$/u);if(name){values.first=name[1];values.last=name[2];}}
+    }else if(id==="address"){if(!combinedAddress(value)&&!splitStreet(value))values.street=value;}
+    else if(id==="street"){if(!splitStreet(value))values.street=value;}
+    else if(id==="postalCity"||id==="zip"){splitPostal(value);}
+    else values[id]=value;
+  };
+  for(let i=0;i<lines.length;i++){
+    const line=lines[i];
+    const sameLine=line.match(/^([^:：]+)[:：]\s*(.*)$/u);
+    const label=cleanLabel(sameLine?sameLine[1]:line);
+    const id=labelMap[label];
+    if(id){
+      if(sameLine&&sameLine[2].trim()){apply(id,sameLine[2]);continue;}
+      const next=lines[i+1];
+      if(next&&!labelMap[cleanLabel(next)]){
+        apply(id,next);i++;
+      }
+      continue;
+    }
+    if(combinedAddress(line))continue;
+    if(!values.zip&&/^\d{5}(?:\s*[,;]\s*|\s+)[\p{L}]/u.test(line)){splitPostal(line);continue;}
+    if(!values.street&&/(?:straße|strasse|str\.|weg|gasse|allee|platz|ring|pfad|chaussee|damm|steig|ufer|markt)\b/i.test(line)){splitStreet(line);}
+    if(!values.mail){const email=line.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);if(email)values.mail=email[0];}
+  }
+  if(!values.first&&!values.last&&!lines.some(line=>cleanLabel(line)==="name, vorname")){
+    const candidate=lines.find(line=>/^[\p{L}.'-]+\s+[\p{L}.'-]+$/u.test(line)&&!/(?:informationen|schiedsrichter seit|sr gebiet)/i.test(line));
+    if(candidate){const parts=candidate.split(/\s+/);values.first=parts[0];values.last=parts[1];}
+  }
+  return values;
+}
+const parseRefereeText=()=>{
+  const raw=$("ref-import-text").value.trim();
+  if(!raw){$("ref-import-result").textContent="Bitte zuerst einen Text einfügen.";return;}
+  const values=parseRefereeImport(raw);
+  let count=0;
+  for(const [id,value] of Object.entries(values)){
+    if($(id)&&value){$(id).value=value;$(id).dispatchEvent(new Event("input",{bubbles:true}));count++;}
+  }
+  $("ref-import-result").textContent=count
+    ?count+" Angaben übernommen. Bitte kontrollieren und anschließend auf Hinzufügen bzw. Speichern klicken."
+    :"Keine eindeutigen Angaben erkannt. Verwende Beschriftungen wie Vorname:, Nachname:, E-Mail: oder Mobil:.";
+};
+$("ref-import").addEventListener("click",parseRefereeText);
 
 const setEditorOpen=open=>{
  $("editor-body").hidden=!open;
