@@ -93,7 +93,109 @@ if(!user){
         
         const summaryBox=document.createElement("div");summaryBox.className="details";const summaryTitle=document.createElement("h3");summaryTitle.textContent="Coaching-Zusammenfassungen";summaryBox.append(summaryTitle);
         const summaryList=document.createElement("div");summaryList.textContent="Wird geladen …";summaryBox.append(summaryList);more.append(summaryBox);
-        card.addEventListener("toggle",async()=>{if(!card.open)return;summaryList.textContent="Wird geladen …";const {data,error}=await sb.from("portal_coaching_summaries").select("id,period_from,period_to,game_count,created_at,report_text,pdf_path").eq("owner_id",user.id).eq("referee_id",String(r.id)).order("created_at",{ascending:false});summaryList.replaceChildren();if(error){summaryList.textContent="Laden fehlgeschlagen: "+error.message;return;}if(!data?.length){summaryList.textContent="Noch keine Coaching-Zusammenfassung gespeichert.";return;}for(const item of data){const wrap=document.createElement("div");wrap.style.cssText="border:1px solid #dce5ee;border-radius:9px;padding:12px;margin:9px 0;overflow-wrap:anywhere";const isShort=String(item.report_text||"").trimStart().startsWith("KURZFASSUNG DES SICHTUNGSBOGENS");const label=document.createElement("strong");label.textContent=(isShort?"Sichtungsbogen – Kurzfassung":"Gesamt-Sichtungsbogen")+" · "+item.period_from+" bis "+item.period_to+" · "+item.game_count+" Spiele";wrap.append(label);const actions=document.createElement("div");actions.className="ref-actions";actions.style.marginTop="9px";const view=document.createElement("button");view.textContent="Ansehen";const report=document.createElement("div");report.hidden=true;report.style.cssText="white-space:pre-wrap;margin-top:12px;line-height:1.5";report.textContent=item.report_text;view.onclick=()=>{report.hidden=!report.hidden;view.textContent=report.hidden?"Ansehen":"Einklappen";};actions.append(view);const shortReport=document.createElement("div");shortReport.hidden=true;shortReport.style.cssText="white-space:pre-wrap;margin-top:12px;line-height:1.5;border-top:1px solid #dce5ee;padding-top:10px";const shortMatch=String(item.report_text||"").match(/(?:^|\n)KURZFASSUNG DES SICHTUNGSBOGENS\s*\n([\s\S]*)$/);if(shortMatch&&!isShort){const shortBody=shortMatch[1].trim();shortReport.textContent=shortBody;const shortView=document.createElement("button");shortView.textContent="Kurzfassung ansehen";shortView.onclick=()=>{shortReport.hidden=!shortReport.hidden;shortView.textContent=shortReport.hidden?"Kurzfassung ansehen":"Kurzfassung einklappen";};actions.append(shortView);const shortPdf=document.createElement("button");shortPdf.textContent="Kurzfassung als PDF";shortPdf.onclick=()=>{const w=window.open("","_blank");if(!w){alert("Bitte Pop-ups erlauben.");return;}const style=w.document.createElement("style");style.textContent="body{font:12pt/1.55 Arial,sans-serif;margin:18mm;white-space:pre-wrap;color:#172a40}@page{size:A4;margin:18mm}";w.document.head.append(style);w.document.title="Kurzfassung "+name;w.document.body.textContent="SICHTUNGSBOGEN – KURZFASSUNG\n\n"+shortBody;w.focus();w.print();};actions.append(shortPdf);}const pdf=document.createElement("button");pdf.textContent="Als PDF speichern";pdf.onclick=()=>{const w=window.open("","_blank");if(!w){alert("Bitte Pop-ups für diese Seite erlauben.");return;}const style=w.document.createElement("style");style.textContent="body{font:12pt/1.55 Arial,sans-serif;margin:18mm;white-space:pre-wrap;color:#172a40}@page{size:A4;margin:18mm}";w.document.head.append(style);w.document.title="Coaching-Zusammenfassung "+name;w.document.body.textContent=item.report_text;w.focus();w.print();};actions.append(pdf);if(item.pdf_path){const stored=document.createElement("button");stored.textContent="Gespeicherte PDF herunterladen";stored.onclick=async()=>{stored.disabled=true;try{const {data,error}=await sb.storage.from("portal-coaching-summaries").download(item.pdf_path);if(error)throw error;const url=URL.createObjectURL(data),a=document.createElement("a");a.href=url;a.download=(isShort?"Sichtungsbogen-Kurzfassung-":"Gesamt-Sichtungsbogen-")+name.replace(/[^a-zA-Z0-9äöüÄÖÜß_-]+/g,"-")+"-"+item.period_from+".pdf";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}catch(e){alert("PDF-Download fehlgeschlagen: "+e.message);}finally{stored.disabled=false;}};actions.append(stored);}const del=document.createElement("button");del.textContent="Löschen";del.onclick=async()=>{if(!confirm("Diese Coaching-Zusammenfassung endgültig löschen?"))return;const {error:err}=await sb.from("portal_coaching_summaries").delete().eq("owner_id",user.id).eq("id",item.id);if(err){alert(err.message);return;}if(item.pdf_path)await sb.storage.from("portal-coaching-summaries").remove([item.pdf_path]);wrap.remove();};actions.append(del);wrap.append(actions,report,shortReport);summaryList.append(wrap);}});
+        async function openPdfTab(makeBlob,title){
+          // Der Tab wird synchron beim Klick geöffnet, vor dem Laden aus Storage.
+          const tab=window.open("about:blank","_blank");
+          if(!tab){alert("Bitte Pop-ups für das Coachingportal erlauben.");return;}
+          tab.opener=null;tab.document.title=title;
+          tab.document.body.textContent="PDF wird geladen …";
+          try{
+            const blob=await makeBlob();
+            const pdfBlob=blob.type==="application/pdf"?blob:new Blob([blob],{type:"application/pdf"});
+            const url=URL.createObjectURL(pdfBlob);
+            tab.location.replace(url);
+          }catch(err){
+            tab.document.body.textContent="Die PDF konnte nicht geöffnet werden: "+(err?.message||err);
+          }
+        }
+        // Bei alten Bögen ohne gespeicherte Datei den vorhandenen Text als PDF ausgeben.
+        async function textPdf(text,title){
+          const {jsPDF}=await import("https://esm.sh/jspdf@2.5.2");
+          const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+          pdf.setFont("helvetica","normal");pdf.setFontSize(11);
+          let y=20;
+          const writeLine=(line)=>{
+            if(y>275){pdf.addPage();y=20;}
+            pdf.text(line||" ",17,y);y+=5.7;
+          };
+          for(const para of (title+"\n\n"+String(text||"")).replace(/\r/g,"").split("\n")){
+            if(!para.trim()){writeLine("");continue;}
+            for(const line of pdf.splitTextToSize(para,175))writeLine(line);
+          }
+          return pdf.output("blob");
+        }
+        async function savedPdf(item){
+          if(!item.pdf_path)return textPdf(item.report_text,"SICHTUNGSBOGEN");
+          const {data,error}=await sb.storage.from("portal-coaching-summaries").download(item.pdf_path);
+          if(error)throw error;
+          if(!data)throw Error("Die PDF ist nicht verfügbar.");
+          return data;
+        }
+        async function downloadPdf(makeBlob,filename){
+          const blob=await makeBlob();
+          const pdfBlob=blob.type==="application/pdf"?blob:new Blob([blob],{type:"application/pdf"});
+          const url=URL.createObjectURL(pdfBlob);
+          const anchor=document.createElement("a");
+          anchor.href=url;anchor.download=filename;document.body.append(anchor);
+          anchor.click();anchor.remove();
+          setTimeout(()=>URL.revokeObjectURL(url),60000);
+        }
+        card.addEventListener("toggle",async()=>{
+          if(!card.open)return;
+          summaryList.textContent="Wird geladen …";
+          const {data,error}=await sb.from("portal_coaching_summaries")
+            .select("id,period_from,period_to,game_count,created_at,report_text,pdf_path")
+            .eq("owner_id",user.id).eq("referee_id",String(r.id))
+            .order("created_at",{ascending:false});
+          summaryList.replaceChildren();
+          if(error){summaryList.textContent="Laden fehlgeschlagen: "+error.message;return;}
+          if(!data?.length){summaryList.textContent="Noch keine Coaching-Zusammenfassung gespeichert.";return;}
+          for(const item of data){
+            const isShort=String(item.report_text||"").trimStart().startsWith("KURZFASSUNG DES SICHTUNGSBOGENS");
+            const kind=isShort?"Sichtungsbogen – Kurzfassung":"Gesamt-Sichtungsbogen";
+            const filename=(isShort?"Sichtungsbogen-Kurzfassung-":"Gesamt-Sichtungsbogen-")
+              +name.replace(/[^a-zA-Z0-9äöüÄÖÜß_-]+/g,"-")+"-"+item.period_from+".pdf";
+            const wrap=document.createElement("div");
+            wrap.style.cssText="border:1px solid #dce5ee;border-radius:9px;padding:12px;margin:9px 0;overflow-wrap:anywhere";
+            const label=document.createElement("strong");
+            label.textContent=kind+" · "+item.period_from+" bis "+item.period_to+" · "+item.game_count+" Spiele";
+            wrap.append(label);
+            const actions=document.createElement("div");actions.className="ref-actions";actions.style.marginTop="9px";
+            const view=document.createElement("button");
+            view.type="button";view.textContent="PDF ansehen";
+            view.onclick=()=>openPdfTab(()=>savedPdf(item),kind);
+            actions.append(view);
+            const download=document.createElement("button");
+            download.type="button";download.textContent="PDF herunterladen";
+            download.onclick=async()=>{
+              download.disabled=true;
+              try{await downloadPdf(()=>savedPdf(item),filename);}
+              catch(err){alert("PDF-Download fehlgeschlagen: "+(err?.message||err));}
+              finally{download.disabled=false;}
+            };
+            actions.append(download);
+            // Historische Bögen mit eingebetteter statt separat gespeicherter Kurzfassung.
+            const legacy=String(item.report_text||"").match(/(?:^|\n)KURZFASSUNG DES SICHTUNGSBOGENS\s*\n([\s\S]*)$/);
+            if(legacy&&!isShort){
+              const legacyView=document.createElement("button");
+              legacyView.type="button";legacyView.textContent="Kurzfassung als PDF ansehen";
+              legacyView.onclick=()=>openPdfTab(()=>textPdf(legacy[1].trim(),"SICHTUNGSBOGEN – KURZFASSUNG"),"Kurzfassung");
+              actions.append(legacyView);
+            }
+            const del=document.createElement("button");
+            del.type="button";del.textContent="Löschen";
+            del.onclick=async()=>{
+              if(!confirm("Diesen Sichtungsbogen endgültig löschen?"))return;
+              const {error:err}=await sb.from("portal_coaching_summaries")
+                .delete().eq("owner_id",user.id).eq("id",item.id);
+              if(err){alert(err.message);return;}
+              if(item.pdf_path)await sb.storage.from("portal-coaching-summaries").remove([item.pdf_path]);
+              wrap.remove();
+            };
+            actions.append(del);
+            wrap.append(actions);summaryList.append(wrap);
+          }
+        });
         card.append(more);rows.append(card);
       }
       $("status").textContent=filtered.length+" von "+refs.length+" Schiedsrichtern angezeigt.";
