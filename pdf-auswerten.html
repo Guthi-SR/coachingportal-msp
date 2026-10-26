@@ -46,11 +46,11 @@ details pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.55 ui-monosp
 <label>Bis<input id="to" type="date"></label>
 </div>
 <div class="actions">
-<button type="button" id="analyze">PDF-Auswertung erstellen</button>
+<button type="button" id="analyze">Gesamt-Sichtungsbogen mit KI erstellen</button>
 <button type="button" id="clear" class="secondary">Auswertung zurücksetzen</button>
 </div>
 <p id="status" class="status" role="status" aria-live="polite"></p>
-<div class="notice small">Es werden keine neuen Bögen hochgeladen oder vorhandene Spielzuordnungen verändert. Die PDF-Inhalte werden im Browser verarbeitet. Diese erste Auswertung ist <strong>textbasiert, ohne KI-Interpretation</strong> und ersetzt keine fachliche Coachingbewertung.</div>
+<div class="notice small">Es werden keine neuen Bögen hochgeladen oder vorhandene Spielzuordnungen verändert. Für die KI-Zusammenfassung werden die PDF-Texte an den geschützten Server und den konfigurierten KI-Dienst übermittelt. Die Auswertung muss fachlich geprüft werden. Ohne konfigurierten KI-Dienst erscheint nur ein regelbasierter Entwurf.</div>
 </section>
 <section id="coverage" class="no-print" hidden>
 <h3>Gefundene Spiele und PDF-Bögen</h3>
@@ -362,11 +362,24 @@ async function run(){
   successes.sort((a,b)=>gDate(a.game)-gDate(b.game));
   const ev=evidenceFor(successes);
   reportText=buildReport(entries,successes,missing,unreadable,errors,ev);
+  let aiWarning="";
+  if(successes.length){
+   setStatus("Erstelle fachlich zusammengeführten Sichtungsbogen mit KI …");
+   try{
+    const {data:{session}}=await sb.auth.getSession();
+    if(!session?.access_token)throw Error("Bitte erneut anmelden.");
+    const sources=successes.map(x=>({game:displayGame(x.game),coach:x.game.coach_name||"",file:x.doc.file_name||"",text:x.pages.map(p=>"PDF-Seite "+p.page+"\\n"+p.text).join("\\n\\n").slice(0,35000)}));
+    const ai=await fetch("/api/ki-sichtungsbogen",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},body:JSON.stringify({referee:name(successes[0].game),from:$("from").value,to:$("to").value,sources})});
+    const result=await ai.json();
+    if(!ai.ok)throw Error(result.error||"KI-Auswertung nicht verfügbar.");
+    reportText=result.report;
+   }catch(error){aiWarning="KI-Auswertung nicht verfügbar: "+error.message+" Angezeigt wird ein regelbasierter Entwurf. ";}
+  }
   $("report-document").textContent=reportText;
   printCoverage(entries,successes,unreadable,errors);
   showEvidence(successes,ev);
   $("report-section").hidden=false;
-  setStatus("Auswertung abgeschlossen: "+successes.length+" lesbare PDF(s), "+missing.length+" Spiel(e) ohne PDF, "+unreadable.length+" nicht auslesbar, "+errors.length+" Lesefehler.");
+  setStatus(aiWarning+"Auswertung abgeschlossen: "+successes.length+" lesbare PDF(s), "+missing.length+" Spiel(e) ohne PDF, "+unreadable.length+" nicht auslesbar, "+errors.length+" Lesefehler.");
  }catch(error){setStatus("Auswertung fehlgeschlagen: "+(error?.message||error));}
  finally{running=false;$("analyze").disabled=false;}
 }
