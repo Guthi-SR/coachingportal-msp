@@ -119,7 +119,7 @@ export function matchingGame(game,observation){
 }
 export async function linkObservation(ownerId,gameKey,docId){
  const {error:e}=await sb.from("portal_observations").update({game_key:gameKey}).eq("owner_id",ownerId).eq("document_id",docId);
- if(e)throw e;return updateGame(ownerId,gameKey,{pdf_id:docId,received_at:new Date().toISOString()});
+ if(e)throw e;return updateGame(ownerId,gameKey,{pdf_id:docId,received_at:new Date().toISOString(),checked_at:null,returned_to_observer_at:null,return_note:null,review_status:"eingegangen"});
 }
 export async function reassignObservation(ownerId,gameKey,docId){
  const {error}=await sb.rpc("portal_reassign_observation",{p_document_id:docId,p_game_key:gameKey});
