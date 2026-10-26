@@ -54,6 +54,15 @@ details pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.55 ui-monosp
 
 .bsa-flow{background:#fff;color:#111;max-width:210mm;margin:auto;padding:16mm;font:11pt/1.5 Arial,sans-serif;overflow-wrap:anywhere}.bsa-flow h1{text-align:center;font-size:15pt;margin:0 0 15mm}.bsa-flow h2{text-align:center;font-size:12pt;margin:10mm 0 5mm;break-after:avoid}.bsa-flow h3{font-size:10.5pt;margin:5mm 0 2mm;break-after:avoid}.bsa-flow p{white-space:pre-wrap;margin:0 0 5mm}.bsa-flow-block{break-inside:avoid-page}.bsa-flow-rating{text-align:center;font-weight:bold}.bsa-flow-text{white-space:pre-wrap}
 @media print{body.print-final .bsa-flow{width:100%;max-width:none;padding:0;margin:0;box-shadow:none}body.print-final .bsa-flow h1{margin-top:0}body.print-final .bsa-flow-block{break-inside:auto}body.print-final .bsa-flow h2,body.print-final .bsa-flow h3{break-after:avoid}body.print-final .bsa-flow p{orphans:3;widows:3}@page{size:A4;margin:16mm}}
+
+/* Automatisch erzeugte Gesamtübersicht im Rückimport und im PDF. */
+.bsa-flow-summary-table{width:100%;min-width:0;table-layout:fixed;border-collapse:collapse;margin:3mm 0 5mm;font-size:10pt}
+.bsa-flow-summary-table th,.bsa-flow-summary-table td{border:1px solid #cbd5e1;text-align:left;padding:2.5mm 3mm;overflow-wrap:anywhere}
+.bsa-flow-summary-table th:last-child,.bsa-flow-summary-table td:last-child{width:31mm;text-align:center;font-weight:700}
+.bsa-flow-summary-table tr{break-inside:avoid}
+.bsa-flow-summary-table thead{display:table-header-group}
+.bsa-flow-summary-note{font-size:10pt;margin:0 0 5mm}
+@media print{body.print-final .bsa-flow-summary-table{min-width:0;width:100%}body.print-final .bsa-flow-summary-table tr{break-inside:avoid}}
 </style></head><body>
 <header><h1>Coachingportal MSP</h1></header>
 <main>
@@ -94,7 +103,7 @@ details pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.55 ui-monosp
 <div id="raw-pdfs"></div>
 </div>
 </section>
-<section id="return-section"><div class="no-print"><h2>Fertigen Sichtungsbogen aus ChatGPT übernehmen</h2><p class="muted">Füge hier die vollständige ChatGPT-Antwort ein. Das Portal ordnet die sechs Bereiche der BSA-Vorlage zu. Bitte die Vorschau prüfen, bevor du die PDF speicherst.</p><label for="return-input">ChatGPT-Sichtungsbogen</label><textarea id="return-input" class="return-field" placeholder="Hier den vollständigen Sichtungsbogen aus ChatGPT einfügen …"></textarea><div class="actions"><button type="button" id="render-final">Sichtungsbogen erstellen</button><button type="button" id="print-final" disabled>Als PDF erstellen / speichern</button><button type="button" id="clear-final" class="secondary">Eingabe löschen</button></div><p id="return-status" role="status" class="status"></p></div><div id="final-preview" class="final-sheet" hidden></div></section>
+<section id="return-section"><div class="no-print"><h2>Fertigen Sichtungsbogen aus ChatGPT übernehmen</h2><p class="muted">Füge hier den vollständigen ChatGPT-Sichtungsbogen ein. Die fünf Einzelbewertungen werden übernommen; die Gesamtübersicht und eine abschließende Gesamtbeurteilung erscheinen automatisch am Ende der Vorschau und in der PDF. Bitte vor dem Speichern prüfen.</p><label for="return-input">ChatGPT-Sichtungsbogen</label><textarea id="return-input" class="return-field" placeholder="Hier den vollständigen Sichtungsbogen aus ChatGPT einfügen …"></textarea><div class="actions"><button type="button" id="render-final">Sichtungsbogen erstellen</button><button type="button" id="print-final" disabled>Als PDF erstellen / speichern</button><button type="button" id="clear-final" class="secondary">Eingabe löschen</button></div><p id="return-status" role="status" class="status"></p></div><div id="final-preview" class="final-sheet" hidden></div></section>
 </div>
 </main>
 <script type="module">
@@ -256,9 +265,10 @@ function makeTransfer(successes,ev,missing,unreadable,errors){
  "ENTWICKLUNGSTHEMEN DES SR: GENAU drei nummerierte Punkte (1., 2., 3.) mit eigener Themenüberschrift, fachlicher Erläuterung und jeweils einem überprüfbaren Förderziel für die nächsten Beobachtungen.",
  "BEWERTUNGSKATEGORIEN: Alle fünf Kategorien ausführlich ausarbeiten. JE KATEGORIE mehrere zusammenhängende Absätze mit integrierter Gesamtanalyse über alle Spiele, konkreten belegten Beispielen wo nötig, positiver Würdigung, kritischer Gewichtung und abschließendem Absatz \"Gesamtbeurteilung:\". NIEMALS pro Spiel nacheinander erzählen. Umfang und Tiefe vergleichbar mit FAZIT, nicht bloß zwei Sätze.",
  "BEWERTUNGSLOGIK: Für jede Kategorie genau eine fachlich begründete Gesamtnote aus ++, +, o, -, -- wählen. Nicht die Einzelnoten mechanisch mitteln. Wenn die Originaltexte keine belastbare Note erlauben, \"nicht bewertbar\" mit Begründung verwenden. Unterscheide Vorschlagsnoten von ausdrücklich dokumentierten Noten. Zwei kurze wortgetreue Zitate mit Quellenangabe nur wenn exakt belegbar.",
+ "GESAMTÜBERSICHT: Gib KEINE zusätzliche Bewertungstabelle außerhalb des Sichtungsbogens aus. Das Coachingportal liest die fünf Einzelbewertungen automatisch aus und erstellt am Ende die vollständige Gesamtübersicht und die PDF-Tabelle. Gib nur einen einzigen zusammenhängenden, vollständig kopierbaren Sichtungsbogen im vorgegebenen Rückimport-Format aus.",
  "VERBINDLICHES RÜCKIMPORT-FORMAT: Schreibe die folgenden Hauptüberschriften EXAKT so, ohne Markdown und jeweils allein in einer Zeile: SPIELDATEN, GESAMTBEWERTUNG, FAZIT, POSITIVE ASPEKTE, OPTIMIERBARE BEREICHE, ENTWICKLUNGSTHEMEN DES SR, BEWERTUNGSKATEGORIEN, ABSCHLIESSENDE FÖRDEREINSCHÄTZUNG.",
  "In den drei nummerierten Bereichen jeden Punkt mit \"1. Aussagekräftige Themenüberschrift\", \"2. Aussagekräftige Themenüberschrift\", \"3. Aussagekräftige Themenüberschrift\" beginnen, danach Fließtext in separaten Absätzen. In BEWERTUNGSKATEGORIEN jede Kategorie mit EXAKTER Überschrift in eigener Zeile: ADMINISTRATIVES & SPIELBEZOGENE VORBEREITUNG; ENTSCHEIDUNGSQUALITÄT; DISZIPLINARKONTROLLE; AUFTRETEN & PERSÖNLICHKEIT; STELLUNGSSPIEL & FITNESS. Direkt darunter \"Bewertung: +\" (mit tatsächlich begründeter Note), dann \"Kommentar:\" und den VOLLSTÄNDIGEN ausführlichen Text einschließlich \"Gesamtbeurteilung:\". Kein Markdown-Fettdruck in Überschriften oder Notenzeilen.",
- "ABSCHLIESSENDE FÖRDEREINSCHÄTZUNG: Übergreifende Empfehlung, mit den dokumentierten Fördervoten der Coaches differenziert umgehen. Alle Inhalte vollständig ausgeben, nicht kürzen. Die automatische thematische Vorsortierung ist fehleranfällig; maßgeblich sind die vollständigen Originaltexte.",
+ "ABSCHLIESSENDE FÖRDEREINSCHÄTZUNG: Abschließende Gesamtbeurteilung mit übergreifender Förderempfehlung in drei bis fünf gehaltvollen Sätzen; dokumentierte Fördervoten der Coaches differenziert einordnen. Vorherige Fachabschnitte nicht kürzen. Die automatische thematische Vorsortierung ist fehleranfällig; maßgeblich sind die vollständigen Originaltexte.",
  "",
  "SCHIEDSRICHTER: "+(successes[0]?name(successes[0].game):$("referee").selectedOptions[0]?.textContent||"–"),
  "ZEITRAUM: "+dateDE($("from").value)+" bis "+dateDE($("to").value),
@@ -439,7 +449,8 @@ async function run(){
 }
 
 // Rückimport des in ChatGPT fertig formulierten Sichtungsbogens.
-const sectionNames=["SPIELDATEN","FAZIT","POSITIVE ASPEKTE","OPTIMIERBARE BEREICHE","ENTWICKLUNGSTHEMEN DES SR","BEWERTUNGSKATEGORIEN"];
+const sectionNames=["SPIELDATEN","GESAMTBEWERTUNG","FAZIT","POSITIVE ASPEKTE","OPTIMIERBARE BEREICHE","ENTWICKLUNGSTHEMEN DES SR","BEWERTUNGSKATEGORIEN","ABSCHLIESSENDE FÖRDEREINSCHÄTZUNG","ABSCHLIESSENDE GESAMTBEURTEILUNG","GESAMTÜBERSICHT DER BEWERTUNGEN","GESAMTÜBERSICHT DER BEWERTUNG"];
+const requiredSections=["SPIELDATEN","FAZIT","POSITIVE ASPEKTE","OPTIMIERBARE BEREICHE","ENTWICKLUNGSTHEMEN DES SR","BEWERTUNGSKATEGORIEN"];
 const categoryNames=["ADMINISTRATIVES & SPIELBEZOGENE VORBEREITUNG","ENTSCHEIDUNGSQUALITÄT","DISZIPLINARKONTROLLE","AUFTRETEN & PERSÖNLICHKEIT","STELLUNGSSPIEL & FITNESS"];
 const normalizeHeading=t=>t.replace(/^#{1,6}\s*/,"").replace(/^\*{1,2}/,"").replace(/\*{1,2}$/,"").replace(/^\d+[.)]\s*/,"").replace(/[:\s]+$/,"").trim().toLocaleUpperCase("de-DE").replace(/\s+/g," ");
 function splitSections(text,headings){
@@ -459,29 +470,95 @@ function renderFinished(text){
  const clean=x=>x.replace(/^#{1,6}\s*/,"").replace(/\*\*/g,"").replace(/^\s*[-*]\s+/,"").trim();
  const normalize=x=>clean(x).replace(/^\d+(?:\.\d+)*[.)]?\s*/,"").replace(/[:\s]+$/,"").toLocaleUpperCase("de-DE");
  const sections=new Map();let current=null;
- for(const line of lines){const key=sectionNames.find(h=>normalize(line)===h);if(key){current=key;if(!sections.has(key))sections.set(key,[]);continue;}if(current)sections.get(current).push(clean(line));}
- const missing=sectionNames.filter(x=>!sections.has(x));if(missing.length)throw Error("Rubriken fehlen: "+missing.join(", "));
+ for(const line of lines){
+  const key=sectionNames.find(h=>normalize(line)===h);
+  if(key){current=key;if(!sections.has(key))sections.set(key,[]);continue;}
+  if(current)sections.get(current).push(clean(line));
+ }
+ const missing=requiredSections.filter(x=>!sections.has(x));
+ if(missing.length)throw Error("Rubriken fehlen: "+missing.join(", "));
+ const content=x=>(sections.get(x)||[]).join("\n").trim();
+ const categoriesText=content("BEWERTUNGSKATEGORIEN").split("\n");
+ const blocks=new Map();let active=null;
+ for(const row of categoriesText){
+  const cat=categoryNames.find(x=>normalize(row)===x);
+  if(cat){active=cat;blocks.set(cat,[]);continue;}
+  if(active)blocks.get(active).push(row);
+ }
+ const missingCategories=categoryNames.filter(x=>!blocks.has(x));
+ if(missingCategories.length)throw Error("Bewertungskategorien fehlen: "+missingCategories.join(", "));
+ const scores=new Map();
+ const categories=categoryNames.map(cat=>{
+  const value=(blocks.get(cat)||[]).join("\n").trim();
+  const match=value.match(/(?:^|\n)\s*Bewertung\s*:\s*(\+\+|\+|o|O|--|-|nicht bewertbar)/i);
+  const grade=match?match[1].toLowerCase():"nicht bewertbar";
+  const comment=value.replace(/(?:^|\n)\s*Bewertung\s*:\s*(?:\+\+|\+|o|O|--|-|nicht bewertbar)\s*/i,"").replace(/^\s*Kommentar\s*:\s*/i,"").trim();
+  scores.set(cat,grade);return {cat,grade,comment};
+ });
  const root=$("final-preview");root.replaceChildren();root.className="bsa-flow";
  const h=(tag,value,parent=root)=>{const el=document.createElement(tag);el.textContent=value;parent.append(el);return el;};
  h("h1","SICHTUNGSBOGEN");
  const parsePoints=value=>{
   const rows=value.split("\n"),items=[];let item=null;
-  for(const row of rows){if(!row.trim())continue;const m=row.match(/^(?:\d+(?:\.\d+)*[.)]?|[•-])\s+(.+)/);
+  for(const row of rows){
+   if(!row.trim())continue;
+   const m=row.match(/^(?:\d+(?:\.\d+)*[.)]?|[•-])\s+(.+)/);
    if(m){if(item)items.push(item);item=m[1];}
    else if(item)item+="\n"+row;
    else item=row;
-  }if(item)items.push(item);return items;
+  }
+  if(item)items.push(item);return items;
  };
- const content=x=>(sections.get(x)||[]).join("\n").trim();
- for(const title of sectionNames){
+ const headings=["SPIELDATEN","FAZIT","POSITIVE ASPEKTE","OPTIMIERBARE BEREICHE","ENTWICKLUNGSTHEMEN DES SR","BEWERTUNGSKATEGORIEN"];
+ for(const title of headings){
   h("h2",title);
   if(title==="BEWERTUNGSKATEGORIEN"){
-   const rows=content(title).split("\n");let active=null;const blocks=new Map();
-   for(const row of rows){const cat=categoryNames.find(x=>normalize(row)===x);if(cat){active=cat;blocks.set(cat,[]);continue;}if(active)blocks.get(active).push(row);}
-   for(const cat of categoryNames){const block=h("div","");block.className="bsa-flow-block";h("h3",cat,block);const value=(blocks.get(cat)||[]).join("\n").trim();const m=value.match(/(?:^|\n)\s*Bewertung\s*:\s*(\+\+|\+|o|O|--|-|nicht bewertbar)/i);const grade=m?m[1].toLowerCase():"nicht bewertbar";const p=h("p","BEWERTUNG: "+grade,block);p.className="bsa-flow-rating";h("p",value.replace(/(?:^|\n)\s*Bewertung\s*:\s*(?:\+\+|\+|o|O|--|-|nicht bewertbar)\s*/i,"").replace(/^\s*Kommentar\s*:\s*/i,"").trim()||"Keine Angaben.",block);}
+   for(const {cat,grade,comment} of categories){
+    const block=h("div","");block.className="bsa-flow-block";
+    h("h3",cat,block);
+    const rating=h("p","BEWERTUNG: "+grade,block);rating.className="bsa-flow-rating";
+    h("p",comment||"Kein Kommentar angegeben.",block);
+   }
   }else if(["POSITIVE ASPEKTE","OPTIMIERBARE BEREICHE","ENTWICKLUNGSTHEMEN DES SR"].includes(title)){
-   for(const [i,item] of parsePoints(content(title)).entries()){const block=h("div","");block.className="bsa-flow-block";h("h3",(i+1)+". "+title,block);h("p",item,block);}
-  }else{const p=h("p",content(title));p.className="bsa-flow-text";}
+   for(const [i,item] of parsePoints(content(title)).entries()){
+    const block=h("div","");block.className="bsa-flow-block";
+    h("h3",(i+1)+". "+title,block);h("p",item,block);
+   }
+  }else{
+   const p=h("p",content(title));p.className="bsa-flow-text";
+  }
+ }
+ // Die Übersicht wird immer aus den fünf tatsächlich importierten Bewertungen erzeugt.
+ h("h2","GESAMTÜBERSICHT DER BEWERTUNGEN");
+ const summary=h("table","");summary.className="bsa-flow-summary-table";
+ const thead=document.createElement("thead"),header=document.createElement("tr");
+ for(const label of ["Bewertungskategorie","Bewertung"]){const th=document.createElement("th");th.textContent=label;header.append(th);}
+ thead.append(header);summary.append(thead);
+ const tbody=document.createElement("tbody");
+ for(const {cat,grade} of categories){
+  const tr=document.createElement("tr");
+  for(const value of [cat,grade]){const td=document.createElement("td");td.textContent=value;tr.append(td);}
+  tbody.append(tr);
+ }
+ summary.append(tbody);
+ const positives=[...scores.values()].filter(x=>x==="+"||x==="++").length;
+ const neutrals=[...scores.values()].filter(x=>x==="o").length;
+ const negatives=[...scores.values()].filter(x=>x==="-"||x==="--").length;
+ const ungraded=[...scores.values()].filter(x=>x==="nicht bewertbar").length;
+ const tally="Zusammenfassung: "+positives+" positiv, "+neutrals+" neutral, "+negatives+" negativ"+(ungraded?", "+ungraded+" nicht bewertbar":"")+".";
+ const tallyNode=h("p",tally);tallyNode.className="bsa-flow-summary-note";
+ h("h2","ABSCHLIESSENDE GESAMTBEURTEILUNG");
+ const overall=content("GESAMTBEWERTUNG");
+ if(overall){const p=h("p","Vorgeschlagene Gesamtbewertung: "+overall);p.className="bsa-flow-text";}
+ const closing=content("ABSCHLIESSENDE FÖRDEREINSCHÄTZUNG")||content("ABSCHLIESSENDE GESAMTBEURTEILUNG");
+ if(closing){const p=h("p",closing);p.className="bsa-flow-text";}
+ else{
+  const positiveAreas=categories.filter(x=>x.grade==="+"||x.grade==="++").map(x=>x.cat.toLocaleLowerCase("de-DE"));
+  const negativeAreas=categories.filter(x=>x.grade==="-"||x.grade==="--").map(x=>x.cat.toLocaleLowerCase("de-DE"));
+  let assessment=positiveAreas.length?"Positive Schwerpunkte zeigen sich bei "+positiveAreas.join(", ")+". ":"";
+  if(negativeAreas.length)assessment+="Besonderer Entwicklungsbedarf besteht bei "+negativeAreas.join(", ")+". ";
+  assessment+="Die ausführlichen Einschätzungen und Förderziele ergeben sich aus dem Fazit und den Entwicklungsthemen. Aus der Tabelle wird keine eigenständige Gesamtnote berechnet.";
+  h("p",assessment);
  }
  root.hidden=false;return [];
 }
