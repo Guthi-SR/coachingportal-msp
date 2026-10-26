@@ -59,7 +59,7 @@ details pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.55 ui-monosp
 </section>
 <section id="report-section" hidden>
 <h2>Zusammenfassende PDF-Coachingauswertung</h2>
-<p class="muted small no-print">Kompakter Bericht aus den vorhandenen Bogeninhalten. Die Belegstellen findest du unten auf dieser Seite.</p>
+<p class="muted small no-print">Thematisch gegliederter Vortragsbericht aus den vorhandenen Bogeninhalten. Die Belegstellen findest du unten auf dieser Seite.</p>
 <div class="actions no-print"><button id="print-report" type="button">Als PDF drucken / speichern</button><button id="copy-report" type="button" class="secondary">Zusammenfassung kopieren</button></div>
 <p id="report-action-status" class="small no-print" role="status"></p>
 <div id="report-document" class="report-document"></div>
@@ -222,76 +222,55 @@ function buildReport(associated,successes,missing,unreadable,errors,ev){
  const selected=$("referee").selectedOptions[0]?.textContent||"–";
  const referee=associated[0]?.game?name(associated[0].game):selected;
  const from=dateDE($("from").value),to=dateDE($("to").value);
- const positiveRecords=ev.filter(e=>e.kind==="positive");
- const improveRecords=ev.filter(e=>e.kind==="improve");
- const mixedRecords=ev.filter(e=>e.kind==="mixed");
- const goodDates=unique(successes.map(x=>x.game.match_date)).sort();
- const examined=associated.filter(e=>e.docs.length>0);
- const blocks=[
-  "COACHINGAUSWERTUNG – PDF-BEOBACHTUNGSBÖGEN",
-  "",
-  "Schiedsrichter: "+referee,
-  "Auswertungszeitraum: "+from+" bis "+to,
-  "Datenbasis: "+successes.length+" auslesbare PDF"+(successes.length===1?"":"s")+" aus "+goodDates.length+" Spiel"+(goodDates.length===1?"":"en")+
-  " ("+associated.length+" Spiele insgesamt im Zeitraum).",
-  "",
-  "1. ZUSAMMENFASSENDER ÜBERBLICK"
- ];
- if(!successes.length){
-  blocks.push("Für den ausgewählten Zeitraum konnten keine verwertbaren Textinhalte aus den hinterlegten PDF-Beobachtungsbögen gewonnen werden. Eine fachlich belastbare Zusammenfassung ist deshalb derzeit nicht möglich.");
- }else{
-  const starter="Die vorhandenen Coachingbögen wurden für den gewählten Zeitraum zusammengeführt.";
-  const positivePart=positiveRecords.length?
-   "Als positive Hinweise sind Textstellen zu "+reportTopicList(positiveRecords)+" auffindbar.":
-   "Eindeutig positive Hinweise konnten durch die automatische Texterkennung nicht verlässlich zugeordnet werden.";
-  const improvementPart=improveRecords.length?
-   "Verbesserungsansätze werden im Zusammenhang mit "+reportTopicList(improveRecords)+" angesprochen.":
-   "Eindeutige Verbesserungshinweise wurden durch die automatische Texterkennung nicht erkannt.";
-  blocks.push(starter+" "+positivePart+" "+improvementPart+
-   " Dies stellt die dokumentierten Aussagen der Coaches zusammen und ist keine neu vergebene Leistungsbewertung.");
- }
- blocks.push("","2. DOKUMENTIERTE STÄRKEN");
- const positives=topicSentences(positiveRecords);
- if(positives.length)blocks.push(...positives);
- else blocks.push("Aus den automatisch erkannten Formulierungen lassen sich keine sicher als positiv gekennzeichneten Aussagen auswählen. Das bedeutet nicht, dass die Bögen keine positiven Bewertungen enthalten.");
- blocks.push("","3. DOKUMENTIERTES VERBESSERUNGSPOTENZIAL");
- const improvements=topicSentences(improveRecords);
- if(improvements.length)blocks.push(...improvements);
- else blocks.push("Keine eindeutig zuordenbaren Verbesserungshinweise erkannt. Für eine vollständige fachliche Bewertung bitte die Original-PDFs prüfen.");
- if(mixedRecords.length)blocks.push("Hinweis: "+mixedRecords.length+" Textstelle(n) enthalten gleichzeitig positive und kritische Signalwörter. Sie wurden bewusst nicht einseitig als Stärke oder Schwäche eingeordnet. Diese Stellen sind unten unter „Textbelege“ einsehbar.");
- blocks.push("","4. ENTWICKLUNG IM ZEITRAUM");
- if(goodDates.length<2)blocks.push("Ein Entwicklungsverlauf kann aus nur einem auslesbaren Spiel nicht beurteilt werden. Für einen Vergleich werden mindestens zwei verschiedene Spiele mit lesbaren Bögen benötigt.");
+ const dates=unique(successes.map(x=>x.game.match_date)).sort();
+ const paragraphs=["GESAMTAUSWERTUNG DER COACHINGBÖGEN","",
+  "Schiedsrichter: "+referee,"Zeitraum: "+from+" bis "+to,
+  "Datengrundlage: "+successes.length+" auslesbare PDF-Bögen zu "+dates.length+" Spielen; "+associated.length+" Spiele im ausgewählten Zeitraum.",""];
+ const relevant=(rx,kinds)=>ev.filter(e=>rx.test(e.topic)&&(!kinds||kinds.includes(e.kind)));
+ const distinctGames=records=>unique(records.map(e=>e.game.game_key)).length;
+ const topicParagraph=(title,rx)=>{
+  const all=relevant(rx),pos=all.filter(e=>e.kind==="positive"),crit=all.filter(e=>e.kind==="improve");
+  paragraphs.push("",title);
+  if(!all.length){paragraphs.push("Zu diesem Themenbereich konnten aus den maschinenlesbaren Bögen keine eindeutig zuordenbaren Aussagen gewonnen werden. Daraus lässt sich keine Leistungsbewertung ableiten.");return;}
+  let t="In den vorliegenden Coachingbögen wird dieser Bereich bei "+distinctGames(all)+" Spiel"+(distinctGames(all)===1?"":"en")+" angesprochen. ";
+  if(pos.length)t+="Die Coaches dokumentieren hierzu positive Beobachtungen, unter anderem im Spiel vom "+dateDE(pos[0].game.match_date)+". ";
+  if(crit.length)t+="Daneben werden konkrete Ansatzpunkte für die weitere Entwicklung beschrieben, beispielsweise im Spiel vom "+dateDE(crit[0].game.match_date)+". ";
+  if(!pos.length&&!crit.length)t+="Die erkannten Passagen erlauben keine verlässliche Einordnung als Stärke oder Entwicklungsbedarf. ";
+  if(pos.length&&crit.length)t+="In der Gesamtschau ist deshalb eine differenzierte Betrachtung erforderlich: Positive Beobachtungen und kritische Hinweise stehen nebeneinander und dürfen nicht pauschal gegeneinander aufgerechnet werden.";
+  else if(pos.length)t+="Die Aussagen liefern Hinweise auf vorhandene Stärken; ihre Beständigkeit über den gesamten Zeitraum ist anhand der Originalbögen zu prüfen.";
+  else if(crit.length)t+="Für die weitere Förderung sollte der benannte Aspekt in den kommenden Spielleitungen gezielt beobachtet und mit den dokumentierten Situationen abgeglichen werden.";
+  paragraphs.push(t);
+ };
+ paragraphs.push("1. ALLGEMEINE LEISTUNGSBEURTEILUNG");
+ if(!successes.length)paragraphs.push("Für den gewählten Zeitraum konnten keine lesbaren PDF-Texte gewonnen werden. Eine fachlich belastbare Gesamtbeurteilung ist damit nicht möglich.");
+ else paragraphs.push("Für "+referee+" wurden im ausgewählten Zeitraum "+successes.length+" lesbare Coachingbögen aus "+dates.length+" Spielen zusammengeführt. Die folgende thematisch gegliederte Betrachtung berücksichtigt dokumentierte positive Beobachtungen und Entwicklungshinweise. Sie unterscheidet bewusst zwischen belegten Aussagen und Schlussfolgerungen, die ohne fachliche Prüfung nicht zuverlässig möglich sind.");
+ topicParagraph("2. SPIELLEITUNG UND REGELANWENDUNG",/Entscheidungsqualität/);
+ topicParagraph("3. PERSÖNLICHE STRAFEN UND SPIELMANAGEMENT",/Disziplinarkontrolle|Kommunikation und Auftreten/);
+ topicParagraph("4. PERSÖNLICHKEIT, AUFTRETEN UND KOMMUNIKATION",/Kommunikation und Auftreten/);
+ topicParagraph("5. STELLUNGSSPIEL UND LAUFVERMÖGEN",/Stellungsspiel und Fitness/);
+ paragraphs.push("","6. ENTWICKLUNG IM BEOBACHTUNGSZEITRAUM");
+ if(dates.length<2)paragraphs.push("Da nur ein Spiel mit auslesbarem Coachingbogen vorliegt, lässt sich kein zeitlicher Entwicklungsverlauf beurteilen.");
  else{
-  const repeated=[];
-  for(const topic of topics){
-   const records=ev.filter(e=>e.topic===topic.key),dates=unique(records.map(e=>e.game.match_date)).sort();
-   if(dates.length>=2)repeated.push(topic.key+" ("+dates.map(dateDE).join(", ")+")");
-  }
-  blocks.push("Im ausgewählten Zeitraum liegen auswertbare Bögen zu den Spielen vom "+goodDates.map(dateDE).join(", ")+" vor.");
-  if(repeated.length)blocks.push("Folgende Themen werden an mehreren Spieltagen angesprochen: "+repeated.join("; ")+".");
-  else blocks.push("Die automatische Themenanalyse hat keine mehrfach angesprochenen Bewertungsbereiche eindeutig erkannt.");
-  blocks.push("Allein aus wiederholten Erwähnungen lässt sich weder eine Verbesserung noch eine Verschlechterung ableiten. Dafür müssen die konkreten Spielszenen und die Bewertungsmaßstäbe der Coaches fachlich verglichen werden.");
+  const repeated=topics.filter(t=>distinctGames(ev.filter(e=>e.topic===t.key))>=2).map(t=>t.key);
+  paragraphs.push("Die auswertbaren Spiele fanden am "+dates.map(dateDE).join(", ")+" statt. "+(repeated.length?"Mehrfach angesprochen wurden "+repeated.join(", ")+". ":"Eine wiederholte thematische Auffälligkeit ließ sich nicht eindeutig feststellen. ")+"Eine wiederholte Erwähnung belegt für sich allein weder einen Fortschritt noch einen Rückschritt. Dafür sind die konkreten Situationen und ihre Bewertungen im zeitlichen Zusammenhang fachlich zu vergleichen.");
  }
- blocks.push("","5. GESAMTFAZIT");
- if(successes.length){
-  let statement="Auf Basis von "+successes.length+" lesbaren PDF-Bögen liegen";
-  statement+=positiveRecords.length?" dokumentierte positive Hinweise":" keine eindeutig zugeordneten positiven Textstellen";
-  statement+=improveRecords.length?" und konkrete Hinweise auf Entwicklungspotenzial vor.":" vor; eindeutige Verbesserungsansätze wurden nicht automatisch identifiziert.";
-  blocks.push(statement);
-  if(improveRecords.length)blocks.push("Für das nächste Coaching sollten insbesondere die dokumentierten Hinweise in den Bereichen "+reportTopicList(improveRecords)+" überprüft werden.");
-  blocks.push("Eine darüber hinausgehende Gesamtnote, Förderempfehlung oder Aussage über Leistungssteigerungen wird ohne eindeutige Originalbelege nicht automatisch ergänzt.");
- }else blocks.push("Mangels lesbarer PDF-Inhalte ist kein inhaltliches Gesamtfazit möglich.");
- blocks.push("","6. VOLLSTÄNDIGKEIT UND QUELLEN");
- blocks.push(examined.length+" von "+associated.length+" Spielen verfügen über mindestens einen zugeordneten PDF-Bogen; "+successes.length+" PDF-Dokumente waren textlich auswertbar.");
- if(missing.length)blocks.push("Ohne PDF-Bogen: "+missing.map(x=>dateDE(x.game.match_date)+" "+x.game.home+" – "+x.game.away).join("; ")+".");
- if(unreadable.length)blocks.push("Nicht auslesbare PDF-Bögen (möglicher Scan): "+unreadable.map(x=>dateDE(x.game.match_date)+" "+x.game.home+" – "+x.game.away).join("; ")+".");
- if(errors.length)blocks.push("Lesefehler bei: "+errors.map(x=>dateDE(x.game.match_date)+" "+x.game.home+" – "+x.game.away).join("; ")+".");
- if(successes.length)blocks.push("Ausgewertete Quellen:\n"+successes.map(x=>
-  "- "+dateDE(x.game.match_date)+" · "+x.game.home+" – "+x.game.away+
-  " · Coach: "+(x.game.coach_name||"nicht angegeben")+" · "+(x.doc.file_name||"PDF-Beobachtungsbogen")
- ).join("\n"));
- blocks.push("","Methodischer Hinweis: Die Berichtsgliederung und die thematische Einordnung beruhen auf automatischer Textsuche ohne KI-Sprachmodell. Zitierte PDF-Passagen sind Originaltext bzw. sichtbar mit „…“ gekürzt. Eine nicht erkannte Stelle bedeutet weder eine neutrale noch eine negative Bewertung. Die fachliche Kontrolle der Originalbögen bleibt notwendig.");
- return blocks.join("\n\n");
+ paragraphs.push("","7. STÄRKEN UND ENTWICKLUNGSPOTENZIAL");
+ const positives=ev.filter(e=>e.kind==="positive"),critical=ev.filter(e=>e.kind==="improve");
+ paragraphs.push((positives.length?"Positive Hinweise finden sich in den Bereichen "+reportTopicList(positives)+". ":"Eindeutig positive Formulierungen konnten nicht zuverlässig erkannt werden. ")+(critical.length?"Entwicklungshinweise betreffen "+reportTopicList(critical)+".":"Eindeutige Entwicklungshinweise wurden nicht automatisch erkannt.")+" Die Häufigkeit von Schlüsselwörtern ist dabei keine Leistungsnote.");
+ const candidates=distinctEvidence([...positives,...critical,...ev.filter(e=>e.kind==="mixed")],2);
+ if(candidates.length){
+  paragraphs.push("ZWEI AUSGEWÄHLTE ORIGINALSTELLEN");
+  candidates.forEach((e,i)=>paragraphs.push("Zitat "+(i+1)+": "+evidenceQuote(e)+"\nEinordnung: Diese Aussage dokumentiert eine Beobachtung im Themenfeld „"+e.topic+"“. Sie ist im Zusammenhang mit den übrigen Bögen zu bewerten und begründet allein keine Gesamtbewertung."));
+  if(candidates.length<2)paragraphs.push("Ein zweites hinreichend eigenständiges Originalzitat konnte nicht zuverlässig ermittelt werden.");
+ }else paragraphs.push("Zwei belastbare Originalzitate konnten nicht automatisch ausgewählt werden.");
+ paragraphs.push("","8. ABSCHLIESSENDE GESAMTBEURTEILUNG");
+ if(!successes.length)paragraphs.push("Eine abschließende fachliche Beurteilung ist ohne auslesbare Originalbögen nicht möglich.");
+ else paragraphs.push("Zusammenfassend ergibt sich für "+referee+" ein dokumentiertes Leistungsbild mit "+(positives.length?"positiven Beobachtungen":"nicht eindeutig automatisch erkannten Stärken")+(critical.length?" und benannten Entwicklungsmöglichkeiten.":".")+" Für die weitere Förderung sollten die konkret beschriebenen Spielsituationen als Ausgangspunkt dienen und in folgenden Coachings erneut aufgegriffen werden. Eine belastbare Aussage zur Leistungsentwicklung oder eine abschließende Qualitätsnote erfordert die fachliche Prüfung der vollständigen Originalbögen; sie wird hier nicht aus bloßen Schlagworttreffern abgeleitet.");
+ paragraphs.push("","QUELLEN UND VOLLSTÄNDIGKEIT");
+ paragraphs.push(successes.length+" PDF-Bögen waren lesbar. "+missing.length+" Spiele ohne PDF, "+unreadable.length+" PDF-Bögen ohne auslesbare Textebene und "+errors.length+" Lesefehler.");
+ successes.forEach(x=>paragraphs.push(dateDE(x.game.match_date)+" · "+(x.game.home||"–")+" – "+(x.game.away||"–")+" · "+(x.doc.file_name||"PDF")+" · Coach: "+(x.game.coach_name||"nicht angegeben")));
+ paragraphs.push("Methodischer Hinweis: Diese automatisch erzeugte, thematisch gegliederte Vortragsfassung verwendet eine regelbasierte Textanalyse ohne KI-Sprachmodell. Die zwei Originalstellen sind wörtlich übernommen beziehungsweise als gekürzt gekennzeichnet. Die fachliche Freigabe vor einer Präsentation bleibt erforderlich.");
+ return paragraphs.join("\n\n");
 }
 function addCell(tr,content,klass){
  const td=document.createElement("td");
