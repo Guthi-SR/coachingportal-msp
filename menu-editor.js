@@ -2,7 +2,7 @@ import{requireAdmin,sb}from"/portal-workflow.js";
 const nav=document.querySelector("#portal-main-menu");
 if(nav){
  const key="msp-menu-layout-v1";
- const groups=["portal-administration-menu","portal-templates-menu"];
+ const groups=["portal-administration-menu","portal-templates-menu","portal-json-menu"];
  const root=()=>[...nav.children].filter(x=>x.matches("a,details")&&x.id!=="menu-editor");
  const id=x=>x.matches("a")?"link:"+new URL(x.href).pathname:x.id;
  const all=()=>[...root(),...groups.flatMap(g=>[...nav.querySelectorAll("#"+g+" .person-submenu > a")])];
