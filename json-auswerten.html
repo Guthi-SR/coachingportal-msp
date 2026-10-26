@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JSON auswerten – Coachingportal MSP</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f6fa;color:#142b46;font:16px/1.5 system-ui,sans-serif}
+header{background:#142b46;color:white;padding:20px}
+main{width:100%;max-width:980px;margin:0 auto;padding:24px;min-width:0}
+.card{background:white;border:1px solid #dce5ee;border-radius:12px;padding:24px;margin:14px 0}
+h2{margin-top:0}
+a{color:#17568c}
+#json-protected-content[hidden]{display:none!important}
+@media(max-width:767px){main{padding:12px}.card{padding:16px}}
+</style>
+</head>
+<body>
+<header><h1>Coachingportal MSP</h1></header>
+<main>
+<p><a href="/">← Zur Startseite</a></p>
+<p id="json-access-status" role="status">Zugang wird geprüft …</p>
+<section id="json-protected-content" class="card" hidden>
+<h2>JSON auswerten</h2>
+<p>Hier bereiten wir die spätere Auswertung der JSON-Daten aus den Beobachtungsbögen vor.</p>
+<p>Noch keine Auswertungsregeln festgelegt. Sobald du mir eine Beispieldatei gibst, entscheiden wir gemeinsam, welche Informationen und Kennzahlen daraus gewonnen werden können.</p>
+<p><strong>Status:</strong> Funktion in Vorbereitung.</p>
+<p><a href="/json-ansehen.html">JSON ansehen</a></p>
+</section>
+</main>
+<script type="module">
+import {requireAdmin} from "/portal-workflow.js";
+const status=document.getElementById("json-access-status");
+try{
+ await requireAdmin();
+ status.hidden=true;
+ document.getElementById("json-protected-content").hidden=false;
+}catch(error){
+ status.textContent=error?.message||"Zugriff nicht möglich.";
+}
+</script>
+<script type="module" src="/portal-ui.js"></script>
+</body>
+</html>
