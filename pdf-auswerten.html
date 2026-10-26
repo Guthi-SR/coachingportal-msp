@@ -84,7 +84,7 @@ details pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.55 ui-monosp
 <button type="button" id="clear" class="secondary">Auswertung zurücksetzen</button>
 </div>
 <p id="status" class="status" role="status" aria-live="polite"></p>
-<div class="notice small">Die PDF-Bögen werden im Browser ausgelesen und thematisch vorsortiert. Der fertige Prompt samt Originaltexten wird nur hier angezeigt. Erst durch das Einfügen in ChatGPT übergibst du die Inhalte. Kein API-Key erforderlich.</div>
+<div class="notice small">Die PDF-Bögen werden im Browser ausgelesen und thematisch vorsortiert. Bei fehlender Textebene startet automatisch eine OCR-Erkennung (Deutsch/Englisch) direkt im Browser. Das PDF wird dabei nicht an einen zusätzlichen Auswertungsserver übertragen; Programm- und Sprachdateien kommen beim ersten Mal vom CDN. OCR-Ergebnisse bitte anhand der Original-PDF prüfen, besonders Namen, Spielminuten und Bewertungen. Erst durch Einfügen in ChatGPT gibst du den Text weiter. Kein API-Key erforderlich.</div>
 </section>
 <section id="coverage" class="no-print" hidden>
 <h3>Gefundene Spiele und PDF-Bögen</h3>
@@ -163,21 +163,97 @@ async function getPdfLib(){
  lib.GlobalWorkerOptions.workerSrc="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
  return lib;
 }
-async function readPdf(pdfjs,doc){
+// Nur die OCR-Bibliothek und Sprachdateien kommen vom CDN; die PDF verbleibt im Browser.
+const MIN_TEXT_CHARS=90;
+let ocrLibraryPromise=null,ocrWorker=null,ocrStatusContext="";
+const meaningfulChars=value=>String(value||"").replace(/\s/g,"").length;
+async function getOcrLibrary(){
+ if(window.Tesseract?.createWorker)return window.Tesseract;
+ if(!ocrLibraryPromise){
+  ocrLibraryPromise=new Promise((resolve,reject)=>{
+   const script=document.createElement("script");
+   script.src="https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js";
+   script.crossOrigin="anonymous";
+   script.onload=()=>window.Tesseract?.createWorker
+    ?resolve(window.Tesseract):reject(Error("Die OCR-Bibliothek konnte nicht gestartet werden."));
+   script.onerror=()=>reject(Error("Die OCR-Bibliothek konnte nicht geladen werden. Internetverbindung und Browser-Sperren prüfen."));
+   document.head.append(script);
+  }).catch(error=>{ocrLibraryPromise=null;throw error;});
+ }
+ return ocrLibraryPromise;
+}
+async function getOcrWorker(progress){
+ if(ocrWorker)return ocrWorker;
+ const tesseract=await getOcrLibrary();
+ setStatus(ocrStatusContext+" · OCR-Sprachmodelle werden geladen …");
+ ocrWorker=await tesseract.createWorker(["deu","eng"],1,{
+  logger:event=>{
+   if(event.status==="recognizing text"&&typeof event.progress==="number")
+    progress?.(Math.round(event.progress*100));
+  }
+ });
+ return ocrWorker;
+}
+async function releaseOcrWorker(){
+ const worker=ocrWorker;ocrWorker=null;
+ if(worker){try{await worker.terminate();}catch(error){console.warn("OCR-Worker beenden:",error);}}
+}
+async function readPdf(pdfjs,doc,onStatus){
  const blob=await viewPdfBlob(userId,doc.document_id);
  if(!(blob instanceof Blob))throw Error("PDF-Datei konnte nicht geladen werden.");
  const pdf=await pdfjs.getDocument({data:new Uint8Array(await blob.arrayBuffer())}).promise;
  const pages=[];
  try{
   if(pdf.numPages>40)throw Error("PDF mit mehr als 40 Seiten – bitte einzeln prüfen.");
+  // Standard-PDFs unverändert und schnell über die bestehende Textebene lesen.
   for(let i=1;i<=pdf.numPages;i++){
    const page=await pdf.getPage(i);
    const text=await page.getTextContent();
-   pages.push({page:i,text:textParts(text).join("\n")});
+   pages.push({page:i,text:textParts(text).join("\n"),ocr:false,ocrAttempted:false});
    page.cleanup();
   }
+  // Leere Seiten in Misch-PDFs werden ebenfalls erkannt.
+  const missing=pages.filter(page=>meaningfulChars(page.text)<MIN_TEXT_CHARS);
+  if(!missing.length)return pages;
+  ocrStatusContext="Texterkennung: "+(doc.file_name||"PDF");
+  onStatus?.(ocrStatusContext+" · OCR startet für "+missing.length+" von "+pages.length+" Seiten …");
+  const worker=await getOcrWorker(progress=>{
+   onStatus?.(ocrStatusContext+" · OCR läuft ("+progress+" %) …");
+  });
+  for(const item of missing){
+   item.ocrAttempted=true;
+   let canvas=null,page=null;
+   try{
+    onStatus?.(ocrStatusContext+" · OCR Seite "+item.page+" von "+pages.length+" …");
+    page=await pdf.getPage(item.page);
+    const dimensions=page.getViewport({scale:1});
+    const maxSide=Math.max(dimensions.width,dimensions.height);
+    // Ca. 200 DPI, maximal 4 Megapixel pro Seite.
+    const scale=Math.min(2.8,2400/maxSide,Math.sqrt(4000000/(dimensions.width*dimensions.height)));
+    const viewport=page.getViewport({scale});
+    canvas=document.createElement("canvas");
+    canvas.width=Math.max(1,Math.ceil(viewport.width));
+    canvas.height=Math.max(1,Math.ceil(viewport.height));
+    const context=canvas.getContext("2d",{alpha:false});
+    if(!context)throw Error("Canvas ist in diesem Browser nicht verfügbar.");
+    await page.render({canvasContext:context,viewport,background:"rgb(255,255,255)"}).promise;
+    const result=await worker.recognize(canvas);
+    const found=String(result?.data?.text||"").trim();
+    if(meaningfulChars(found)>meaningfulChars(item.text)){
+     item.text=found;
+     item.ocr=true;
+     item.ocrConfidence=Number(result?.data?.confidence)||null;
+    }
+   }catch(error){
+    item.ocrError=error?.message||String(error);
+    console.warn("OCR Seite "+item.page+":",error);
+   }finally{
+    if(canvas){canvas.width=0;canvas.height=0;}
+    page?.cleanup();
+   }
+  }
+  return pages;
  }finally{await pdf.destroy();}
- return pages;
 }
 function sentences(page){
  const cleaned=page.text.replace(/\s*\n\s*/g," ").replace(/\s+/g," ").trim();
