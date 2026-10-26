@@ -599,8 +599,53 @@ $("render-final").onclick=()=>{
   renderFinished(value);$("save-final").disabled=false;$("print-final").disabled=false;$("return-status").textContent="Ausführlicher Sichtungsbogen und Kurzfassung erstellt. Beide Texte werden beim Schiedsrichter gespeichert; die ausführliche PDF bleibt unverändert.";
  }catch(e){$("final-preview").hidden=true;$("short-section").hidden=true;shortText="";$("save-final").disabled=true;$("print-final").disabled=true;$("return-status").textContent=e.message;}
 };
-function createSummaryPdf(){const root=$("final-preview");if(root.hidden||!root.textContent.trim())throw Error("Bitte zuerst den Sichtungsbogen erstellen.");const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});const width=176,top=18,bottom=278;let y=top;const write=(value,size=10,bold=false,gap=3)=>{pdf.setFont("helvetica",bold?"bold":"normal");pdf.setFontSize(size);const lines=pdf.splitTextToSize(String(value||""),width);const step=size*0.44;for(const line of lines){if(y+step>bottom){pdf.addPage();y=top;}pdf.text(line,17,y);y+=step;}y+=gap;};for(const node of root.querySelectorAll("h1,h2,h3,p,table")){if(node.tagName==="TABLE"){for(const row of node.querySelectorAll("tr"))write([...row.querySelectorAll("th,td")].map(c=>c.textContent.trim()).join("  |  "),9,false,1);continue;}write(node.textContent,node.tagName==="H1"?15:node.tagName==="H2"?12:node.tagName==="H3"?11:10,/^H[123]$/.test(node.tagName),node.tagName==="P"?3:5);}return pdf.output("blob");}
-$("save-final").onclick=async()=>{const btn=$("save-final"),status=$("return-status");let path=null;try{const value=$("return-input").value.trim();if(!value||$("final-preview").hidden)throw Error("Bitte zuerst den vollständigen Sichtungsbogen erstellen.");const person=$("referee").value;if(!person)throw Error("Bitte zuerst einen Schiedsrichter auswählen.");const from=$("from").value,to=$("to").value;if(!from||!to||from>to)throw Error("Bitte einen gültigen Beobachtungszeitraum auswählen.");btn.disabled=true;status.textContent="Text und PDF werden gespeichert …";const blob=createSummaryPdf();const id=crypto.randomUUID();path=userId+"/"+id+".pdf";const uploaded=await sb.storage.from("portal-coaching-summaries").upload(path,blob,{contentType:"application/pdf",upsert:false});if(uploaded.error)throw uploaded.error;const {error}=await sb.from("portal_coaching_summaries").insert({id,owner_id:userId,referee_id:person,referee_name:$("referee").selectedOptions[0]?.textContent||person,period_from:from,period_to:to,game_count:getMatches().length,report_text:value,pdf_path:path});if(error)throw error;path=null;status.textContent="Text und PDF dauerhaft beim Schiedsrichter gespeichert."; }catch(e){if(path)await sb.storage.from("portal-coaching-summaries").remove([path]);status.textContent="Speichern fehlgeschlagen: "+(e.message||e);}finally{btn.disabled=false;}};
+function createSummaryPdf(rootId="final-preview"){const root=$(rootId);if(!root||!root.textContent.trim())throw Error("Bitte zuerst den Sichtungsbogen erstellen.");const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});const width=176,top=18,bottom=278;let y=top;const write=(value,size=10,bold=false,gap=3)=>{pdf.setFont("helvetica",bold?"bold":"normal");pdf.setFontSize(size);const lines=pdf.splitTextToSize(String(value||""),width);const step=size*0.44;for(const line of lines){if(y+step>bottom){pdf.addPage();y=top;}pdf.text(line,17,y);y+=step;}y+=gap;};for(const node of root.querySelectorAll("h1,h2,h3,p,table")){if(node.tagName==="TABLE"){for(const row of node.querySelectorAll("tr"))write([...row.querySelectorAll("th,td")].map(c=>c.textContent.trim()).join("  |  "),9,false,1);continue;}write(node.textContent,node.tagName==="H1"?15:node.tagName==="H2"?12:node.tagName==="H3"?11:10,/^H[123]$/.test(node.tagName),node.tagName==="P"?3:5);}return pdf.output("blob");}
+$("save-final").onclick=async()=>{
+ const btn=$("save-final"),status=$("return-status");
+ const uploadedPaths=[];
+ try{
+  const value=$("return-input").value.trim();
+  if(!value||$("final-preview").hidden)throw Error("Bitte zuerst den vollständigen Sichtungsbogen erstellen.");
+  if(!shortText||$("short-section").hidden)throw Error("Die Kurzfassung fehlt. Bitte erneut auf „Sichtungsbogen erstellen“ klicken.");
+  const person=$("referee").value;
+  if(!person)throw Error("Bitte zuerst einen Schiedsrichter auswählen.");
+  const from=$("from").value,to=$("to").value;
+  if(!from||!to||from>to)throw Error("Bitte einen gültigen Beobachtungszeitraum auswählen.");
+  const fullText=value.split(/(?:^|\r?\n)KURZFASSUNG DES SICHTUNGSBOGENS[ \t]*(?:\r?\n|$)/i)[0].trim();
+  if(!fullText)throw Error("Der ausführliche Sichtungsbogen fehlt.");
+  // Beide Fassungen erhalten eine eigene Zeile in der Datenbank und eine eigene PDF-Datei.
+  const docs=[
+   {id:crypto.randomUUID(),content:fullText,blob:createSummaryPdf("final-preview")},
+   {id:crypto.randomUUID(),content:shortText,blob:createSummaryPdf("short-preview")}
+  ];
+  btn.disabled=true;
+  status.textContent="Beide Sichtungsbögen mit Text und eigener PDF werden gespeichert …";
+  for(const doc of docs){
+   doc.path=userId+"/"+doc.id+".pdf";
+   const {error}=await sb.storage.from("portal-coaching-summaries").upload(doc.path,doc.blob,{contentType:"application/pdf",upsert:false});
+   if(error)throw error;
+   uploadedPaths.push(doc.path);
+  }
+  // Ein gemeinsamer INSERT schreibt beide Datensätze innerhalb einer Datenbanktransaktion.
+  const rows=docs.map(doc=>({
+   id:doc.id,owner_id:userId,referee_id:person,
+   referee_name:$("referee").selectedOptions[0]?.textContent||person,
+   period_from:from,period_to:to,game_count:getMatches().length,
+   report_text:doc.content,pdf_path:doc.path
+  }));
+  const {error}=await sb.from("portal_coaching_summaries").insert(rows);
+  if(error)throw error;
+  uploadedPaths.length=0;
+  status.textContent="Beide Dokumente separat beim Schiedsrichter gespeichert: Gesamt-Sichtungsbogen und Kurzfassung, jeweils mit eigenem Text und PDF.";
+ }catch(e){
+  let cleanupError=null;
+  if(uploadedPaths.length){
+   const {error}=await sb.storage.from("portal-coaching-summaries").remove(uploadedPaths);
+   cleanupError=error;
+  }
+  status.textContent="Speichern fehlgeschlagen: "+(e?.message||e)+(cleanupError?" (Bereinigung der PDFs nicht vollständig: "+cleanupError.message+")":"");
+ }finally{btn.disabled=false;}
+};
 $("print-final").onclick=()=>{if($("final-preview").hidden)return;document.body.classList.add("print-final");window.print();};
 $("copy-short").onclick=async()=>{if(!shortText)return;try{await navigator.clipboard.writeText(shortText);$("short-status").textContent="Kurzfassung kopiert.";}catch(e){$("short-status").textContent="Kopieren nicht möglich: "+e.message;}};
 $("print-short").onclick=()=>{if($("short-section").hidden)return;document.body.classList.add("print-short");window.print();};
