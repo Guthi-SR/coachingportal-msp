@@ -494,8 +494,8 @@ function renderFinished(text){
  return overflows;
 }
 $("render-final").onclick=()=>{
- try{const value=$("return-input").value.trim();if(value.length<100)throw Error("Bitte zuerst den vollständigen ChatGPT-Sichtungsbogen einfügen.");
- const overflows=renderFinished(value);$("print-final").disabled=overflows.length>0;$("return-status").textContent=overflows.length?"Achtung: "+overflows.length+" Textfelder überschreiten den verfügbaren Platz auf den drei Originalseiten. PDF-Ausgabe gesperrt, damit keine Inhalte abgeschnitten werden. Bitte Texte kürzen.":"Dreiseitige A4-Vorschau erstellt. Bitte Rubriken und Bewertungen prüfen, dann als PDF speichern.";
+ try{const value=$("return-input").value.trim();if(!value)throw Error("Bitte zuerst den ChatGPT-Sichtungsbogen einfügen.");
+ const overflows=renderFinished(value);$("print-final").disabled=false;$("return-status").textContent=overflows.length?"Keine Zeichenbegrenzung. Hinweis: "+overflows.length+" Textfelder passen nicht vollständig auf die festen drei Seiten und können im PDF abgeschnitten werden. Die PDF-Ausgabe bleibt freigegeben.":"Dreiseitige A4-Vorschau erstellt. Bitte Rubriken und Bewertungen prüfen, dann als PDF speichern.";
  }catch(e){$("final-preview").hidden=true;$("print-final").disabled=true;$("return-status").textContent=e.message;}
 };
 $("print-final").onclick=()=>{if($("final-preview").hidden)return;document.body.classList.add("print-final");window.print();};
