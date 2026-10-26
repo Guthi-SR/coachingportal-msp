@@ -124,7 +124,7 @@
 </details>
 <details class="game-filter-details"><summary>Filter anzeigen / einklappen</summary><div class="game-filters" role="group" aria-label="Spiele filtern"><button type="button" class="active" data-game-filter="all" aria-pressed="true">Alle Spiele</button><button type="button" data-game-filter="future" aria-pressed="false">Zukünftige Spiele</button><button type="button" data-game-filter="without" aria-pressed="false">Spiele ohne Bogen</button></div><div class="game-sort"><label for="referee-filter">Schiedsrichter filtern:</label><select id="referee-filter"><option value="">Alle Schiedsrichter</option></select><label for="coach-filter">Coach / Beobachter filtern:</label><select id="coach-filter"><option value="">Alle Coaches / Beobachter</option></select><label for="game-sort-field">Sortieren nach:</label><select id="game-sort-field"><option value="date">Datum</option><option value="referee">Schiedsrichter</option><option value="coach">Coach / Beobachter</option></select><button type="button" id="game-sort-direction" aria-label="Sortierreihenfolge ändern">Neueste zuerst ↓</button></div></details><p id="filter-count" class="small"></p>
 <p class="mobile-list-hint">Tippe bei einem Spiel auf „Details &amp; Bearbeiten“, um weitere Angaben und Aktionen zu öffnen.</p><div id="mobile-game-list" class="mobile-game-list" aria-label="Spiele als Karten"></div>
-<div class="scroll"><table><thead><tr><th>Datum</th><th>Uhrzeit</th><th>Spielkennung</th><th>Heim</th><th>Gast</th><th>Liga</th><th>Einsatzart</th><th>Spielstätte</th><th>Kilometer</th><th>Einteilung</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Bogen</th><th>Eingegangen</th><th>Zurück an Beobachter</th><th>Geprüft</th><th>Versand</th><th>Aktion</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div class="scroll"><table><thead><tr><th>Datum</th><th>Uhrzeit</th><th>Spielkennung</th><th>Heim</th><th>Gast</th><th>Liga</th><th>Einsatzart</th><th>Spielstätte</th><th>Kilometer</th><th>Einteilung</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Bogen</th><th>Bearbeitung</th><th>Versand</th><th>Aktion</th></tr></thead><tbody id="rows"></tbody></table></div>
 <p><a href="/spiele-anlegen.html">Neues Spiel anlegen</a> · <a href="/beobachtungsboegen.html">Alle Beobachtungsbögen</a></p>
 <p class="small">Automatische E-Mails benötigen die serverseitige Absender-Konfiguration. Status und Zuordnungen werden zusätzlich im Portal gespeichert. Bereits vorhandene lokale Datensätze bleiben erhalten.</p></section></main></div>
 <dialog id="game-edit-dialog" aria-labelledby="game-edit-heading">
@@ -556,7 +556,7 @@ $("return-observer-form").addEventListener("submit",async event=>{
  const note=$("return-observer-note").value.trim();if(note.length<3){$("return-observer-error").textContent="Bitte gib eine kurze, konkrete Notiz ein.";return}
  const button=$("save-return-observer");button.disabled=true;$("return-observer-error").textContent="Rückgabe wird gespeichert …";
  try{
-  const patch={returned_to_observer_at:new Date().toISOString(),return_note:note};
+  const patch={review_status:"zurueck_beobachter",returned_to_observer_at:new Date().toISOString(),return_note:note,checked_at:null};
   if(!g.received_at)patch.received_at=new Date().toISOString();
   Object.assign(g,await updateGame(userId,g.game_key,patch));
   $("return-observer-dialog").close();render();status.textContent="Bogen zur Überarbeitung zurückgegeben. Die Notiz wurde gespeichert.";
@@ -629,6 +629,44 @@ function venueCell(g){
   status.className="venue-status venue-status-"+result.kind;
  });
  return box;
+}
+
+const reviewOptions=[
+ ["nicht_eingegangen","Bogen nicht eingegangen"],
+ ["eingegangen","Bogen eingegangen"],
+ ["in_bearbeitung","In Bearbeitung"],
+ ["geprueft","Geprüft"],
+ ["zurueck_beobachter","Zurück zum Beobachter"]
+];
+function reviewState(g){
+ if(reviewOptions.some(([value])=>value===g.review_status))return g.review_status;
+ if(g.checked_at)return "geprueft";
+ if(g.returned_to_observer_at)return "zurueck_beobachter";
+ if(g.received_at||g.pdf_id||docs.some(d=>d.game_key===g.game_key))return "eingegangen";
+ return "nicht_eingegangen";
+}
+function reviewLabel(g){return reviewOptions.find(([value])=>value===reviewState(g))?.[1]||"Bogen nicht eingegangen"}
+async function saveReviewState(g,next){
+ if(next===reviewState(g))return;
+ if(next==="zurueck_beobachter"){openReturnObserver(g);return}
+ if(next==="nicht_eingegangen"&&hasBogen(g)&&!confirm("Für dieses Spiel ist bereits ein PDF-Bogen hinterlegt. Den Bearbeitungsstatus trotzdem auf „Bogen nicht eingegangen“ setzen? Die PDF-Datei bleibt erhalten.")){render();return}
+ const now=new Date().toISOString();
+ const patch={
+  review_status:next,
+  received_at:next==="nicht_eingegangen"?null:(g.received_at||now),
+  checked_at:next==="geprueft"?(g.checked_at||now):null,
+  returned_to_observer_at:null,
+  return_note:null
+ };
+ try{Object.assign(g,await updateGame(userId,g.game_key,patch));render();status.textContent="Bearbeitungsstatus gespeichert: "+reviewLabel(g)+"."}
+ catch(error){render();status.textContent="Bearbeitungsstatus konnte nicht gespeichert werden: "+error.message}
+}
+function reviewSelect(g){
+ const select=document.createElement("select");select.setAttribute("aria-label","Bearbeitung für Spiel "+g.game_key);
+ for(const [value,label] of reviewOptions)select.add(new Option(label,value));
+ select.value=reviewState(g);
+ select.addEventListener("change",()=>{const next=select.value;if(next==="zurueck_beobachter"){select.value=reviewState(g);openReturnObserver(g)}else void saveReviewState(g,next)});
+ return select;
 }
 function hasBogen(g){return !!(g.pdf_id||docs.some(d=>d.game_key===g.game_key))}
 function gamePersonName(game,kind){
@@ -706,7 +744,7 @@ function mobileGameCard(g){
  const top=mobileElement("div","mobile-card-top");
  const date=dateDE(g.match_date)+(g.kickoff?" · "+g.kickoff+" Uhr":"");
  top.append(mobileElement("span","mobile-card-date",date));
- const state=g.is_test?"Testspiel":color==="red"?"Bogen überfällig":color==="yellow"?"Spiel demnächst":color==="green"?"Bogen versendet":g.checked_at?"Bogen geprüft":g.received_at?"Bogen eingegangen":"Offen";
+ const state=g.is_test?"Testspiel":color==="red"?"Bogen überfällig":color==="yellow"?"Spiel demnächst":color==="green"?"Bogen versendet":reviewLabel(g);
  top.append(mobileElement("span","mobile-card-pill",state));
  const teams=mobileElement("div","mobile-card-teams");
  teams.append(mobileElement("div","",g.home||"Heimmannschaft offen"),mobileElement("span","mobile-vs","gegen"),mobileElement("div","",g.away||"Gastmannschaft offen"));
@@ -756,18 +794,13 @@ function mobileGameCard(g){
   sel.addEventListener("change",()=>assignment(g,type,sel.value));
   holder.append(label,sel);inner.append(holder);
  }
- const checks=mobileElement("div","mobile-checks");
- for(const [field,label] of [["received_at","Bogen eingegangen"]]){
-  const checkLabel=document.createElement("label"),input=document.createElement("input");input.type="checkbox";input.checked=!!g[field];
-  if(field==="checked_at"&&!g.received_at)input.disabled=true;
-  input.setAttribute("aria-label",label+" für "+g.game_key);
-  input.addEventListener("change",()=>change(g,field==="received_at"?{received_at:input.checked?new Date().toISOString():null,...(!input.checked?{checked_at:null}:{})}:{checked_at:input.checked?new Date().toISOString():null}));
-  checkLabel.append(input,document.createTextNode(label));checks.append(checkLabel);
+ const reviewBox=mobileElement("div","mobile-detail-field");
+ reviewBox.append(mobileElement("label","","Bearbeitung"),reviewSelect(g));
+ if(reviewState(g)==="zurueck_beobachter"){
+  if(g.return_note)reviewBox.append(mobileElement("div","return-observer-note",g.return_note));
+  const editNote=mobileElement("button","return-observer-button","Rückgabe / Notiz bearbeiten");editNote.type="button";editNote.onclick=()=>openReturnObserver(g);reviewBox.append(editNote);
  }
- const reviewStatus=mobileElement("div","small",g.checked_at?"✓ Bogen geprüft":"Bogen in Bearbeitung");checks.append(reviewStatus);inner.append(checks);
- const returnBox=mobileElement("div","mobile-detail-field");returnBox.append(mobileElement("small","","Rückgabe an Beobachter"));
- if(g.returned_to_observer_at){returnBox.append(mobileElement("strong","return-observer-state","↩ Zur Überarbeitung zurückgegeben"));if(g.return_note)returnBox.append(mobileElement("div","return-observer-note",g.return_note))}
- const returnBtn=mobileElement("button","return-observer-button",g.checked_at?"✓ Bogen geprüft":g.returned_to_observer_at?"Rückgabe / Notiz bearbeiten":"Bogen zurück an Beobachter");returnBtn.type="button";returnBtn.disabled=!!g.checked_at;returnBtn.title=g.checked_at?"Der Bogen wurde geprüft und freigegeben. Keine Rückgabe erforderlich.":"";returnBtn.onclick=()=>{if(!g.checked_at)openReturnObserver(g)};returnBox.append(returnBtn);inner.append(returnBox);
+ inner.append(reviewBox);
  const actions=mobileElement("div","mobile-actions");
  if(!g.is_test){
   const manual=mobileElement("button","",g.sent_manual_at?"Versandnotiz ändern":"Bereits versendet");
@@ -904,16 +937,12 @@ function render(){
   const pdfCell=document.createElement("td");
   if(doc){const a=document.createElement("a");a.href="/beobachtungsbogen-ansehen.html?pdf="+encodeURIComponent(doc.document_id);a.target="_blank";a.rel="noopener noreferrer";a.textContent="📘";a.style.fontSize="24px";a.title="Bogen separat öffnen";pdfCell.append(a)}
   else pdfCell.textContent="–";row.append(pdfCell);
-  for(const [field,prop] of [["received_at","Bogen eingegangen"]]){
-   const td=document.createElement("td"),input=document.createElement("input");input.type="checkbox";input.checked=!!g[field];input.title=prop;input.setAttribute("aria-label",prop+" für "+g.game_key);
-   if(field==="checked_at"&&!g.received_at)input.disabled=true;
-   input.addEventListener("change",()=>change(g,field==="received_at"?{received_at:input.checked?new Date().toISOString():null,...(!input.checked?{checked_at:null}:{})}:{checked_at:input.checked?new Date().toISOString():null}));
-   td.append(input);row.append(td)
+  const reviewCell=document.createElement("td");reviewCell.append(reviewSelect(g));
+  if(reviewState(g)==="zurueck_beobachter"){
+   if(g.return_note){const note=document.createElement("div");note.className="return-observer-note";note.textContent=g.return_note;reviewCell.append(note)}
+   const editNote=document.createElement("button");editNote.type="button";editNote.textContent="Notiz bearbeiten";editNote.onclick=()=>openReturnObserver(g);reviewCell.append(editNote)
   }
-  const returnCell=document.createElement("td");
-  if(g.returned_to_observer_at){const returned=document.createElement("span");returned.className="return-observer-state";returned.textContent="↩ Zur Überarbeitung zurückgegeben";returnCell.append(returned);if(g.return_note){const note=document.createElement("div");note.className="return-observer-note";note.textContent=g.return_note;returnCell.append(note)}}
-  const returnButton=document.createElement("button");returnButton.type="button";returnButton.className="return-observer-button";returnButton.textContent=g.checked_at?"✓ Bogen geprüft":g.returned_to_observer_at?"Rückgabe / Notiz bearbeiten":"Bogen zurück an Beobachter";returnButton.disabled=!!g.checked_at;returnButton.title=g.checked_at?"Der Bogen wurde geprüft und freigegeben. Keine Rückgabe erforderlich.":"";returnButton.addEventListener("click",()=>{if(!g.checked_at)openReturnObserver(g)});returnCell.append(returnButton);row.append(returnCell);
-  const checkedCell=document.createElement("td");checkedCell.textContent=g.checked_at?"✓ Geprüft":"In Bearbeitung";checkedCell.className="small";row.append(checkedCell);
+  row.append(reviewCell);
   const sendCell=document.createElement("td");const sent=!!(g.sent_at||g.sent_manual_at);
   const label=document.createElement("div");label.textContent=g.is_test?"Testspiel – Test-E-Mail möglich":sent?"✓ Versendet":g.received_at?"Bogen eingegangen":"Noch nicht versendet";label.className="small";sendCell.append(label);
   const manual=document.createElement("button");manual.type="button";manual.textContent=g.sent_manual_at?"Versandnotiz ändern":"Bereits versendet";manual.onclick=()=>{
