@@ -86,6 +86,8 @@ const topics=[
 ];
 const positive=/\b(sehr gut|hervorragend|souver[aä]n|sicher(?:e|er|es|en)?|positiv|gelungen|[uü]berzeugend|exzellent|stark(?:e|er|es|en)?|lobenswert|vorbildlich|korrekt|konsequent|gute leistung|[uü]berdurchschnittlich)\b/i;
 const improve=/\b(verbesser\w*|optimier\w*|k[uü]nftig|sollte|sollten|fehlt\w*|fehlend\w*|unsicher\w*|kritisch\w*|schw[aä]ch\w*|nicht optimal|zu sp[aä]t|unzureichend|ausbauf[aä]hig|verpasst|defizit\w*|vermeidbar|empfehl\w*)\b/i;
+const negatedPositive=/\b(?:nicht|kaum|wenig|ohne)\s+(?:\w+\s+){0,2}(?:sicher\w*|gut|korrekt|konsequent|souver[aä]n\w*|positiv|gelungen)\b/i;
+const noImprovement=/\b(?:keine?|ohne)\s+(?:wirklich\s+)?(?:verbesser\w*|optimier\w*|defizit\w*|schw[aä]ch\w*)\b/i;
 const norm=x=>String(x||"").trim().toLocaleLowerCase("de-DE");
 const name=(g)=>String(g.referee_name||g.referee_id||"Unbekannt");
 const displayGame=g=>dateDE(g.match_date)+" · "+(g.home||"–")+" – "+(g.away||"–");
@@ -159,7 +161,9 @@ function evidenceFor(results){
   for(const sentence of sentences(p)){
    const matched=topics.filter(t=>t.rx.test(sentence));
    if(!matched.length)continue;
-   const good=positive.test(sentence),next=improve.test(sentence);
+   const negated=negatedPositive.test(sentence);
+   const good=positive.test(sentence)&&!negated;
+   const next=(improve.test(sentence)&&!noImprovement.test(sentence))||negated;
    for(const t of matched){
     const kind=good&&!next?"positive":next&&!good?"improve":good&&next?"mixed":"general";
     evidence.push({topic:t.key,kind,text:sentence,game:r.game,page:p.page,doc:r.doc});
