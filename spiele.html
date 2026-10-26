@@ -124,7 +124,7 @@
 </details>
 <details class="game-filter-details"><summary>Filter anzeigen / einklappen</summary><div class="game-filters" role="group" aria-label="Spiele filtern"><button type="button" class="active" data-game-filter="all" aria-pressed="true">Alle Spiele</button><button type="button" data-game-filter="future" aria-pressed="false">Zukünftige Spiele</button><button type="button" data-game-filter="without" aria-pressed="false">Spiele ohne Bogen</button></div><div class="game-sort"><label for="referee-filter">Schiedsrichter filtern:</label><select id="referee-filter"><option value="">Alle Schiedsrichter</option></select><label for="coach-filter">Coach / Beobachter filtern:</label><select id="coach-filter"><option value="">Alle Coaches / Beobachter</option></select><label for="game-sort-field">Sortieren nach:</label><select id="game-sort-field"><option value="date">Datum</option><option value="referee">Schiedsrichter</option><option value="coach">Coach / Beobachter</option></select><button type="button" id="game-sort-direction" aria-label="Sortierreihenfolge ändern">Neueste zuerst ↓</button></div></details><p id="filter-count" class="small"></p>
 <p class="mobile-list-hint">Tippe bei einem Spiel auf „Details &amp; Bearbeiten“, um weitere Angaben und Aktionen zu öffnen.</p><div id="mobile-game-list" class="mobile-game-list" aria-label="Spiele als Karten"></div>
-<div class="scroll"><table><thead><tr><th>Datum</th><th>Uhrzeit</th><th>Spielkennung</th><th>Heim</th><th>Gast</th><th>Liga</th><th>Einsatzart</th><th>Spielstätte</th><th>Kilometer</th><th>Einteilung</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Bogen</th><th>Bearbeitung</th><th>Versand</th><th>Aktion</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div class="scroll"><table><thead><tr><th>Datum</th><th>Uhrzeit</th><th>Spielkennung</th><th>Heim</th><th>Gast</th><th>Liga</th><th>Einsatzart</th><th>Spielstätte</th><th>Kilometer</th><th>Einteilung</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Bogen</th><th>JSON</th><th>Bearbeitung</th><th>Versand</th><th>Aktion</th></tr></thead><tbody id="rows"></tbody></table></div>
 <p><a href="/spiele-anlegen.html">Neues Spiel anlegen</a> · <a href="/beobachtungsboegen.html">Alle Beobachtungsbögen</a></p>
 <p class="small">Automatische E-Mails benötigen die serverseitige Absender-Konfiguration. Status und Zuordnungen werden zusätzlich im Portal gespeichert. Bereits vorhandene lokale Datensätze bleiben erhalten.</p></section></main></div>
 <dialog id="game-edit-dialog" aria-labelledby="game-edit-heading">
@@ -174,7 +174,7 @@
 <label id="test-confirm-wrap" hidden style="display:flex;gap:10px;align-items:flex-start"><input id="test-confirm" type="checkbox" style="width:19px;height:19px;flex:none"> Ich bestätige den ausdrücklich gewünschten Versand dieser TEST-E-Mail an die angezeigte Empfängeradresse.</label><p id="mail-error" role="status"></p><div class="actions"><button type="button" id="cancel-mail">Abbrechen</button><button type="submit" id="mail-submit" class="primary">E-Mail jetzt senden</button></div></form></dialog>
 <script type="module">import {cloudPeople} from "/portal-people.js";
 import{sb,requirePermission,localGames,localPeople,syncGames,syncObservations,associateUniqueObservations,updateGame,updatePlanningStatus,gameColor,dateDE,reminderBody,sendBody,sendMail}from"/portal-workflow.js";
-const $=id=>document.getElementById(id),status=$("status");let userId="",userEmail="",games=[],docs=[],refs=[],coaches=[],selected=null,returningGame=null,mailKind="",gameFilter="all",refereeFilter="",coachFilter="",sortKey="date",sortDir="desc",routeAttempts=[];
+const $=id=>document.getElementById(id),status=$("status");let userId="",userEmail="",games=[],docs=[],jsonGameKeys=null,refs=[],coaches=[],selected=null,returningGame=null,mailKind="",gameFilter="all",refereeFilter="",coachFilter="",sortKey="date",sortDir="desc",routeAttempts=[];
 const currentIso=()=>{const t=new Date();return [t.getFullYear(),String(t.getMonth()+1).padStart(2,"0"),String(t.getDate()).padStart(2,"0")].join("-")};
 function person(people,id){return people.find(x=>x.id===id||x.name===id)}
 function fullName(p){return p?.name||[p?.first,p?.last].filter(Boolean).join(" ")||""}
@@ -714,6 +714,31 @@ async function deleteGame(g,del){
 }
 
 
+
+function jsonStatusControl(gameKey){
+ const wrapper=document.createElement("span");
+ wrapper.style.cssText="display:inline-flex;align-items:center;gap:6px;white-space:nowrap";
+ const box=document.createElement("input");
+ box.type="checkbox";box.disabled=true;
+ box.style.cssText="width:18px;height:18px;margin:0;accent-color:#208154;pointer-events:none";
+ const known=jsonGameKeys instanceof Set;
+ const linked=known&&jsonGameKeys.has(String(gameKey));
+ box.checked=Boolean(linked);
+ box.setAttribute("aria-label",known?(linked?"JSON-Datei hinterlegt":"Keine JSON-Datei hinterlegt"):"JSON-Status nicht verfügbar");
+ const label=document.createElement("small");
+ label.textContent=known?(linked?"Hinterlegt":"–"):"Nicht verfügbar";
+ wrapper.title=known?(linked?"Eine zugeordnete JSON-Datei ist für dieses Spiel gespeichert.":"Keine zugeordnete JSON-Datei für dieses Spiel gespeichert."):"JSON-Status konnte nicht geladen werden oder ist für diesen Zugang nicht verfügbar.";
+ wrapper.append(box,label);
+ return wrapper;
+}
+async function loadJsonGameKeys(isAdmin){
+ jsonGameKeys=null;
+ if(!isAdmin)return;
+ const {data,error}=await sb.from("portal_json_imports").select("game_key").eq("owner_id",userId).not("game_key","is",null);
+ if(error){console.warn("JSON-Spielstatus nicht verfügbar:",error.message);return;}
+ jsonGameKeys=new Set((data||[]).map(r=>String(r.game_key)));
+}
+
 const openCardKeys=new Set();
 function mobileElement(tag,klass,value){
  const el=document.createElement(tag);
@@ -772,6 +797,7 @@ function mobileGameCard(g){
   link.target="_blank";link.rel="noopener noreferrer";bogenBox.append(link);
  }else{bogenBox.append(mobileElement("strong","","Noch kein PDF"))}
  quick.append(kmBox,bogenBox);
+ const jsonBox=mobileElement("div","mobile-info");jsonBox.append(mobileElement("small","","JSON-Datei"),jsonStatusControl(g.game_key));quick.append(jsonBox);
  quick.append(mobileInfo("Einteilungsstatus",planningNames[g.planning_status]||"Offen"));
  main.append(quick);card.append(main);
  const details=document.createElement("details"),summary=document.createElement("summary");
@@ -937,6 +963,7 @@ function render(){
   const pdfCell=document.createElement("td");
   if(doc){const a=document.createElement("a");a.href="/beobachtungsbogen-ansehen.html?pdf="+encodeURIComponent(doc.document_id);a.target="_blank";a.rel="noopener noreferrer";a.textContent="📘";a.style.fontSize="24px";a.title="Bogen separat öffnen";pdfCell.append(a)}
   else pdfCell.textContent="–";row.append(pdfCell);
+  const jsonCell=document.createElement("td");jsonCell.append(jsonStatusControl(g.game_key));row.append(jsonCell);
   const reviewCell=document.createElement("td");reviewCell.append(reviewSelect(g));
   if(reviewState(g)==="zurueck_beobachter"){
    if(g.return_note){const note=document.createElement("div");note.className="return-observer-note";note.textContent=g.return_note;reviewCell.append(note)}
@@ -1027,7 +1054,7 @@ $("mail-form").onsubmit=async e=>{
  catch(error){$("mail-error").textContent=error.message;button.disabled=false}
 };
 try{
- const{user,ownerId}=await requirePermission("games_view");userId=ownerId;userEmail=user.email||"";await loadRouteConsent();refs=await cloudPeople(userId,"referee");coaches=await cloudPeople(userId,"coach");
+ const{user,ownerId,profile}=await requirePermission("games_view");userId=ownerId;userEmail=user.email||"";await loadRouteConsent();refs=await cloudPeople(userId,"referee");coaches=await cloudPeople(userId,"coach");
  const refFilter=$("referee-filter");for(const p of [...refs].sort((a,b)=>fullName(a).localeCompare(fullName(b),"de")))refFilter.add(new Option(fullName(p),p.id));
  const requestedReferee=new URLSearchParams(location.search).get("referee");
  if(requestedReferee&&refs.some(p=>String(p.id)===requestedReferee)){refereeFilter=requestedReferee;refFilter.value=requestedReferee;}
@@ -1035,7 +1062,7 @@ try{
  const coachSelect=$("coach-filter");for(const p of [...coaches].sort((a,b)=>fullName(a).localeCompare(fullName(b),"de")))coachSelect.add(new Option(fullName(p),p.id));
  const requestedCoach=new URLSearchParams(location.search).get("coach");
  if(requestedCoach&&coaches.some(p=>String(p.id)===requestedCoach)){coachFilter=requestedCoach;coachSelect.value=requestedCoach;}
- games=await syncGames(userId);docs=await syncObservations(userId);await reconcileConfirmedVenues();await loadRouteAttempts();
+ games=await syncGames(userId);docs=await syncObservations(userId);await loadJsonGameKeys(profile?.role==="admin");await reconcileConfirmedVenues();await loadRouteAttempts();
  if(await associateUniqueObservations(userId,games,docs))games=await syncGames(userId);
  render();void startRouteReview()
 }catch(error){status.textContent="Laden fehlgeschlagen: "+error.message}
