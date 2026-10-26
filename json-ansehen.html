@@ -130,6 +130,15 @@ function existingMatch(hash,body){
   (sourceId&&identity(x)===sourceId)||
   (x.json_body&&canonicalText(x.json_body)===parsed));
 }
+function safeFilePart(value,fallback){
+ return String(value||"").trim().replace(/[\\/:*?"<>|\u0000-\u001f]/g,"_").replace(/\s+/g," ").replace(/[. ]+$/g,"").slice(0,90)||fallback;
+}
+function coachingFileName(d){
+ const referee=safeFilePart(d.referee,"Schiedsrichter unbekannt");
+ const match=safeFilePart(d.home,"Heim unbekannt")+" gegen "+safeFilePart(d.away,"Gast unbekannt");
+ const coach=safeFilePart(d.coach,"Coach unbekannt");
+ return (referee+" - "+match+" - "+coach).slice(0,185).replace(/[. ]+$/g,"")+".json";
+}
 function batchResult(filename,text,kind="success",itemId=null){
  const li=document.createElement("li");li.className=kind;
  const b=document.createElement("strong");b.textContent=filename+" – ";
@@ -265,7 +274,7 @@ async function processFiles(files){
    const id=crypto.randomUUID(),path=user.id+"/"+id+".json";
    const storage=await sb.storage.from(bucket).upload(path,file,{contentType:"application/json",upsert:false});
    if(storage.error)throw storage.error;
-   const row={id,owner_id:user.id,file_name:file.name,storage_path:path,sha256,json_body:body,
+   const row={id,owner_id:user.id,file_name:coachingFileName(d),original_file_name:file.name,storage_path:path,sha256,json_body:body,
      game_key:null,match_date:d.match_date,home:d.home,away:d.away,referee_name:d.referee,coach_name:d.coach,assigned_at:null};
    const saved=await sb.from("portal_json_imports").insert(row);
    if(saved.error){
@@ -282,7 +291,7 @@ async function processFiles(files){
    }
    imports.push({...row,created_at:new Date().toISOString()});
    uploaded++;
-   batchResult(file.name,"Gespeichert, Spielzuordnung noch offen.","success",id);
+   batchResult(file.name,"Gespeichert als „"+row.file_name+"“. Spielzuordnung noch offen.","success",id);
   }catch(error){
    errors++;
    batchResult(file.name,"Nicht übernommen: "+error.message,"error");
