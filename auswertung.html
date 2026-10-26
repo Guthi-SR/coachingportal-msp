@@ -319,17 +319,36 @@ async function exportBatchCoaches(){
  const button=$("export-coaches");button.disabled=true;const previous=button.textContent;button.textContent="Excel wird erstellt …";
  try{
   const ExcelJS=await loadExcelLibrary(),book=new ExcelJS.Workbook();book.creator="Coachingportal MSP";book.title="Coach-Auswertung";book.subject="Spiele, Kilometer und Aufwandsentschädigung";book.created=new Date();book.calcProperties.fullCalcOnLoad=true;
-  const overview=book.addWorksheet("Übersicht");overview.columns=[{width:31},{width:15},{width:18},{width:20},{width:20},{width:18},{width:20},{width:21},{width:19}];overview.mergeCells("A1:I1");overview.getCell("A1").value="Coach-Auswertung – Spiele und Aufwandsentschädigung";overview.getCell("A1").font={size:16,bold:true,color:{argb:"FFFFFFFF"}};overview.getCell("A1").fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};overview.getRow(1).height=34;
+  const overview=book.addWorksheet("Übersicht");overview.columns=[{width:31},{width:18},{width:21},{width:20},{width:23},{width:21},{width:23},{width:21}];overview.mergeCells("A1:H1");overview.getCell("A1").value="Coach-Auswertung – Spiele und Kilometer";overview.getCell("A1").font={size:16,bold:true,color:{argb:"FFFFFFFF"}};overview.getCell("A1").fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};overview.getRow(1).height=34;
   overview.getCell("A3").value="Zeitraum";overview.getCell("B3").value=dateDE(from)+" – "+dateDE(to);overview.getCell("A4").value="Auswahl";overview.getCell("B4").value=coachScope==="all"?"Alle Coaches":snapshot.length+" ausgewählte Coaches";overview.getCell("A5").value="Testspiele ausgeschlossen";overview.getCell("B5").value="Ja";
   const details=book.addWorksheet("Einzelspiele");details.columns=[{header:"Datum",width:14},{header:"Coach",width:28},{header:"Begegnung",width:48},{header:"Spielklasse",width:25},{header:"Einsatzart",width:21},{header:"Status",width:18},{header:"Km hin und zurück",width:19},{header:"Kilometerkosten (0,30 €/km)",width:23},{header:"Spesen",width:15},{header:"Aufwandsentschädigung gesamt",width:25},{header:"Abrechnung",width:18},{header:"Coach-ID",width:22}];
   let count=0;for(const item of snapshot){for(const game of item.games){const m=gameCompensation(game);details.addRow([new Date(game.match_date+"T12:00:00Z"),String(item.name),[game.home,game.away].filter(Boolean).join(" – ")||"Coaching",game.league||"",expenseLabel(m.type),"Im Zeitraum",m.km,m.mileage,m.fee,m.total,m.complete?"Vollständig":"Kilometer fehlen",String(item.person.id)]);count++}for(const game of item.plannedGames){const m=gameCompensation(game);details.addRow([new Date(game.match_date+"T12:00:00Z"),String(item.name),[game.home,game.away].filter(Boolean).join(" – ")||"Coaching",game.league||"",expenseLabel(m.type),"Geplant (Zukunft)",m.km,m.mileage,m.fee,m.total,m.complete?"Kilometer vorhanden":"Kilometer noch offen",String(item.person.id)]);count++}}
   details.getColumn(1).numFmt="dd.mm.yyyy";details.getColumn(7).numFmt='0.##" km"';for(const n of [8,9,10])details.getColumn(n).numFmt='€ #,##0.00';details.getColumn(12).hidden=true;details.views=[{state:"frozen",ySplit:1}];details.autoFilter={from:"A1",to:"L"+Math.max(1,count+1)};
-  ["Coach","Spiele im Zeitraum","Spiele geplant","Km im Zeitraum","Km geplant","Spiele insgesamt","Km insgesamt","Kilometerkosten (absolviert)","Spesen (absolviert)"].forEach((h,i)=>overview.getRow(7).getCell(i+1).value=h);
-  for(const [i,item] of snapshot.entries()){const row=overview.getRow(8+i),past=item.games.map(gameCompensation),future=item.plannedGames.map(gameCompensation);row.getCell(1).value=item.name;row.getCell(2).value=item.games.length;row.getCell(3).value=item.plannedGames.length;row.getCell(4).value=item.sum;row.getCell(5).value=item.plannedSum;row.getCell(6).value=item.totalGames;row.getCell(7).value=item.totalKm;row.getCell(8).value=past.filter(m=>m.complete).reduce((s,m)=>s+(m.mileage??0),0);row.getCell(9).value=past.reduce((s,m)=>s+m.fee,0)}
-  const total=overview.getRow(8+snapshot.length);total.getCell(1).value="GESAMT";for(let col=2;col<=9;col++)total.getCell(col).value=snapshot.reduce((sum,item)=>{if(col===2)return sum+item.games.length;if(col===3)return sum+item.plannedGames.length;if(col===4)return sum+item.sum;if(col===5)return sum+item.plannedSum;if(col===6)return sum+item.totalGames;if(col===7)return sum+item.totalKm;const ms=item.games.map(gameCompensation);if(col===8)return sum+ms.filter(m=>m.complete).reduce((s,m)=>s+(m.mileage??0),0);return sum+ms.reduce((s,m)=>s+m.fee,0)},0);
-  for(const n of [4,5,7])overview.getColumn(n).numFmt='0.##" km"';for(const n of [8,9])overview.getColumn(n).numFmt='€ #,##0.00';total.eachCell(cell=>{cell.font={bold:true,color:{argb:"FF142B46"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE8F0F8"}}});
+  // Gleiche Reihenfolge und dieselben Kennzahlen wie in der Coach-Tabelle des Portals.
+  const coachHeaders=["Coach / Beobachter","Spiele gesamt","Spiele im Zeitraum","Spiele in Zukunft","Noch nicht bestätigt","Kilometer gesamt","Kilometer im Zeitraum","Kilometer Zukunft"];
+  coachHeaders.forEach((header,i)=>overview.getRow(7).getCell(i+1).value=header);
+  for(const [i,item] of snapshot.entries()){
+   const row=overview.getRow(8+i);
+   const values=[item.name,item.totalGames,item.games.length,item.plannedGames.length,item.unconfirmedGames.length,item.totalKm,item.sum,item.plannedSum];
+   values.forEach((value,j)=>row.getCell(j+1).value=value);
+  }
+  const total=overview.getRow(8+snapshot.length);total.getCell(1).value="GESAMT";
+  const coachTotals=[
+   snapshot.reduce((sum,item)=>sum+item.totalGames,0),
+   snapshot.reduce((sum,item)=>sum+item.games.length,0),
+   snapshot.reduce((sum,item)=>sum+item.plannedGames.length,0),
+   snapshot.reduce((sum,item)=>sum+item.unconfirmedGames.length,0),
+   snapshot.reduce((sum,item)=>sum+item.totalKm,0),
+   snapshot.reduce((sum,item)=>sum+item.sum,0),
+   snapshot.reduce((sum,item)=>sum+item.plannedSum,0)
+  ];
+  coachTotals.forEach((value,i)=>total.getCell(i+2).value=value);
+  for(const n of [6,7,8])overview.getColumn(n).numFmt='0.##" km"';
+  overview.views=[{state:"frozen",ySplit:7}];
+  overview.autoFilter={from:"A7",to:"H"+Math.max(8,7+snapshot.length)};
+  total.eachCell(cell=>{cell.font={bold:true,color:{argb:"FF142B46"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE8F0F8"}}});
   for(const sheet of [overview,details]){const row=sheet.getRow(sheet===overview?7:1);row.height=28;row.eachCell(cell=>{cell.font={bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};cell.alignment={vertical:"middle"}})}
-  const bytes=await book.xlsx.writeBuffer(),blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="Coaches_Auswertung_"+from+"_bis_"+to+".xlsx";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);$("coach-export-status").textContent="Excel-Auswertung mit Einsatzarten und Entschädigungen erstellt.";
+  const bytes=await book.xlsx.writeBuffer(),blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="Coaches_Auswertung_"+from+"_bis_"+to+".xlsx";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);$("coach-export-status").textContent="Excel-Übersicht in Portalreihenfolge erstellt; Einzelspiele mit Entschädigungen bleiben als separates Tabellenblatt erhalten.";
  }catch(error){$("coach-export-status").textContent="Excel-Export fehlgeschlagen: "+error.message}finally{button.textContent=previous;updateCoachExportStatus()}
 }
 $("export-coaches").addEventListener("click",exportBatchCoaches);
@@ -353,14 +372,25 @@ async function exportExcel(){
  const current=lastResult;if(!current)return;const button=$("export-excel");button.disabled=true;const oldLabel=button.textContent;button.textContent="Excel wird erstellt …";
  try{
   const ExcelJS=await loadExcelLibrary(),book=new ExcelJS.Workbook();book.creator="Coachingportal MSP";book.title="Coaching-Auswertung";book.subject="Spiele, Kilometer und Aufwandsentschädigung";book.created=new Date();book.calcProperties.fullCalcOnLoad=true;
-  const sum=book.addWorksheet("Übersicht"),detail=book.addWorksheet("Einzelspiele");sum.columns=[{width:44},{width:28},{width:20}];sum.mergeCells("A1:C1");sum.getCell("A1").value="Coaching-Auswertung – Spiele und Aufwandsentschädigung";sum.getCell("A1").font={size:16,bold:true,color:{argb:"FFFFFFFF"}};sum.getCell("A1").fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};sum.getRow(1).height=34;sum.getCell("A3").value="Coach";sum.getCell("B3").value=current.name;sum.getCell("A4").value="Zeitraum";sum.getCell("B4").value=(current.from?dateDE(current.from):"Beginn offen")+" – "+(current.to?dateDE(current.to):"Ende offen");
+  const sum=book.addWorksheet("Übersicht"),detail=book.addWorksheet("Einzelspiele");
+  sum.columns=[{width:31},{width:18},{width:21},{width:20},{width:23},{width:21},{width:23},{width:21}];
+  sum.mergeCells("A1:H1");sum.getCell("A1").value="Coaching-Auswertung – Spiele und Kilometer";
+  sum.getCell("A1").font={size:16,bold:true,color:{argb:"FFFFFFFF"}};
+  sum.getCell("A1").fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};
+  sum.getRow(1).height=34;sum.getCell("A3").value="Coach";sum.getCell("B3").value=current.name;sum.getCell("A4").value="Zeitraum";sum.getCell("B4").value=(current.from?dateDE(current.from):"Beginn offen")+" – "+(current.to?dateDE(current.to):"Ende offen");
   detail.columns=[{header:"Datum",width:14},{header:"Begegnung",width:45},{header:"Einsatzart",width:21},{header:"Status",width:20},{header:"Km hin und zurück",width:19},{header:"Kilometerkosten (0,30 €/km)",width:23},{header:"Spesen",width:15},{header:"Aufwandsentschädigung gesamt",width:25},{header:"Abrechnung",width:18}];
   const rows=[...current.games.map(game=>({game,status:"Im Zeitraum"})),...current.plannedGames.map(game=>({game,status:"Geplant (Zukunft)"}))].map(x=>({...x,m:gameCompensation(x.game)}));
   for(const {game,m,status} of rows)detail.addRow([new Date(game.match_date+"T12:00:00Z"),[game.home,game.away].filter(Boolean).join(" – ")||"Coaching",expenseLabel(m.type),status,m.km,m.mileage,m.fee,m.total,m.complete?"Kilometer vorhanden":"Kilometer fehlen"]);
   detail.getColumn(1).numFmt="dd.mm.yyyy";detail.getColumn(5).numFmt='0.##" km"';for(const n of [6,7,8])detail.getColumn(n).numFmt='€ #,##0.00';detail.views=[{state:"frozen",ySplit:1}];detail.autoFilter={from:"A1",to:"I"+Math.max(1,rows.length+1)};
-  const past=current.games.map(gameCompensation),future=current.plannedGames.map(gameCompensation),complete=past.filter(m=>m.complete);
-  const sums=[["Spiele im Zeitraum",current.games.length],["Spiele geplant (Zukunft)",current.plannedGames.length],["Spiele insgesamt",current.totalGames],["Kilometer im Zeitraum",current.sum],["Kilometer geplant (Zukunft)",current.plannedSum],["Kilometer insgesamt",current.totalKm],["Kilometerkosten (absolvierte Spiele)",complete.reduce((s,m)=>s+(m.mileage??0),0)],["Spesen (absolvierte Spiele)",past.reduce((s,m)=>s+m.fee,0)],["Absolvierte Spiele mit fehlenden Kilometern",past.filter(m=>!m.complete).length],["Geplante Spiele mit fehlenden Kilometern",future.filter(m=>!m.complete).length]];
-  sums.forEach((x,i)=>{sum.getCell(6+i,1).value=x[0];sum.getCell(6+i,2).value=x[1]});for(const n of [9,10,11])sum.getCell(n,2).numFmt='0.##" km"';for(const n of [12,13])sum.getCell(n,2).numFmt='€ #,##0.00';
+  // Auch beim Export eines einzelnen Coaches dieselbe Portal-Spaltenfolge verwenden.
+  const coachHeaders=["Coach / Beobachter","Spiele gesamt","Spiele im Zeitraum","Spiele in Zukunft","Noch nicht bestätigt","Kilometer gesamt","Kilometer im Zeitraum","Kilometer Zukunft"];
+  coachHeaders.forEach((header,i)=>sum.getRow(7).getCell(i+1).value=header);
+  const values=[current.name,current.totalGames,current.games.length,current.plannedGames.length,current.unconfirmedGames.length,current.totalKm,current.sum,current.plannedSum];
+  values.forEach((value,i)=>sum.getRow(8).getCell(i+1).value=value);
+  for(const n of [6,7,8])sum.getColumn(n).numFmt='0.##" km"';
+  sum.views=[{state:"frozen",ySplit:7}];
+  sum.autoFilter={from:"A7",to:"H8"};
+  const summaryHeader=sum.getRow(7);summaryHeader.height=28;summaryHeader.eachCell(cell=>{cell.font={bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};cell.alignment={vertical:"middle"}});
   for(const sheet of [sum,detail]){const row=sheet.getRow(1);row.eachCell(cell=>{cell.font={bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}}})}
   const bytes=await book.xlsx.writeBuffer(),blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="Coaching_Auswertung_"+current.from+"_bis_"+current.to+".xlsx";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
  }catch(error){$("km-note").textContent="Excel-Export fehlgeschlagen: "+error.message}finally{button.textContent=oldLabel;button.disabled=false}
