@@ -12,11 +12,32 @@ if(!user){
     $("status").textContent="Nur für Administratoren freigegeben.";
   }else{
     const refs=await cloudPeople(user.id,"coach");
-    const {data:coachGames,error:gamesError}=await sb.from("portal_games").select("coach_id,match_date").eq("owner_id",user.id);
-    if(gamesError)throw gamesError;
-    const today=new Date().toLocaleDateString("sv-SE",{timeZone:"Europe/Berlin"});
-    const counts=new Map();
-    for(const g of coachGames||[]){if(g.coach_id&&g.match_date&&g.match_date<=today)counts.set(String(g.coach_id),(counts.get(String(g.coach_id))||0)+1);}
+    // Wie bei den Schiedsrichtern: laufende Saison 01.07.–30.06.,
+    // vergangene Spiele getrennt von heute und zukünftigen Spielen.
+    const todayISO=new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Berlin",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+    const year=Number(todayISO.slice(0,4)),seasonYear=year-(todayISO.slice(5)<"07-01"?1:0);
+    const seasonStart=seasonYear+"-07-01",seasonEnd=(seasonYear+1)+"-07-01";
+    const {data:coachGames,error:gamesError}=await sb.from("portal_games")
+      .select("game_key,coach_id,match_date")
+      .eq("owner_id",user.id)
+      .gte("match_date",seasonStart)
+      .lt("match_date",seasonEnd);
+    const observationCounts=new Map(),plannedCounts=new Map();
+    if(gamesError)console.error("Coach-Spielzählung:",gamesError);
+    else{
+      const seen=new Set();
+      for(const game of coachGames||[]){
+        if(!game.coach_id||!game.match_date)continue;
+        const key=String(game.coach_id);
+        if(game.game_key){
+          const unique=key+"\u0000"+String(game.game_key);
+          if(seen.has(unique))continue;
+          seen.add(unique);
+        }
+        const bucket=game.match_date<todayISO?observationCounts:plannedCounts;
+        bucket.set(key,(bucket.get(key)||0)+1);
+      }
+    }
     const sortSelect=$("coach-sort");
     const sortKey="msp-coach-sort-mode";
     const firstName=p=>String(p.first||p.name?.trim().split(/\s+/)[0]||"").trim();
@@ -37,7 +58,7 @@ if(!user){
       for(const r of filtered){
         const name=r.name||[r.first,r.last].filter(Boolean).join(" ")||"Unbenannt";
         const card=document.createElement("details");card.className="ref-card";
-        const summary=document.createElement("summary");const initials=document.createElement("div");initials.className="coach-initials";initials.textContent=[r.first,r.last].filter(Boolean).map(x=>String(x).charAt(0).toUpperCase()).join("")||name.split(/\\s+/).map(x=>x[0]).slice(0,2).join("").toUpperCase();summary.append(initials);if(r.photoPath){const {data:photo,error:photoError}=await sb.storage.from("portal-coach-photos").createSignedUrl(r.photoPath,3600);if(!photoError&&photo?.signedUrl){const img=document.createElement("img");img.className="coach-thumb";img.alt="Profilfoto von "+name;img.src=photo.signedUrl;img.onerror=()=>{img.replaceWith(initials);initials.hidden=false};initials.hidden=true;summary.append(img)}}const title=document.createElement("div");title.className="coach-card-title";const bold=document.createElement("strong");bold.textContent=name;title.append(bold);const sub=document.createElement("small");sub.textContent=[r.club,r.city].filter(Boolean).join(" · ")||"Coach-Beobachter";title.append(sub);const count=document.createElement("span");count.textContent=(counts.get(String(r.id))||0)+" bisherige Coaching-Spiele";title.append(count);summary.append(title);summary.setAttribute("aria-label",name+": "+(counts.get(String(r.id))||0)+" bisherige Coaching-Spiele");card.append(summary);
+        const summary=document.createElement("summary");const initials=document.createElement("div");initials.className="coach-initials";initials.textContent=[r.first,r.last].filter(Boolean).map(x=>String(x).charAt(0).toUpperCase()).join("")||name.split(/\\s+/).map(x=>x[0]).slice(0,2).join("").toUpperCase();summary.append(initials);if(r.photoPath){const {data:photo,error:photoError}=await sb.storage.from("portal-coach-photos").createSignedUrl(r.photoPath,3600);if(!photoError&&photo?.signedUrl){const img=document.createElement("img");img.className="coach-thumb";img.alt="Profilfoto von "+name;img.src=photo.signedUrl;img.onerror=()=>{img.replaceWith(initials);initials.hidden=false};initials.hidden=true;summary.append(img)}}const title=document.createElement("div");title.className="coach-card-title";const bold=document.createElement("strong");bold.textContent=name;title.append(bold);const sub=document.createElement("small");sub.textContent=[r.club,r.city].filter(Boolean).join(" · ")||"Coach-Beobachter";title.append(sub);const count=document.createElement("span");count.textContent=(gamesError?"–":(observationCounts.get(String(r.id))||0))+" beobachtet · "+(gamesError?"–":(plannedCounts.get(String(r.id))||0))+" geplant · Saison "+seasonYear+"/"+String(seasonYear+1).slice(-2);title.append(count);summary.append(title);summary.setAttribute("aria-label",name+": "+count.textContent);card.append(summary);
         const contact=document.createElement("div");contact.className="contact";
         const phone=r.phoneMobile||r.phonePrivate||r.phoneBusiness||r.phone||"";
         const mail=r.mail||r.email||"";
