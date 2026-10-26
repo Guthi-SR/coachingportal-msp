@@ -483,8 +483,7 @@ function renderFinished(text){
   fixed(page,"bsa-small-heading","BEWERTUNG",top+7,6);
   const ratingNode=fixed(page,"bsa-rating","",top+14,8);
   for(const symbol of ["++","+","o","-","--"]){const el=document.createElement(rating===symbol?"strong":"span");el.textContent=symbol+" ";ratingNode.append(el);}
-  fixed(page,"bsa-label",rating==="nicht bewertbar"?"Kommentar (nicht bewertbar)":"Kommentar",top+24,5);
-  fixed(page,"bsa-content",comment||"Keine Angaben.",top+29,height-29);
+  if(i!==3){fixed(page,"bsa-label",rating==="nicht bewertbar"?"Kommentar (nicht bewertbar)":"Kommentar",top+24,5);fixed(page,"bsa-content",comment||"Keine Angaben.",top+29,height-29);}
  });
  // On the original form, the fourth category's comment starts on page 3.
  const appearance=(ratingBlocks.get(categoryNames[3])||[]).join("\n").trim();
