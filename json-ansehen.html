@@ -2,7 +2,7 @@
 <html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>JSON ansehen und importieren – Coachingportal MSP</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f3f6fa;color:#142b46;font:16px/1.5 system-ui,sans-serif}header{background:#142b46;color:#fff;padding:20px}main{max-width:1100px;margin:0 auto;padding:22px;min-width:0}.card{background:#fff;border:1px solid #dce5ee;border-radius:12px;padding:22px;margin:15px 0}h2{margin:0 0 8px}h3{margin:0 0 10px}label{display:block;font-weight:650;margin:12px 0 5px}input,select,button{font:inherit;padding:11px;border:1px solid #adbdce;border-radius:8px;max-width:100%}input[type=file],select{width:100%}button{background:#142b46;color:white;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}button.secondary{background:white;color:#142b46}a{color:#17568c}.muted{color:#63768a}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.info{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 20px}.info p{margin:5px 0;overflow-wrap:anywhere}#json-protected-content[hidden],[hidden]{display:none!important}pre{max-height:350px;white-space:pre-wrap;overflow:auto;overflow-wrap:anywhere;background:#f4f7fa;padding:15px;border-radius:8px}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:9px;border-bottom:1px solid #e7eef4;vertical-align:top}td{overflow-wrap:anywhere}.scroll{overflow-x:auto}.notice{padding:12px;background:#eff5fb;border-radius:9px}.tag{font-size:13px;color:#46617a} @media(max-width:767px){main{padding:11px}.card{padding:15px}.info{grid-template-columns:1fr}td,th{padding:7px;font-size:13px}}
+*{box-sizing:border-box}body{margin:0;background:#f3f6fa;color:#142b46;font:16px/1.5 system-ui,sans-serif}header{background:#142b46;color:#fff;padding:20px}main{max-width:1100px;margin:0 auto;padding:22px;min-width:0}.card{background:#fff;border:1px solid #dce5ee;border-radius:12px;padding:22px;margin:15px 0}h2{margin:0 0 8px}h3{margin:0 0 10px}label{display:block;font-weight:650;margin:12px 0 5px}input,select,button{font:inherit;padding:11px;border:1px solid #adbdce;border-radius:8px;max-width:100%}input[type=file],select{width:100%}button{background:#142b46;color:white;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}button.secondary{background:white;color:#142b46}a{color:#17568c}.muted{color:#63768a}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.info{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 20px}.info p{margin:5px 0;overflow-wrap:anywhere}#json-protected-content[hidden],[hidden]{display:none!important}.json-dropzone{margin:10px 0;padding:26px 15px;border:2px dashed #9eb3c8;border-radius:12px;background:#f6f9fd;text-align:center;cursor:pointer;outline-offset:3px}.json-dropzone:hover,.json-dropzone.drag-over,.json-dropzone:focus-visible{background:#e9f3ff;border-color:#28629b}.json-dropzone strong{display:block;margin-bottom:3px}.json-dropzone small{color:#63768a}pre{max-height:350px;white-space:pre-wrap;overflow:auto;overflow-wrap:anywhere;background:#f4f7fa;padding:15px;border-radius:8px}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:9px;border-bottom:1px solid #e7eef4;vertical-align:top}td{overflow-wrap:anywhere}.scroll{overflow-x:auto}.notice{padding:12px;background:#eff5fb;border-radius:9px}.tag{font-size:13px;color:#46617a} @media(max-width:767px){main{padding:11px}.card{padding:15px}.info{grid-template-columns:1fr}td,th{padding:7px;font-size:13px}}
 </style></head><body>
 <header><h1>Coachingportal MSP</h1></header>
 <main>
@@ -13,6 +13,7 @@
 <p class="muted">Coachingbogen als JSON auswählen. Wir schlagen ein vorhandenes Spiel vor. Die Zuordnung wird erst nach deiner Bestätigung übernommen.</p>
 <label for="json-file">JSON-Datei auswählen</label>
 <input id="json-file" type="file" accept=".json,application/json">
+<div id="json-dropzone" class="json-dropzone" tabindex="0" role="button" aria-label="JSON-Datei ablegen oder per Klick auswählen"><strong>JSON-Datei hier hineinziehen</strong><small>Drag &amp; Drop oder anklicken, um eine Datei auszuwählen (max. 5 MB)</small></div>
 <p id="parse-status" role="status" aria-live="polite"></p>
 <div id="preview" hidden>
 <h3>Erkannte Angaben</h3><div class="info" id="file-details"></div>
@@ -81,9 +82,10 @@ function validate(data){
 async function hashFile(file){const bytes=await file.arrayBuffer();const digest=await crypto.subtle.digest("SHA-256",bytes);return [...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,"0")).join("");}
 function reset(){pending=null;$("json-file").value="";$("preview").hidden=true;$("original-json").textContent="";$("parse-status").textContent="";}
 $("clear-json").onclick=reset;
+let droppedJsonFile=null;
 $("json-file").addEventListener("change",async()=>{
  resetPreview();
- const file=$("json-file").files?.[0];if(!file)return;
+ const file=droppedJsonFile||$("json-file").files?.[0];droppedJsonFile=null;if(!file)return;
  if(file.size>5242880){$("parse-status").textContent="Die Datei ist größer als 5 MB.";return;}
  if(!/\.json$/i.test(file.name)){$("parse-status").textContent="Bitte eine .json-Datei auswählen.";return;}
  try{
@@ -94,6 +96,24 @@ $("json-file").addEventListener("change",async()=>{
   $("parse-status").textContent="Datei erkannt: "+file.name;
  }catch(e){$("parse-status").textContent="Datei nicht lesbar: "+e.message;}
 });
+const dropzone=$("json-dropzone");
+dropzone.addEventListener("click",()=>$("json-file").click());
+dropzone.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("json-file").click();}});
+dropzone.addEventListener("dragenter",e=>{e.preventDefault();dropzone.classList.add("drag-over");});
+dropzone.addEventListener("dragover",e=>{e.preventDefault();e.dataTransfer.dropEffect="copy";dropzone.classList.add("drag-over");});
+dropzone.addEventListener("dragleave",e=>{if(!dropzone.contains(e.relatedTarget))dropzone.classList.remove("drag-over");});
+dropzone.addEventListener("drop",e=>{
+ e.preventDefault();
+ e.stopPropagation();
+ dropzone.classList.remove("drag-over");
+ const files=e.dataTransfer?.files||[];
+ if(files.length!==1){resetPreview();$("parse-status").textContent="Bitte genau eine JSON-Datei hineinziehen.";return;}
+ droppedJsonFile=files[0];
+ $("json-file").value="";
+ $("json-file").dispatchEvent(new Event("change"));
+});
+document.addEventListener("dragover",e=>{if(e.dataTransfer?.types?.includes("Files"))e.preventDefault();});
+document.addEventListener("drop",e=>{if(e.dataTransfer?.types?.includes("Files"))e.preventDefault();});
 function resetPreview(){pending=null;$("preview").hidden=true;$("original-json").textContent="";$("parse-status").textContent="";}
 function assignmentValid(d,key){
  if(!key)return true;
