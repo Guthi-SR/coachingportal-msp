@@ -31,6 +31,9 @@ details pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.55 ui-monosp
  .stats{display:flex}.stat{border:1px solid #aaa;padding:6px;min-width:0}
  @page{size:A4;margin:15mm}
 }
+
+.final-sheet{background:#fff;color:#1b2b3b;border:1px solid #d7e1eb;padding:24px;max-width:850px;margin:16px auto;font:14px/1.55 Arial,sans-serif}.final-sheet h2{text-align:center;letter-spacing:1px;border-bottom:2px solid #233b55;padding-bottom:10px}.final-sheet h3{background:#e9eff5;padding:8px 10px;margin:22px 0 10px;font-size:15px}.final-sheet h4{margin:15px 0 5px}.final-sheet p{white-space:pre-wrap;margin:5px 0 12px}.final-sheet .rating{font-weight:700}.return-field{width:100%;min-height:250px;font:14px/1.5 system-ui;padding:12px;border:1px solid #9fb3c6;border-radius:8px}.final-sheet .rating-grid{display:flex;gap:16px;flex-wrap:wrap}.final-sheet .rating-grid span{padding:2px 7px;border:1px solid #c8d3df;border-radius:3px}.final-sheet .rating-grid .selected{background:#142b46;color:white}
+@media print{body.print-final #report-section,body.print-final #coverage,body.print-final #return-section .no-print{display:none!important}body.print-final #return-section{display:block!important}body.print-final .final-sheet{border:0;padding:0;margin:0;max-width:none}body.print-final .final-sheet h3{break-after:avoid}body.print-final .final-sheet h4{break-after:avoid}body.print-final .final-sheet p{break-inside:avoid}body.print-final .final-sheet h2{margin-top:0}body:not(.print-final) #return-section{display:none!important}}
 </style></head><body>
 <header><h1>Coachingportal MSP</h1></header>
 <main>
@@ -71,6 +74,7 @@ details pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.55 ui-monosp
 <div id="raw-pdfs"></div>
 </div>
 </section>
+<section id="return-section"><div class="no-print"><h2>Fertigen Sichtungsbogen aus ChatGPT übernehmen</h2><p class="muted">Füge hier die vollständige ChatGPT-Antwort ein. Das Portal ordnet die sechs Bereiche der BSA-Vorlage zu. Bitte die Vorschau prüfen, bevor du die PDF speicherst.</p><label for="return-input">ChatGPT-Sichtungsbogen</label><textarea id="return-input" class="return-field" placeholder="Hier den vollständigen Sichtungsbogen aus ChatGPT einfügen …"></textarea><div class="actions"><button type="button" id="render-final">Sichtungsbogen erstellen</button><button type="button" id="print-final" disabled>Als PDF erstellen / speichern</button><button type="button" id="clear-final" class="secondary">Eingabe löschen</button></div><p id="return-status" role="status" class="status"></p></div><div id="final-preview" class="final-sheet" hidden></div></section>
 </div>
 </main>
 <script type="module">
@@ -228,6 +232,7 @@ function makeTransfer(successes,ev,missing,unreadable,errors){
  "4. OPTIMIERBARE BEREICHE: drei konkrete Verbesserungsansätze.",
  "5. ENTWICKLUNGSTHEMEN DES SR: drei überprüfbare Förderziele.",
  "6. BEWERTUNGSKATEGORIEN: Administratives & spielbezogene Vorbereitung; Entscheidungsqualität; Disziplinarkontrolle; Auftreten & Persönlichkeit; Stellungsspiel & Fitness. Jeweils Bewertung ++, +, o, -, -- oder nicht bewertbar sowie ausführlicher Kommentar.",
+ "WICHTIG FÜR DEN RÜCKIMPORT: Schreibe jede Abschnittsüberschrift exakt wie folgt in einer eigenen Zeile, ohne Markdown-Nummerierung: SPIELDATEN, FAZIT, POSITIVE ASPEKTE, OPTIMIERBARE BEREICHE, ENTWICKLUNGSTHEMEN DES SR, BEWERTUNGSKATEGORIEN. In den Bereichen POSITIVE ASPEKTE, OPTIMIERBARE BEREICHE und ENTWICKLUNGSTHEMEN DES SR beginne jeden der drei Punkte mit 1., 2., 3. In BEWERTUNGSKATEGORIEN verwende pro Kategorie eine eigene Überschrift mit dem exakten Namen und direkt darunter eine Zeile Bewertung: ++ oder Bewertung: + oder Bewertung: o oder Bewertung: - oder Bewertung: -- oder Bewertung: nicht bewertbar, gefolgt von Kommentar: und dem ausführlichen Kommentar.",
  "Führe Inhalte aller Spiele fachlich zusammen. Benenne wiederkehrende Beobachtungen, Unterschiede und Entwicklungen. Verwende zwei kurze wortgetreue Zitate mit Quellenangabe, sofern belegbar. Spielszenen, Minuten und Bewertungen nur bei belastbaren Belegen. Keine erfundenen Tatsachen. Die automatische thematische Vorsortierung ist fehleranfällig: Prüfe Aussagen anhand der vollständigen Originaltexte. Formuliere einen vollständigen Sichtungsbogen, keine Stichwortliste.",
  "",
  "SCHIEDSRICHTER: "+(successes[0]?name(successes[0].game):$("referee").selectedOptions[0]?.textContent||"–"),
@@ -407,6 +412,56 @@ async function run(){
  }catch(error){setStatus("Auswertung fehlgeschlagen: "+(error?.message||error));}
  finally{running=false;$("analyze").disabled=false;}
 }
+
+// Rückimport des in ChatGPT fertig formulierten Sichtungsbogens.
+const sectionNames=["SPIELDATEN","FAZIT","POSITIVE ASPEKTE","OPTIMIERBARE BEREICHE","ENTWICKLUNGSTHEMEN DES SR","BEWERTUNGSKATEGORIEN"];
+const categoryNames=["ADMINISTRATIVES & SPIELBEZOGENE VORBEREITUNG","ENTSCHEIDUNGSQUALITÄT","DISZIPLINARKONTROLLE","AUFTRETEN & PERSÖNLICHKEIT","STELLUNGSSPIEL & FITNESS"];
+const normalizeHeading=t=>t.replace(/^#{1,6}\s*/,"").replace(/^\*{1,2}/,"").replace(/\*{1,2}$/,"").replace(/^\d+[.)]\s*/,"").replace(/[:\s]+$/,"").trim().toLocaleUpperCase("de-DE").replace(/\s+/g," ");
+function splitSections(text,headings){
+ const blocks=new Map();let current=null;
+ for(const line of text.replace(/\r/g,"").split("\n")){
+  const normalized=normalizeHeading(line);
+  const key=headings.find(h=>normalizeHeading(h)===normalized);
+  if(key){current=key;if(!blocks.has(key))blocks.set(key,[]);continue;}
+  if(current)blocks.get(current).push(line);
+ }
+ return blocks;
+}
+function paragraph(node,text){const p=document.createElement("p");p.textContent=text.trim();node.append(p);}
+function heading(node,tag,text){const el=document.createElement(tag);el.textContent=text;node.append(el);}
+function renderFinished(text){
+ const sections=splitSections(text,sectionNames),missing=sectionNames.filter(x=>!sections.has(x));
+ if(missing.length)throw Error("Nicht erkannte Rubriken: "+missing.join(", ")+". Bitte die Überschriften aus dem Master-Prompt übernehmen.");
+ const root=$("final-preview");root.replaceChildren();heading(root,"h2","SICHTUNGSBOGEN");
+ for(const title of sectionNames){
+  heading(root,"h3",title);
+  const content=sections.get(title).join("\n").trim();
+  if(title!=="BEWERTUNGSKATEGORIEN"){paragraph(root,content||"Keine Angaben.");continue;}
+  const ratings=splitSections(content,categoryNames);
+  for(const category of categoryNames){
+   heading(root,"h4",category);
+   const value=(ratings.get(category)||[]).join("\n").trim();
+   const match=value.match(/(?:^|\n)\s*(?:\*\*)?Bewertung(?:\*\*)?\s*:\s*(\+\+|\+|o|O|--|-|nicht bewertbar)/i);
+   const rating=match?match[1].toLowerCase():"nicht bewertbar";
+   const grid=document.createElement("div");grid.className="rating-grid";
+   for(const symbol of ["++","+","o","-","--"]){const span=document.createElement("span");span.textContent=symbol;if(symbol===rating)span.className="selected";grid.append(span);}
+   root.append(grid);
+   if(rating==="nicht bewertbar")paragraph(root,"Bewertung: nicht bewertbar");
+   const comment=value.replace(/(?:^|\n)\s*(?:\*\*)?Bewertung(?:\*\*)?\s*:\s*(?:\+\+|\+|o|O|--|-|nicht bewertbar)\s*/i,"").replace(/^\s*(?:\*\*)?Kommentar(?:\*\*)?\s*:\s*/i,"").trim();
+   paragraph(root,comment||"Kein Kommentar angegeben.");
+  }
+ }
+ root.hidden=false;return missing;
+}
+$("render-final").onclick=()=>{
+ try{const value=$("return-input").value.trim();if(value.length<100)throw Error("Bitte zuerst den vollständigen ChatGPT-Sichtungsbogen einfügen.");
+ renderFinished(value);$("print-final").disabled=false;$("return-status").textContent="Sichtungsbogen erstellt. Bitte Rubriken und Bewertungen prüfen, dann als PDF speichern.";
+ }catch(e){$("final-preview").hidden=true;$("print-final").disabled=true;$("return-status").textContent=e.message;}
+};
+$("print-final").onclick=()=>{if($("final-preview").hidden)return;document.body.classList.add("print-final");window.print();};
+window.addEventListener("afterprint",()=>document.body.classList.remove("print-final"));
+$("clear-final").onclick=()=>{$("return-input").value="";$("final-preview").replaceChildren();$("final-preview").hidden=true;$("print-final").disabled=true;$("return-status").textContent="";};
+
 $("analyze").addEventListener("click",()=>void run());
 $("clear").addEventListener("click",()=>{
  $("report-section").hidden=true;$("coverage").hidden=true;$("report-action-status").textContent="";reportText="";setStatus("");
