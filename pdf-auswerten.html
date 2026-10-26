@@ -34,6 +34,23 @@ details pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.55 ui-monosp
 
 .final-sheet{background:#fff;color:#1b2b3b;border:1px solid #d7e1eb;padding:24px;max-width:850px;margin:16px auto;font:14px/1.55 Arial,sans-serif}.final-sheet h2{text-align:center;letter-spacing:1px;border-bottom:2px solid #233b55;padding-bottom:10px}.final-sheet h3{background:#e9eff5;padding:8px 10px;margin:22px 0 10px;font-size:15px}.final-sheet h4{margin:15px 0 5px}.final-sheet p{white-space:pre-wrap;margin:5px 0 12px}.final-sheet .rating{font-weight:700}.return-field{width:100%;min-height:250px;font:14px/1.5 system-ui;padding:12px;border:1px solid #9fb3c6;border-radius:8px}.final-sheet .rating-grid{display:flex;gap:16px;flex-wrap:wrap}.final-sheet .rating-grid span{padding:2px 7px;border:1px solid #c8d3df;border-radius:3px}.final-sheet .rating-grid .selected{background:#142b46;color:white}
 @media print{body.print-final #report-section,body.print-final #coverage,body.print-final #return-section .no-print{display:none!important}body.print-final #return-section{display:block!important}body.print-final .final-sheet{border:0;padding:0;margin:0;max-width:none}body.print-final .final-sheet h3{break-after:avoid}body.print-final .final-sheet h4{break-after:avoid}body.print-final .final-sheet p{break-inside:avoid}body.print-final .final-sheet h2{margin-top:0}body:not(.print-final) #return-section{display:none!important}}
+
+/* A4 three-page BSA layout with fixed-position sections matching the supplied blank form */
+.bsa-pages{background:#e8edf3;padding:12px;display:flex;flex-direction:column;gap:16px;align-items:center}
+.bsa-page{position:relative;width:210mm;height:297mm;flex:none;background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;font-size:10pt;line-height:1.3;box-shadow:0 2px 10px #0002;overflow:hidden}
+.bsa-page *{box-sizing:border-box}.bsa-page .fixed{position:absolute;left:12mm;right:12mm;overflow:hidden}
+.bsa-page .bsa-title{top:9mm;text-align:center;font-size:13pt;font-weight:700;letter-spacing:.3px}
+.bsa-page .bsa-heading{text-align:center;font-weight:700;font-size:12pt;letter-spacing:.2px}
+.bsa-page .bsa-label{font-weight:600;font-size:10pt;margin-bottom:1mm}
+.bsa-page .bsa-content{white-space:pre-wrap;overflow-wrap:anywhere;font-size:9pt;line-height:1.23}
+.bsa-page .bsa-footer{top:285mm;left:12mm;right:12mm;font-size:9pt;display:flex;justify-content:space-between}
+.bsa-page .bsa-rating{text-align:center;font-weight:700;letter-spacing:1.4px;margin:1mm 0}
+.bsa-page .bsa-rating strong{border:1.4px solid #222;border-radius:50%;padding:1px 4px}
+.bsa-page .bsa-small-heading{text-align:center;font-weight:700;font-size:11pt}
+.bsa-page .bsa-field{margin-top:2mm;white-space:pre-wrap;overflow-wrap:anywhere;font-size:9pt;line-height:1.2}
+.bsa-page .bsa-category{border:0}
+@media(max-width:820px){.bsa-pages{overflow-x:auto;align-items:flex-start}.bsa-page{transform-origin:top left}}
+@media print{body.print-final #final-preview{padding:0;background:#fff;display:block!important}body.print-final .bsa-pages{padding:0;gap:0;background:#fff;display:block}body.print-final .bsa-page{width:210mm;height:297mm;box-shadow:none;break-after:page;page-break-after:always}body.print-final .bsa-page:last-child{break-after:auto;page-break-after:auto}body.print-final .final-sheet{max-width:none;width:auto}body.print-final #return-section{margin:0;padding:0}@page{size:A4;margin:0}}
 </style></head><body>
 <header><h1>Coachingportal MSP</h1></header>
 <main>
@@ -432,30 +449,54 @@ function heading(node,tag,text){const el=document.createElement(tag);el.textCont
 function renderFinished(text){
  const sections=splitSections(text,sectionNames),missing=sectionNames.filter(x=>!sections.has(x));
  if(missing.length)throw Error("Nicht erkannte Rubriken: "+missing.join(", ")+". Bitte die Überschriften aus dem Master-Prompt übernehmen.");
- const root=$("final-preview");root.replaceChildren();heading(root,"h2","SICHTUNGSBOGEN");
- for(const title of sectionNames){
-  heading(root,"h3",title);
-  const content=sections.get(title).join("\n").trim();
-  if(title!=="BEWERTUNGSKATEGORIEN"){paragraph(root,content||"Keine Angaben.");continue;}
-  const ratings=splitSections(content,categoryNames);
-  for(const category of categoryNames){
-   heading(root,"h4",category);
-   const value=(ratings.get(category)||[]).join("\n").trim();
-   const match=value.match(/(?:^|\n)\s*(?:\*\*)?Bewertung(?:\*\*)?\s*:\s*(\+\+|\+|o|O|--|-|nicht bewertbar)/i);
-   const rating=match?match[1].toLowerCase():"nicht bewertbar";
-   const grid=document.createElement("div");grid.className="rating-grid";
-   for(const symbol of ["++","+","o","-","--"]){const span=document.createElement("span");span.textContent=symbol;if(symbol===rating)span.className="selected";grid.append(span);}
-   root.append(grid);
-   if(rating==="nicht bewertbar")paragraph(root,"Bewertung: nicht bewertbar");
-   const comment=value.replace(/(?:^|\n)\s*(?:\*\*)?Bewertung(?:\*\*)?\s*:\s*(?:\+\+|\+|o|O|--|-|nicht bewertbar)\s*/i,"").replace(/^\s*(?:\*\*)?Kommentar(?:\*\*)?\s*:\s*/i,"").trim();
-   paragraph(root,comment||"Kein Kommentar angegeben.");
-  }
- }
- root.hidden=false;return missing;
+ const root=$("final-preview");root.replaceChildren();root.className="bsa-pages";
+ const pages=[1,2,3].map(n=>{const p=document.createElement("div");p.className="bsa-page";root.append(p);fixed(p,"bsa-title","SICHTUNGSBOGEN",9,9);const footer=fixed(p,"bsa-footer","",285,7);const l=document.createElement("span"),r=document.createElement("span");l.textContent="BSA Unterfranken";r.textContent="Seite "+n+"/3";footer.append(l,r);return p;});
+ function fixed(page,cls,value,top,height,left=12,right=12){const el=document.createElement("div");el.className="fixed "+cls;el.style.top=top+"mm";el.style.height=height+"mm";el.style.left=left+"mm";el.style.right=right+"mm";el.textContent=value;page.append(el);return el;}
+ function section(page,title,value,top,height){fixed(page,"bsa-heading",title,top,8);fixed(page,"bsa-content",value,top+9,height-9);}
+ function numbered(value){const chunks=value.split(/(?:^|\n)\s*(?=[123][.)]\s+)/).map(x=>x.trim()).filter(Boolean);return chunks.length>=3?chunks.slice(0,3):[value,"",""];}
+ const get=x=>(sections.get(x)||[]).join("\n").trim();
+ section(pages[0],"SPIELDATEN",get("SPIELDATEN"),21,31);
+ section(pages[0],"FAZIT",get("FAZIT"),56,43);
+ const positive=numbered(get("POSITIVE ASPEKTE"));
+ fixed(pages[0],"bsa-heading","POSITIVE ASPEKTE",104,8);
+ positive.forEach((v,i)=>{fixed(pages[0],"bsa-label","Positive Aspekte",114+i*22,5);fixed(pages[0],"bsa-content",v,119+i*22,17);});
+ const improve=numbered(get("OPTIMIERBARE BEREICHE"));
+ fixed(pages[0],"bsa-heading","OPTIMIERBARE BEREICHE",183,8);
+ improve.forEach((v,i)=>{fixed(pages[0],"bsa-label","Optimierbare Bereiche",193+i*22,5);fixed(pages[0],"bsa-content",v,198+i*22,17);});
+ const develop=numbered(get("ENTWICKLUNGSTHEMEN DES SR"));
+ fixed(pages[0],"bsa-heading","ENTWICKLUNGSTHEMEN DES SR",263,8);
+ fixed(pages[0],"bsa-content",develop[0],272,11);
+ fixed(pages[1],"bsa-label","Entwicklungsthemen des SR",20,5);
+ fixed(pages[1],"bsa-content",develop[1],25,18);
+ fixed(pages[1],"bsa-label","Entwicklungsthemen des SR",48,5);
+ fixed(pages[1],"bsa-content",develop[2],53,18);
+ fixed(pages[1],"bsa-heading","BEWERTUNGSKATEGORIEN",78,8);
+ const ratingBlocks=splitSections(get("BEWERTUNGSKATEGORIEN"),categoryNames);
+ const categoryPositions=[[1,92,42],[1,141,42],[1,190,42],[1,239,39],[2,63,98]];
+ categoryNames.forEach((name,i)=>{
+  const [pageIdx,top,height]=categoryPositions[i],page=pages[pageIdx];
+  const value=(ratingBlocks.get(name)||[]).join("\n").trim();
+  const m=value.match(/(?:^|\n)\s*(?:\*\*)?Bewertung(?:\*\*)?\s*:\s*(\+\+|\+|o|O|--|-|nicht bewertbar)/i);
+  const rating=m?m[1].toLowerCase():"nicht bewertbar";
+  let comment=value.replace(/(?:^|\n)\s*(?:\*\*)?Bewertung(?:\*\*)?\s*:\s*(?:\+\+|\+|o|O|--|-|nicht bewertbar)\s*/i,"").replace(/^\s*(?:\*\*)?Kommentar(?:\*\*)?\s*:\s*/i,"").trim();
+  fixed(page,"bsa-small-heading",name,top,7);
+  fixed(page,"bsa-small-heading","BEWERTUNG",top+7,6);
+  const ratingNode=fixed(page,"bsa-rating","",top+14,8);
+  for(const symbol of ["++","+","o","-","--"]){const el=document.createElement(rating===symbol?"strong":"span");el.textContent=symbol+" ";ratingNode.append(el);}
+  fixed(page,"bsa-label",rating==="nicht bewertbar"?"Kommentar (nicht bewertbar)":"Kommentar",top+24,5);
+  fixed(page,"bsa-content",comment||"Keine Angaben.",top+29,height-29);
+ });
+ // On the original form, the fourth category's comment starts on page 3.
+ const appearance=(ratingBlocks.get(categoryNames[3])||[]).join("\n").trim();
+ if(appearance){const comment=appearance.replace(/(?:^|\n)\s*(?:\*\*)?Bewertung(?:\*\*)?\s*:\s*(?:\+\+|\+|o|O|--|-|nicht bewertbar)\s*/i,"").replace(/^\s*(?:\*\*)?Kommentar(?:\*\*)?\s*:\s*/i,"").trim();fixed(pages[2],"bsa-label","Kommentar",23,5);fixed(pages[2],"bsa-content",comment,29,29);}
+ const overflows=[];
+ root.querySelectorAll(".bsa-page .bsa-content").forEach(el=>{let font=9;while(el.scrollHeight>el.clientHeight+2&&font>6){font-=.5;el.style.fontSize=font+"pt";}if(el.scrollHeight>el.clientHeight+2)overflows.push(el.textContent.slice(0,45));});
+ root.hidden=false;
+ return overflows;
 }
 $("render-final").onclick=()=>{
  try{const value=$("return-input").value.trim();if(value.length<100)throw Error("Bitte zuerst den vollständigen ChatGPT-Sichtungsbogen einfügen.");
- renderFinished(value);$("print-final").disabled=false;$("return-status").textContent="Sichtungsbogen erstellt. Bitte Rubriken und Bewertungen prüfen, dann als PDF speichern.";
+ const overflows=renderFinished(value);$("print-final").disabled=overflows.length>0;$("return-status").textContent=overflows.length?"Achtung: "+overflows.length+" Textfelder überschreiten den verfügbaren Platz auf den drei Originalseiten. PDF-Ausgabe gesperrt, damit keine Inhalte abgeschnitten werden. Bitte Texte kürzen.":"Dreiseitige A4-Vorschau erstellt. Bitte Rubriken und Bewertungen prüfen, dann als PDF speichern.";
  }catch(e){$("final-preview").hidden=true;$("print-final").disabled=true;$("return-status").textContent=e.message;}
 };
 $("print-final").onclick=()=>{if($("final-preview").hidden)return;document.body.classList.add("print-final");window.print();};
