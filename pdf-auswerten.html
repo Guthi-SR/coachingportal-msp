@@ -39,7 +39,7 @@ details pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.55 ui-monosp
 <div id="private" hidden>
 <section class="no-print">
 <h2>PDF-Auswertung der Schiedsrichterbögen</h2>
-<p class="muted">Erstellt einen übersichtlichen Coachingbericht aus den vorhandenen PDF-Beobachtungsbögen: Gesamtüberblick, belegte Stärken, Verbesserungsansätze, zeitlicher Verlauf und Gesamtfazit. Die ausführlichen Textstellen bleiben zum Nachprüfen verfügbar.</p>
+<p class="muted">Erstellt einen zusammengeführten Sichtungsbogen nach der Gliederung des BSA Unterfranken aus den PDF-Beobachtungsbögen im ausgewählten Zeitraum. Die automatische Textauswertung ist ein prüfbarer Entwurf. Die ausführlichen Textstellen bleiben zum Nachprüfen verfügbar.</p>
 <div class="field-grid">
 <label>Schiedsrichter<select id="referee"><option value="">Bitte auswählen</option></select></label>
 <label>Von<input id="from" type="date"></label>
@@ -58,7 +58,7 @@ details pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.55 ui-monosp
 <div class="table-scroll"><table><thead><tr><th>Datum</th><th>Spiel</th><th>Coach</th><th>PDF-Status</th><th>Quelle</th></tr></thead><tbody id="coverage-rows"></tbody></table></div>
 </section>
 <section id="report-section" hidden>
-<h2>Zusammenfassende PDF-Coachingauswertung</h2>
+<h2>Gesamt-Sichtungsbogen nach BSA-Vorlage</h2>
 <p class="muted small no-print">Thematisch gegliederter Vortragsbericht aus den vorhandenen Bogeninhalten. Die Belegstellen findest du unten auf dieser Seite.</p>
 <div class="actions no-print"><button id="print-report" type="button">Als PDF drucken / speichern</button><button id="copy-report" type="button" class="secondary">Zusammenfassung kopieren</button></div>
 <p id="report-action-status" class="small no-print" role="status"></p>
@@ -219,58 +219,59 @@ function reportTopicList(all){
  return names.slice(0,-1).join(", ")+" sowie "+names[names.length-1];
 }
 function buildReport(associated,successes,missing,unreadable,errors,ev){
- const selected=$("referee").selectedOptions[0]?.textContent||"–";
- const referee=associated[0]?.game?name(associated[0].game):selected;
- const from=dateDE($("from").value),to=dateDE($("to").value);
+ const referee=associated[0]?.game?name(associated[0].game):$("referee").selectedOptions[0]?.textContent||"–";
  const dates=unique(successes.map(x=>x.game.match_date)).sort();
- const paragraphs=["GESAMTAUSWERTUNG DER COACHINGBÖGEN","",
-  "Schiedsrichter: "+referee,"Zeitraum: "+from+" bis "+to,
-  "Datengrundlage: "+successes.length+" auslesbare PDF-Bögen zu "+dates.length+" Spielen; "+associated.length+" Spiele im ausgewählten Zeitraum.",""];
- const relevant=(rx,kinds)=>ev.filter(e=>rx.test(e.topic)&&(!kinds||kinds.includes(e.kind)));
- const distinctGames=records=>unique(records.map(e=>e.game.game_key)).length;
- const topicParagraph=(title,rx)=>{
-  const all=relevant(rx),pos=all.filter(e=>e.kind==="positive"),crit=all.filter(e=>e.kind==="improve");
-  paragraphs.push("",title);
-  if(!all.length){paragraphs.push("Zu diesem Themenbereich konnten aus den maschinenlesbaren Bögen keine eindeutig zuordenbaren Aussagen gewonnen werden. Daraus lässt sich keine Leistungsbewertung ableiten.");return;}
-  let t="In den vorliegenden Coachingbögen wird dieser Bereich bei "+distinctGames(all)+" Spiel"+(distinctGames(all)===1?"":"en")+" angesprochen. ";
-  if(pos.length)t+="Die Coaches dokumentieren hierzu positive Beobachtungen, unter anderem im Spiel vom "+dateDE(pos[0].game.match_date)+". ";
-  if(crit.length)t+="Daneben werden konkrete Ansatzpunkte für die weitere Entwicklung beschrieben, beispielsweise im Spiel vom "+dateDE(crit[0].game.match_date)+". ";
-  if(!pos.length&&!crit.length)t+="Die erkannten Passagen erlauben keine verlässliche Einordnung als Stärke oder Entwicklungsbedarf. ";
-  if(pos.length&&crit.length)t+="In der Gesamtschau ist deshalb eine differenzierte Betrachtung erforderlich: Positive Beobachtungen und kritische Hinweise stehen nebeneinander und dürfen nicht pauschal gegeneinander aufgerechnet werden.";
-  else if(pos.length)t+="Die Aussagen liefern Hinweise auf vorhandene Stärken; ihre Beständigkeit über den gesamten Zeitraum ist anhand der Originalbögen zu prüfen.";
-  else if(crit.length)t+="Für die weitere Förderung sollte der benannte Aspekt in den kommenden Spielleitungen gezielt beobachtet und mit den dokumentierten Situationen abgeglichen werden.";
-  paragraphs.push(t);
- };
- paragraphs.push("1. ALLGEMEINE LEISTUNGSBEURTEILUNG");
- if(!successes.length)paragraphs.push("Für den gewählten Zeitraum konnten keine lesbaren PDF-Texte gewonnen werden. Eine fachlich belastbare Gesamtbeurteilung ist damit nicht möglich.");
- else paragraphs.push("Für "+referee+" wurden im ausgewählten Zeitraum "+successes.length+" lesbare Coachingbögen aus "+dates.length+" Spielen zusammengeführt. Die folgende thematisch gegliederte Betrachtung berücksichtigt dokumentierte positive Beobachtungen und Entwicklungshinweise. Sie unterscheidet bewusst zwischen belegten Aussagen und Schlussfolgerungen, die ohne fachliche Prüfung nicht zuverlässig möglich sind.");
- topicParagraph("2. SPIELLEITUNG UND REGELANWENDUNG",/Entscheidungsqualität/);
- topicParagraph("3. PERSÖNLICHE STRAFEN UND SPIELMANAGEMENT",/Disziplinarkontrolle|Kommunikation und Auftreten/);
- topicParagraph("4. PERSÖNLICHKEIT, AUFTRETEN UND KOMMUNIKATION",/Kommunikation und Auftreten/);
- topicParagraph("5. STELLUNGSSPIEL UND LAUFVERMÖGEN",/Stellungsspiel und Fitness/);
- paragraphs.push("","6. ENTWICKLUNG IM BEOBACHTUNGSZEITRAUM");
- if(dates.length<2)paragraphs.push("Da nur ein Spiel mit auslesbarem Coachingbogen vorliegt, lässt sich kein zeitlicher Entwicklungsverlauf beurteilen.");
- else{
-  const repeated=topics.filter(t=>distinctGames(ev.filter(e=>e.topic===t.key))>=2).map(t=>t.key);
-  paragraphs.push("Die auswertbaren Spiele fanden am "+dates.map(dateDE).join(", ")+" statt. "+(repeated.length?"Mehrfach angesprochen wurden "+repeated.join(", ")+". ":"Eine wiederholte thematische Auffälligkeit ließ sich nicht eindeutig feststellen. ")+"Eine wiederholte Erwähnung belegt für sich allein weder einen Fortschritt noch einen Rückschritt. Dafür sind die konkreten Situationen und ihre Bewertungen im zeitlichen Zusammenhang fachlich zu vergleichen.");
+ const title="SICHTUNGSBOGEN – ZUSAMMENGEFASSTE BEOBACHTUNG";
+ const lines=[title,"","SPIELDATEN",
+ "Spiele: "+(successes.length?successes.map(x=>displayGame(x.game)).filter((x,i,a)=>a.indexOf(x)===i).join("; "):"Keine lesbaren Spiele"),
+ "Schiedsrichter: "+referee,
+ "Coaches: "+(unique(successes.map(x=>x.game.coach_name).filter(Boolean)).join(", ")||"Nicht angegeben"),
+ "Beobachtungszeitraum: "+dateDE($("from").value)+" bis "+dateDE($("to").value),
+ "Datengrundlage: "+successes.length+" lesbare PDF-Bögen aus "+dates.length+" Spielen.",""];
+ const pick=(rx,kind,max=3)=>distinctEvidence(ev.filter(e=>rx.test(e.topic)&&(!kind||e.kind===kind)),max);
+ const describe=e=>e.text+" (Spiel "+dateDE(e.game.match_date)+", PDF-Seite "+e.page+")";
+ const passage=(records,empty)=>records.length?records.map(describe).join(" "):empty;
+ const positives=pick(/./,"positive",3),improvements=pick(/./,"improve",3);
+ lines.push("FAZIT");
+ if(!successes.length)lines.push("Eine zusammenfassende Sichtung ist nicht möglich, weil keine auslesbaren Beobachtungsbögen vorliegen.");
+ else lines.push("Für "+referee+" liegen "+successes.length+" auslesbare Beobachtungsbögen aus "+dates.length+" Spielen vor. Die nachfolgende Gesamtsichtung führt die dokumentierten Beobachtungen nach den Bewertungsrubriken des BSA Unterfranken zusammen. Positive und kritische Aussagen werden getrennt ausgewiesen; eine darüber hinausgehende Gesamtbewertung bedarf einer fachlichen Freigabe. "+(positives.length?"Dokumentierte Stärken betreffen insbesondere "+reportTopicList(ev.filter(e=>e.kind==="positive"))+". ":"")+(improvements.length?"Entwicklungshinweise betreffen "+reportTopicList(ev.filter(e=>e.kind==="improve"))+".":""));
+ lines.push("","POSITIVE ASPEKTE");
+ for(let i=0;i<3;i++)lines.push((i+1)+". "+(positives[i]?describe(positives[i]):"Kein weiterer eindeutig belegter positiver Aspekt automatisch ermittelt."));
+ lines.push("","OPTIMIERBARE BEREICHE");
+ for(let i=0;i<3;i++)lines.push((i+1)+". "+(improvements[i]?describe(improvements[i]):"Kein weiterer eindeutig belegter Verbesserungsansatz automatisch ermittelt."));
+ lines.push("","ENTWICKLUNGSTHEMEN DES SR");
+ for(let i=0;i<3;i++){
+  const e=improvements[i];
+  lines.push((i+1)+". "+(e?"Die im Spiel vom "+dateDE(e.game.match_date)+" dokumentierte Beobachtung im Bereich "+e.topic+" sollte bei den nächsten Einsätzen gezielt überprüft und mit konkreten Spielszenen nachbesprochen werden.":"Kein weiteres Entwicklungsthema aus den vorliegenden Textstellen belastbar ableitbar."));
  }
- paragraphs.push("","7. STÄRKEN UND ENTWICKLUNGSPOTENZIAL");
- const positives=ev.filter(e=>e.kind==="positive"),critical=ev.filter(e=>e.kind==="improve");
- paragraphs.push((positives.length?"Positive Hinweise finden sich in den Bereichen "+reportTopicList(positives)+". ":"Eindeutig positive Formulierungen konnten nicht zuverlässig erkannt werden. ")+(critical.length?"Entwicklungshinweise betreffen "+reportTopicList(critical)+".":"Eindeutige Entwicklungshinweise wurden nicht automatisch erkannt.")+" Die Häufigkeit von Schlüsselwörtern ist dabei keine Leistungsnote.");
- const candidates=distinctEvidence([...positives,...critical,...ev.filter(e=>e.kind==="mixed")],2);
- if(candidates.length){
-  paragraphs.push("ZWEI AUSGEWÄHLTE ORIGINALSTELLEN");
-  candidates.forEach((e,i)=>paragraphs.push("Zitat "+(i+1)+": "+evidenceQuote(e)+"\nEinordnung: Diese Aussage dokumentiert eine Beobachtung im Themenfeld „"+e.topic+"“. Sie ist im Zusammenhang mit den übrigen Bögen zu bewerten und begründet allein keine Gesamtbewertung."));
-  if(candidates.length<2)paragraphs.push("Ein zweites hinreichend eigenständiges Originalzitat konnte nicht zuverlässig ermittelt werden.");
- }else paragraphs.push("Zwei belastbare Originalzitate konnten nicht automatisch ausgewählt werden.");
- paragraphs.push("","8. ABSCHLIESSENDE GESAMTBEURTEILUNG");
- if(!successes.length)paragraphs.push("Eine abschließende fachliche Beurteilung ist ohne auslesbare Originalbögen nicht möglich.");
- else paragraphs.push("Zusammenfassend ergibt sich für "+referee+" ein dokumentiertes Leistungsbild mit "+(positives.length?"positiven Beobachtungen":"nicht eindeutig automatisch erkannten Stärken")+(critical.length?" und benannten Entwicklungsmöglichkeiten.":".")+" Für die weitere Förderung sollten die konkret beschriebenen Spielsituationen als Ausgangspunkt dienen und in folgenden Coachings erneut aufgegriffen werden. Eine belastbare Aussage zur Leistungsentwicklung oder eine abschließende Qualitätsnote erfordert die fachliche Prüfung der vollständigen Originalbögen; sie wird hier nicht aus bloßen Schlagworttreffern abgeleitet.");
- paragraphs.push("","QUELLEN UND VOLLSTÄNDIGKEIT");
- paragraphs.push(successes.length+" PDF-Bögen waren lesbar. "+missing.length+" Spiele ohne PDF, "+unreadable.length+" PDF-Bögen ohne auslesbare Textebene und "+errors.length+" Lesefehler.");
- successes.forEach(x=>paragraphs.push(dateDE(x.game.match_date)+" · "+(x.game.home||"–")+" – "+(x.game.away||"–")+" · "+(x.doc.file_name||"PDF")+" · Coach: "+(x.game.coach_name||"nicht angegeben")));
- paragraphs.push("Methodischer Hinweis: Diese automatisch erzeugte, thematisch gegliederte Vortragsfassung verwendet eine regelbasierte Textanalyse ohne KI-Sprachmodell. Die zwei Originalstellen sind wörtlich übernommen beziehungsweise als gekürzt gekennzeichnet. Die fachliche Freigabe vor einer Präsentation bleibt erforderlich.");
- return paragraphs.join("\n\n");
+ lines.push("","BEWERTUNGSKATEGORIEN");
+ const categories=[
+ ["ADMINISTRATIVES & SPIELBEZOGENE VORBEREITUNG",/Organisation und Spielvorbereitung/],
+ ["ENTSCHEIDUNGSQUALITÄT",/Entscheidungsqualität/],
+ ["DISZIPLINARKONTROLLE",/Disziplinarkontrolle/],
+ ["AUFTRETEN & PERSÖNLICHKEIT",/Kommunikation und Auftreten/],
+ ["STELLUNGSSPIEL & FITNESS",/Stellungsspiel und Fitness/]
+ ];
+ for(const [label,rx] of categories){
+  const all=pick(rx,null,5),pos=pick(rx,"positive",3),crit=pick(rx,"improve",3);
+  lines.push("",label,"BEWERTUNG: ++ / + / o / - / --   (fachlich festzulegen)","Kommentar:");
+  if(!all.length){lines.push("In den auslesbaren Texten liegen keine eindeutig zugeordneten Aussagen für diesen Bewertungsbereich vor. Eine Bewertung wird nicht erfunden.");continue;}
+  let comment="Die vorliegenden Sichtungen enthalten zu diesem Bewertungsbereich Beobachtungen aus "+unique(all.map(e=>e.game.game_key)).length+" Spiel(en). ";
+  if(pos.length)comment+="Positiv wurde unter anderem festgehalten: "+passage(pos,"")+" ";
+  if(crit.length)comment+="Als optimierbar wurde dokumentiert: "+passage(crit,"")+" ";
+  if(!pos.length&&!crit.length)comment+="Die dokumentierten Aussagen sind nicht eindeutig als Stärke oder Schwäche klassifizierbar: "+passage(all.slice(0,2),"");
+  if(pos.length&&crit.length)comment+="Die unterschiedlichen Beobachtungen sind im Gesamtbild gegeneinander abzuwägen; aus einzelnen Textstellen folgt keine automatische Notenvergabe.";
+  lines.push(comment.trim());
+ }
+ const quotes=distinctEvidence([...positives,...improvements],2);
+ lines.push("","ORIGINALZITATE AUS DEN COACHINGBÖGEN");
+ quotes.forEach((e,i)=>lines.push((i+1)+". "+evidenceQuote(e)));
+ if(quotes.length<2)lines.push("Weitere wörtliche Originalzitate sind nicht zuverlässig belegbar.");
+ lines.push("","QUELLEN UND VOLLSTÄNDIGKEIT");
+ successes.forEach(x=>lines.push(dateDE(x.game.match_date)+" · "+(x.game.home||"–")+" – "+(x.game.away||"–")+" · "+(x.doc.file_name||"PDF")+" · Coach: "+(x.game.coach_name||"nicht angegeben")));
+ lines.push("Spiele ohne PDF: "+missing.length+"; nicht auslesbare PDFs: "+unreadable.length+"; Lesefehler: "+errors.length+".");
+ lines.push("Hinweis: Dieser Entwurf übernimmt die Rubriken des originalen Sichtungsbogens. Die Inhalte sind regelbasiert aus Originaltextstellen zusammengestellt, nicht durch ein KI-Sprachmodell fachlich synthetisiert. Die Bewertungsstufen bleiben deshalb bis zur fachlichen Prüfung bewusst offen.");
+ return lines.join("\n\n");
 }
 function addCell(tr,content,klass){
  const td=document.createElement("td");
