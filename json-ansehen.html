@@ -1,45 +1,168 @@
 <!doctype html>
-<html lang="de">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>JSON ansehen – Coachingportal MSP</title>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JSON ansehen und importieren – Coachingportal MSP</title>
 <style>
-*{box-sizing:border-box}
-body{margin:0;background:#f3f6fa;color:#142b46;font:16px/1.5 system-ui,sans-serif}
-header{background:#142b46;color:white;padding:20px}
-main{width:100%;max-width:980px;margin:0 auto;padding:24px;min-width:0}
-.card{background:white;border:1px solid #dce5ee;border-radius:12px;padding:24px;margin:14px 0}
-h2{margin-top:0}
-a{color:#17568c}
-#json-protected-content[hidden]{display:none!important}
-@media(max-width:767px){main{padding:12px}.card{padding:16px}}
-</style>
-</head>
-<body>
+*{box-sizing:border-box}body{margin:0;background:#f3f6fa;color:#142b46;font:16px/1.5 system-ui,sans-serif}header{background:#142b46;color:#fff;padding:20px}main{max-width:1100px;margin:0 auto;padding:22px;min-width:0}.card{background:#fff;border:1px solid #dce5ee;border-radius:12px;padding:22px;margin:15px 0}h2{margin:0 0 8px}h3{margin:0 0 10px}label{display:block;font-weight:650;margin:12px 0 5px}input,select,button{font:inherit;padding:11px;border:1px solid #adbdce;border-radius:8px;max-width:100%}input[type=file],select{width:100%}button{background:#142b46;color:white;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}button.secondary{background:white;color:#142b46}a{color:#17568c}.muted{color:#63768a}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.info{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 20px}.info p{margin:5px 0;overflow-wrap:anywhere}#json-protected-content[hidden],[hidden]{display:none!important}pre{max-height:350px;white-space:pre-wrap;overflow:auto;overflow-wrap:anywhere;background:#f4f7fa;padding:15px;border-radius:8px}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:9px;border-bottom:1px solid #e7eef4;vertical-align:top}td{overflow-wrap:anywhere}.scroll{overflow-x:auto}.notice{padding:12px;background:#eff5fb;border-radius:9px}.tag{font-size:13px;color:#46617a} @media(max-width:767px){main{padding:11px}.card{padding:15px}.info{grid-template-columns:1fr}td,th{padding:7px;font-size:13px}}
+</style></head><body>
 <header><h1>Coachingportal MSP</h1></header>
 <main>
-<p><a href="/">← Zur Startseite</a></p>
-<p id="json-access-status" role="status">Zugang wird geprüft …</p>
-<section id="json-protected-content" class="card" hidden>
-<h2>JSON ansehen</h2>
-<p>Hier werden wir künftig den Inhalt einer JSON-Datei aus einem Beobachtungsbogen übersichtlich darstellen.</p>
-<p>Noch keine JSON-Datei eingebunden. Sobald wir das Format deiner Beispieldatei kennen, legen wir gemeinsam fest, welche Angaben angezeigt werden sollen.</p>
-<p><strong>Status:</strong> Funktion in Vorbereitung.</p>
-<p><a href="/json-auswerten.html">JSON auswerten</a></p>
+<p><a href="/">← Zur Startseite</a></p><p id="json-access-status" role="status">Zugang wird geprüft …</p>
+<div id="json-protected-content" hidden>
+<section class="card">
+<h2>JSON ansehen und hochladen</h2>
+<p class="muted">Coachingbogen als JSON auswählen. Wir schlagen ein vorhandenes Spiel vor. Die Zuordnung wird erst nach deiner Bestätigung übernommen.</p>
+<label for="json-file">JSON-Datei auswählen</label>
+<input id="json-file" type="file" accept=".json,application/json">
+<p id="parse-status" role="status" aria-live="polite"></p>
+<div id="preview" hidden>
+<h3>Erkannte Angaben</h3><div class="info" id="file-details"></div>
+<label for="game-select">Spiel zuordnen</label>
+<select id="game-select"><option value="">Ohne Spielzuordnung speichern</option></select>
+<p id="match-advice" class="notice" role="status"></p>
+<div class="row"><button id="save-json" type="button">JSON speichern und Auswahl bestätigen</button><button id="clear-json" type="button" class="secondary">Auswahl zurücksetzen</button></div>
+<details><summary>Original-JSON ansehen</summary><pre id="original-json"></pre></details>
+</div>
 </section>
-</main>
+<section class="card">
+<h2>Bereits gespeicherte JSON-Dateien</h2>
+<p class="muted">Nicht zugeordnete Dateien bleiben erhalten und können später einem Spiel zugewiesen werden.</p>
+<div id="saved-status" role="status"></div>
+<div class="scroll"><table><thead><tr><th>Datei</th><th>Erkannte Daten</th><th>Spielzuordnung</th><th>Aktion</th></tr></thead><tbody id="saved-list"></tbody></table></div>
+</section>
+<p><a href="/json-auswerten.html">Zur späteren JSON-Auswertung</a></p>
+</div></main>
 <script type="module">
-import {requireAdmin} from "/portal-workflow.js";
-const status=document.getElementById("json-access-status");
-try{
- await requireAdmin();
- status.hidden=true;
- document.getElementById("json-protected-content").hidden=false;
-}catch(error){
- status.textContent=error?.message||"Zugriff nicht möglich.";
+import {sb,requireAdmin} from "/portal-workflow.js";
+const $=id=>document.getElementById(id);
+let user=null,games=[],imports=[],pending=null;
+const bucket="portal-observation-jsons";
+const fields={match_date:"spieldatum",home:"heimmannschaft",away:"gastmannschaft",referee:"schiedsrichter",coach:"coach",league:"spielklasse"};
+const norm=x=>String(x||"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\b(e\.?v\.?|fc|tsv|sv|sc|spvgg|dj?k|sg|vfl|fsv)\b/g,"").replace(/[^a-z0-9]/g,"");
+const showDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||"")?d.slice(8,10)+"."+d.slice(5,7)+"."+d.slice(0,4):d||"–";
+const str=x=>typeof x==="string"?x.trim():"";
+const teamScore=(a,b)=>{const x=norm(a),y=norm(b);return x&&y&&(x===y||x.length>=5&&y.includes(x)||y.length>=5&&x.includes(y))?1:0;};
+function score(g,d){
+ if(!d.match_date||g.match_date!==d.match_date)return -1;
+ let pts=5;
+ pts+=teamScore(g.home,d.home)*3+teamScore(g.away,d.away)*3;
+ pts+=teamScore(g.referee_name,d.referee)*3;
+ pts+=teamScore(g.coach_name,d.coach);
+ return pts;
 }
-</script>
-<script type="module" src="/portal-ui.js"></script>
-</body>
-</html>
+const displayGame=g=>showDate(g.match_date)+" · "+g.home+" – "+g.away+" · "+(g.referee_name||"SR offen")+" · "+(g.coach_name||"Coach offen");
+function gameOptions(select,value="",target=null){
+ select.replaceChildren(new Option("Ohne Spielzuordnung speichern",""));
+ const d=target||{};
+ const sorted=[...games].sort((a,b)=>score(b,d)-score(a,d)||String(b.match_date).localeCompare(String(a.match_date)));
+ for(const g of sorted)select.add(new Option(displayGame(g),g.game_key));
+ if(value&&games.some(g=>g.game_key===value))select.value=value;
+}
+function details(d){
+ const box=$("file-details");box.replaceChildren();
+ for(const [label,val] of [["Spieldatum",showDate(d.match_date)],["Heimmannschaft",d.home],["Gastmannschaft",d.away],["Schiedsrichter",d.referee],["Coach",d.coach],["Spielklasse",d.league]]){
+  const el=document.createElement("p"),b=document.createElement("strong");b.textContent=label+": ";el.append(b,document.createTextNode(val||"–"));box.append(el);
+ }
+}
+function propose(d){
+ const selected=games.map(g=>({g,points:score(g,d)})).sort((a,b)=>b.points-a.points);
+ const best=selected[0],runnerUp=selected[1];
+ const unambiguous=best&&best.points>=11&&(!runnerUp||best.points>runnerUp.points);
+ if(unambiguous){$("game-select").value=best.g.game_key;$("match-advice").textContent="Vorschlag anhand von Spieldatum und mindestens zwei weiteren passenden Angaben. Bitte Spiel und Schiedsrichter prüfen und erst dann speichern.";}
+ else if(best?.points>=5){$("match-advice").textContent="Kein eindeutiger Treffer. Bitte ein Spiel manuell auswählen oder zunächst ohne Zuordnung speichern.";}
+ else{$("match-advice").textContent="Kein passendes Spiel gefunden. Die Datei kann ohne Zuordnung gespeichert werden.";}
+}
+function validate(data){
+ if(!data||typeof data!=="object"||Array.isArray(data))throw Error("Die Datei enthält keinen JSON-Coachingbogen.");
+ const d=Object.fromEntries(Object.entries(fields).map(([k,v])=>[k,str(data[v])]));
+ if(!d.match_date||!/^\d{4}-\d{2}-\d{2}$/.test(d.match_date)||Number.isNaN(Date.parse(d.match_date+"T00:00:00Z")))throw Error("Die JSON-Datei enthält kein gültiges Spieldatum.");
+ if(!d.home||!d.away||!d.referee)throw Error("Spieldatum, Heim-/Gastmannschaft und Schiedsrichter müssen vorhanden sein.");
+ return d;
+}
+async function hashFile(file){const bytes=await file.arrayBuffer();const digest=await crypto.subtle.digest("SHA-256",bytes);return [...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,"0")).join("");}
+function reset(){pending=null;$("json-file").value="";$("preview").hidden=true;$("original-json").textContent="";$("parse-status").textContent="";}
+$("clear-json").onclick=reset;
+$("json-file").addEventListener("change",async()=>{
+ resetPreview();
+ const file=$("json-file").files?.[0];if(!file)return;
+ if(file.size>5242880){$("parse-status").textContent="Die Datei ist größer als 5 MB.";return;}
+ if(!/\.json$/i.test(file.name)){$("parse-status").textContent="Bitte eine .json-Datei auswählen.";return;}
+ try{
+  const raw=await file.text(),body=JSON.parse(raw),d=validate(body);
+  pending={file,body,d,raw};
+  details(d);gameOptions($("game-select"),"",d);propose(d);
+  $("original-json").textContent=JSON.stringify(body,null,2);$("preview").hidden=false;
+  $("parse-status").textContent="Datei erkannt: "+file.name;
+ }catch(e){$("parse-status").textContent="Datei nicht lesbar: "+e.message;}
+});
+function resetPreview(){pending=null;$("preview").hidden=true;$("original-json").textContent="";$("parse-status").textContent="";}
+function assignmentValid(d,key){
+ if(!key)return true;
+ const g=games.find(g=>g.game_key===key);
+ if(!g)return false;
+ // Auswahl bei Widerspruch bewusst bestätigen statt stillschweigend falsch zuordnen.
+ if(g.match_date!==d.match_date){
+  return confirm("ACHTUNG: Das ausgewählte Spiel hat ein anderes Spieldatum als die JSON-Datei. Trotzdem zuordnen?");
+ }
+ if(!teamScore(g.home,d.home)||!teamScore(g.away,d.away)){
+  return confirm("ACHTUNG: Die Mannschaften stimmen nicht vollständig überein. Bitte kontrollieren: "+displayGame(g)+". Trotzdem zuordnen?");
+ }
+ if(g.referee_name&&!teamScore(g.referee_name,d.referee)){
+  return confirm("ACHTUNG: Der Schiedsrichtername weicht vom Spiel ab. Trotzdem zuordnen?");
+ }
+ return true;
+}
+$("save-json").onclick=async()=>{
+ if(!pending)return;
+ const {file,body,d}=pending,key=$("game-select").value;
+ if(!assignmentValid(d,key))return;
+ const btn=$("save-json");btn.disabled=true;
+ try{
+  const sha256=await hashFile(file);
+  const existing=imports.find(x=>x.sha256===sha256);
+  if(existing)throw Error("Diese JSON-Datei ist bereits gespeichert"+(existing.game_key?" und einem Spiel zugeordnet":" (noch ohne Spielzuordnung)")+". Du kannst die Zuordnung unten ändern.");
+  const id=crypto.randomUUID();
+  const path=user.id+"/"+id+".json";
+  const upload=await sb.storage.from(bucket).upload(path,file,{contentType:"application/json",upsert:false});
+  if(upload.error)throw upload.error;
+  const row={id,owner_id:user.id,file_name:file.name,storage_path:path,sha256,json_body:body,game_key:key||null,match_date:d.match_date,home:d.home,away:d.away,referee_name:d.referee,coach_name:d.coach,assigned_at:key?new Date().toISOString():null};
+  const write=await sb.from("portal_json_imports").insert(row);
+  if(write.error){await sb.storage.from(bucket).remove([path]);throw write.error;}
+  $("parse-status").textContent="JSON erfolgreich gespeichert"+(key?" und dem ausgewählten Spiel zugeordnet.":" (noch ohne Spielzuordnung).");
+  pending=null;$("json-file").value="";$("preview").hidden=true;
+  await refreshImports();
+ }catch(e){$("parse-status").textContent="Speichern fehlgeschlagen: "+e.message;}
+ finally{btn.disabled=false;}
+};
+async function refreshImports(){
+ const r=await sb.from("portal_json_imports").select("id,file_name,sha256,game_key,match_date,home,away,referee_name,coach_name,created_at").eq("owner_id",user.id).order("created_at",{ascending:false});
+ if(r.error)throw r.error;
+ imports=r.data||[];
+ $("saved-status").textContent=imports.length+" JSON-Datei(en) gespeichert.";
+ const tb=$("saved-list");tb.replaceChildren();
+ for(const item of imports){
+  const tr=document.createElement("tr"),a=document.createElement("td"),b=document.createElement("td"),c=document.createElement("td"),d=document.createElement("td");
+  a.textContent=item.file_name;b.textContent=showDate(item.match_date)+" · "+(item.home||"–")+" – "+(item.away||"–")+" · "+(item.referee_name||"–");
+  const sel=document.createElement("select");sel.setAttribute("aria-label","Spiel für "+item.file_name);
+  gameOptions(sel,item.game_key,{match_date:item.match_date,home:item.home,away:item.away,referee:item.referee_name,coach:item.coach_name});
+  c.append(sel);
+  const btn=document.createElement("button");btn.type="button";btn.textContent="Zuordnung speichern";btn.disabled=true;
+  sel.addEventListener("change",()=>{btn.disabled=sel.value===(item.game_key||"");});
+  btn.onclick=async()=>{
+   const key=sel.value;
+   if(!assignmentValid({match_date:item.match_date,home:item.home,away:item.away,referee:item.referee_name},key))return;
+   btn.disabled=true;
+   const up=await sb.from("portal_json_imports").update({game_key:key||null,assigned_at:key?new Date().toISOString():null}).eq("owner_id",user.id).eq("id",item.id);
+   if(up.error){alert("Zuordnung fehlgeschlagen: "+up.error.message);btn.disabled=false;return;}
+   try{await refreshImports();}catch(error){$("saved-status").textContent=error.message;}
+  };
+  d.append(btn);tr.append(a,b,c,d);tb.append(tr);
+ }
+}
+try{
+ const access=await requireAdmin();user=access.user;
+ $("json-access-status").hidden=true;$("json-protected-content").hidden=false;
+ const result=await sb.from("portal_games").select("game_key,match_date,home,away,referee_name,coach_name").eq("owner_id",user.id).order("match_date",{ascending:false});
+ if(result.error)throw result.error;games=result.data||[];
+ await refreshImports();
+}catch(e){$("json-access-status").hidden=false;$("json-access-status").textContent="Zugang oder Laden fehlgeschlagen: "+e.message;}
+</script><script type="module" src="/portal-ui.js"></script></body></html>
