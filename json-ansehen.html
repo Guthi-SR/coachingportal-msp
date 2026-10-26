@@ -20,7 +20,7 @@ table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:10px;bor
 td{overflow-wrap:anywhere}.scroll{overflow-x:auto}.notice{padding:12px;background:#eff5fb;border-radius:9px}
 .tag{font-size:13px;color:#46617a}.tag.open{color:#9a4d0a}.tag.done{color:#147244}
 #batch-results{margin:12px 0 0;padding:0;list-style:none}#batch-results li{padding:9px 11px;margin:6px 0;border:1px solid #e0e8f1;border-radius:8px;overflow-wrap:anywhere}
-#batch-results .existing{background:#fff7e8;border-color:#efdbb4}#batch-results .success{background:#edf8f1;border-color:#b8e4c9}
+#batch-results .existing{background:#fff7e8;border-color:#efdbb4}.duplicate-tag{display:inline-block;font-size:12px;font-weight:750;border-radius:5px;background:#b45309;color:white;padding:2px 7px;margin-right:7px}.duplicate-panel{border-left:4px solid #bb7d22}.duplicate-list{list-style:none;margin:8px 0 0;padding:0}.duplicate-list li{padding:12px;margin-top:8px;border:1px solid #ead8b7;border-radius:8px;background:#fffaf0}.duplicate-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:7px}.duplicate-meta{font-size:13px;color:#6b5b45;overflow-wrap:anywhere}#batch-results .success{background:#edf8f1;border-color:#b8e4c9}
 #batch-results .error{background:#fff0f0;border-color:#f2c5c5}
 #review-panel{border:1px solid #b9d1e5;border-radius:12px;padding:18px;background:#f8fbff;margin-top:15px}
 #review-panel:focus{outline:2px solid #3d6b99;outline-offset:2px}
@@ -44,6 +44,16 @@ td{overflow-wrap:anywhere}.scroll{overflow-x:auto}.notice{padding:12px;backgroun
 </div>
 <p id="batch-status" role="status" aria-live="polite"></p>
 <ul id="batch-results" aria-live="polite"></ul>
+</section>
+<section class="card duplicate-panel">
+<div class="row" style="justify-content:space-between">
+<h2>Doppelte JSON-Dateien <span id="duplicate-count" class="tag">(0)</span></h2>
+<button id="hide-all-duplicates" type="button" class="secondary" hidden>Alle ausblenden</button>
+</div>
+<p class="muted">Hier erscheinen doppelte Uploadversuche mit dem Hinweis „DOPPELT“. Sie werden nicht erneut gespeichert. Mit „Ausblenden“ entfernst du nur den Hinweis, <strong>nicht die vorhandene Originaldatei</strong>.</p>
+<p id="duplicate-empty" class="tag">Keine doppelt hochgeladenen Dateien vorgemerkt.</p>
+<p id="duplicate-status" role="status" class="action-note"></p>
+<ul id="duplicate-list" class="duplicate-list"></ul>
 </section>
 <section class="card">
 <h2>JSON-Eingangsliste</h2>
@@ -71,7 +81,7 @@ td{overflow-wrap:anywhere}.scroll{overflow-x:auto}.notice{padding:12px;backgroun
 <script type="module">
 import {sb,requireAdmin} from "/portal-workflow.js";
 const $=id=>document.getElementById(id);
-let user=null,games=[],imports=[],activeId=null,uploading=false;
+let user=null,games=[],imports=[],duplicateNotices=[],activeId=null,uploading=false;
 const bucket="portal-observation-jsons";
 const fields={match_date:"spieldatum",home:"heimmannschaft",away:"gastmannschaft",referee:"schiedsrichter",coach:"coach",league:"spielklasse"};
 const str=x=>typeof x==="string"?x.trim():"";
@@ -139,13 +149,94 @@ function coachingFileName(d){
  const coach=safeFilePart(d.coach,"Coach unbekannt");
  return (referee+" - "+match+" - "+coach).slice(0,185).replace(/[. ]+$/g,"")+".json";
 }
-function batchResult(filename,text,kind="success",itemId=null){
+function originalDuplicateLabel(n){
+ const saved=imports.find(x=>x.id===n.existing_import_id);
+ return saved?.file_name||"Originaldatei weiterhin gespeichert";
+}
+function renderDuplicateNotices(){
+ const list=$("duplicate-list");list.replaceChildren();
+ $("duplicate-count").textContent="("+duplicateNotices.length+")";
+ $("duplicate-empty").hidden=duplicateNotices.length>0;
+ $("hide-all-duplicates").hidden=duplicateNotices.length===0;
+ for(const n of [...duplicateNotices].sort((a,b)=>String(b.detected_at).localeCompare(String(a.detected_at)))){
+  const li=document.createElement("li");
+  const tag=document.createElement("span");tag.className="duplicate-tag";tag.textContent="DOPPELT";
+  const name=document.createElement("strong");name.textContent=n.upload_file_name||"JSON-Datei";
+  const info=document.createElement("div");info.className="duplicate-meta";
+  info.textContent="Schon gespeichert als: "+originalDuplicateLabel(n);
+  const actions=document.createElement("div");actions.className="duplicate-actions";
+  const hide=document.createElement("button");hide.type="button";hide.className="secondary";hide.textContent="Ausblenden";
+  hide.onclick=async()=>{
+   hide.disabled=true;
+   try{await dismissDuplicate(n.id);}
+   catch(error){$("duplicate-status").textContent="Ausblenden fehlgeschlagen: "+error.message;hide.disabled=false;}
+  };
+  actions.append(hide);
+  if(imports.some(x=>x.id===n.existing_import_id)){
+   const inspect=document.createElement("button");inspect.type="button";inspect.className="secondary";inspect.textContent="Original ansehen";
+   inspect.onclick=()=>{$("queue-filter").value="all";renderList();openReview(n.existing_import_id);};
+   actions.append(inspect);
+  }
+  li.append(tag,name,info,actions);list.append(li);
+ }
+}
+async function refreshDuplicateNotices(){
+ const {data,error}=await sb.from("portal_json_duplicate_notices")
+ .select("id,existing_import_id,upload_file_name,detected_at")
+ .eq("owner_id",user.id).order("detected_at",{ascending:false});
+ if(error)throw error;
+ duplicateNotices=data||[];
+ renderDuplicateNotices();
+}
+async function registerDuplicateNotice(fileName,existingId){
+ if(!existingId)return null;
+ const {data,error}=await sb.from("portal_json_duplicate_notices")
+ .upsert({owner_id:user.id,existing_import_id:existingId,upload_file_name:fileName,detected_at:new Date().toISOString()},
+  {onConflict:"owner_id,existing_import_id,upload_file_name"})
+ .select("id,existing_import_id,upload_file_name,detected_at").single();
+ if(error)throw error;
+ duplicateNotices=duplicateNotices.filter(x=>x.id!==data.id);
+ duplicateNotices.unshift(data);
+ renderDuplicateNotices();
+ return data.id;
+}
+async function dismissDuplicate(id){
+ const {error}=await sb.from("portal_json_duplicate_notices").delete().eq("owner_id",user.id).eq("id",id);
+ if(error)throw error;
+ duplicateNotices=duplicateNotices.filter(n=>n.id!==id);
+ renderDuplicateNotices();
+ for(const item of $("batch-results").children){if(item.dataset.noticeId===id)item.remove();}
+ $("duplicate-status").textContent="Doppelter Upload ausgeblendet. Die Originaldatei bleibt erhalten.";
+}
+$("hide-all-duplicates").onclick=async()=>{
+ const btn=$("hide-all-duplicates");btn.disabled=true;
+ try{
+  const {error}=await sb.from("portal_json_duplicate_notices").delete().eq("owner_id",user.id);
+  if(error)throw error;
+  duplicateNotices=[];renderDuplicateNotices();
+  for(const item of [...$("batch-results").children])if(item.classList.contains("existing"))item.remove();
+  $("duplicate-status").textContent="Alle Doppelhinweise ausgeblendet. Gespeicherte Originaldateien bleiben erhalten.";
+ }catch(error){$("duplicate-status").textContent="Ausblenden fehlgeschlagen: "+error.message;}
+ finally{btn.disabled=false;}
+};
+function batchResult(filename,text,kind="success",itemId=null,noticeId=null){
  const li=document.createElement("li");li.className=kind;
+ if(noticeId)li.dataset.noticeId=noticeId;
+ if(kind==="existing"){const mark=document.createElement("span");mark.className="duplicate-tag";mark.textContent="DOPPELT";li.append(mark);}
  const b=document.createElement("strong");b.textContent=filename+" – ";
  li.append(b,document.createTextNode(text));
  if(itemId){const btn=document.createElement("button");btn.type="button";btn.className="secondary";btn.style.marginLeft="10px";btn.textContent="Datei öffnen";btn.onclick=()=>{
   $("queue-filter").value="all";renderList();openReview(itemId);
  };li.append(btn);}
+ if(kind==="existing"){
+  const hide=document.createElement("button");hide.type="button";hide.className="secondary";
+  hide.textContent="Ausblenden";hide.style.marginLeft="10px";
+  hide.onclick=async()=>{
+   hide.disabled=true;
+   try{if(noticeId)await dismissDuplicate(noticeId);else li.remove();}
+   catch(error){hide.disabled=false;$("batch-status").textContent="Doppelhinweis konnte nicht ausgeblendet werden: "+error.message;}
+  };li.append(hide);
+ }
  $("batch-results").append(li);
 }
 function details(d){
@@ -250,7 +341,7 @@ async function refreshImports(){
   .select("id,file_name,sha256,json_body,game_key,match_date,home,away,referee_name,coach_name,created_at")
   .eq("owner_id",user.id).order("created_at",{ascending:false});
  if(error)throw error;
- imports=data||[];renderList();
+ imports=data||[];renderList();renderDuplicateNotices();
 }
 async function processFiles(files){
  if(!user||uploading)return;
@@ -268,7 +359,10 @@ async function processFiles(files){
    const found=existingMatch(sha256,body);
    if(found){
     duplicates++;
-    batchResult(file.name,"Bereits vorhanden – nicht erneut gespeichert.", "existing",found.id);
+    let noticeId=null;
+    try{noticeId=await registerDuplicateNotice(file.name,found.id);}
+    catch(error){console.warn("Doppelhinweis konnte nicht gespeichert werden:",error.message);}
+    batchResult(file.name,"Bereits vorhanden – nicht erneut gespeichert.","existing",found.id,noticeId);
     continue;
    }
    const id=crypto.randomUUID(),path=user.id+"/"+id+".json";
@@ -284,7 +378,9 @@ async function processFiles(files){
      await refreshImports();
      const matched=existingMatch(sha256,body);
      duplicates++;
-     batchResult(file.name,"Bereits vorhanden – nicht erneut gespeichert.","existing",matched?.id||null);
+     let noticeId=null;
+     if(matched?.id){try{noticeId=await registerDuplicateNotice(file.name,matched.id);}catch(error){console.warn("Doppelhinweis konnte nicht gespeichert werden:",error.message);}}
+     batchResult(file.name,"Bereits vorhanden – nicht erneut gespeichert.","existing",matched?.id||null,noticeId);
      continue;
     }
     throw saved.error;
@@ -329,6 +425,7 @@ try{
    .eq("owner_id",user.id).order("match_date",{ascending:false});
  if(error)throw error;games=data||[];
  await refreshImports();
+ await refreshDuplicateNotices();
 }catch(e){
  $("json-access-status").hidden=false;
  $("json-access-status").textContent="Zugang oder Laden fehlgeschlagen: "+e.message;
