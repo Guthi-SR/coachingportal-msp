@@ -2,187 +2,328 @@
 <html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>JSON ansehen und importieren – Coachingportal MSP</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f3f6fa;color:#142b46;font:16px/1.5 system-ui,sans-serif}header{background:#142b46;color:#fff;padding:20px}main{max-width:1100px;margin:0 auto;padding:22px;min-width:0}.card{background:#fff;border:1px solid #dce5ee;border-radius:12px;padding:22px;margin:15px 0}h2{margin:0 0 8px}h3{margin:0 0 10px}label{display:block;font-weight:650;margin:12px 0 5px}input,select,button{font:inherit;padding:11px;border:1px solid #adbdce;border-radius:8px;max-width:100%}input[type=file],select{width:100%}button{background:#142b46;color:white;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}button.secondary{background:white;color:#142b46}a{color:#17568c}.muted{color:#63768a}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.info{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 20px}.info p{margin:5px 0;overflow-wrap:anywhere}#json-protected-content[hidden],[hidden]{display:none!important}.json-dropzone{margin:10px 0;padding:26px 15px;border:2px dashed #9eb3c8;border-radius:12px;background:#f6f9fd;text-align:center;cursor:pointer;outline-offset:3px}.json-dropzone:hover,.json-dropzone.drag-over,.json-dropzone:focus-visible{background:#e9f3ff;border-color:#28629b}.json-dropzone strong{display:block;margin-bottom:3px}.json-dropzone small{color:#63768a}pre{max-height:350px;white-space:pre-wrap;overflow:auto;overflow-wrap:anywhere;background:#f4f7fa;padding:15px;border-radius:8px}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:9px;border-bottom:1px solid #e7eef4;vertical-align:top}td{overflow-wrap:anywhere}.scroll{overflow-x:auto}.notice{padding:12px;background:#eff5fb;border-radius:9px}.tag{font-size:13px;color:#46617a} @media(max-width:767px){main{padding:11px}.card{padding:15px}.info{grid-template-columns:1fr}td,th{padding:7px;font-size:13px}}
+*{box-sizing:border-box}body{margin:0;background:#f3f6fa;color:#142b46;font:16px/1.5 system-ui,sans-serif}
+header{background:#142b46;color:white;padding:20px}main{max-width:1100px;margin:auto;padding:22px;min-width:0}
+.card{background:#fff;border:1px solid #dce5ee;border-radius:12px;padding:22px;margin:15px 0}
+h2{margin:0 0 8px}h3{margin:0 0 10px}label{display:block;font-weight:650;margin:12px 0 5px}
+input,select,button{font:inherit;padding:10px;border:1px solid #adbdce;border-radius:8px;max-width:100%}
+input[type=file],select{width:100%}button{background:#142b46;color:#fff;cursor:pointer}
+button:disabled{opacity:.55;cursor:not-allowed}button.secondary{background:white;color:#142b46}
+a{color:#17568c}.muted{color:#63768a}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.info{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px 18px}.info p{margin:5px 0;overflow-wrap:anywhere}
+[hidden]{display:none!important}
+.json-dropzone{margin:12px 0;padding:27px 14px;border:2px dashed #9eb3c8;border-radius:12px;background:#f6f9fd;text-align:center;cursor:pointer;outline-offset:3px}
+.json-dropzone:hover,.json-dropzone.drag-over,.json-dropzone:focus-visible{background:#e9f3ff;border-color:#28629b}
+.json-dropzone strong{display:block;margin-bottom:4px}.json-dropzone small{color:#63768a}
+pre{max-height:350px;white-space:pre-wrap;overflow:auto;overflow-wrap:anywhere;background:#f4f7fa;padding:15px;border-radius:8px}
+table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:10px;border-bottom:1px solid #e7eef4;vertical-align:top}
+td{overflow-wrap:anywhere}.scroll{overflow-x:auto}.notice{padding:12px;background:#eff5fb;border-radius:9px}
+.tag{font-size:13px;color:#46617a}.tag.open{color:#9a4d0a}.tag.done{color:#147244}
+#batch-results{margin:12px 0 0;padding:0;list-style:none}#batch-results li{padding:9px 11px;margin:6px 0;border:1px solid #e0e8f1;border-radius:8px;overflow-wrap:anywhere}
+#batch-results .existing{background:#fff7e8;border-color:#efdbb4}#batch-results .success{background:#edf8f1;border-color:#b8e4c9}
+#batch-results .error{background:#fff0f0;border-color:#f2c5c5}
+#review-panel{border:1px solid #b9d1e5;border-radius:12px;padding:18px;background:#f8fbff;margin-top:15px}
+#review-panel:focus{outline:2px solid #3d6b99;outline-offset:2px}
+.action-note{font-size:13px;color:#586c7c}.row-status{font-weight:650;font-size:13px}
+@media(max-width:767px){main{padding:11px}.card{padding:15px}.info{grid-template-columns:1fr}
+ table thead{display:none}table tbody{display:grid;gap:10px}table tr{display:grid;gap:6px;border:1px solid #e1e8f2;border-radius:9px;padding:10px}table td{display:block;border:0;padding:3px}table td::before{content:attr(data-label) ": ";font-size:12px;font-weight:650;color:#62778d}table button{min-height:40px}
+}
 </style></head><body>
 <header><h1>Coachingportal MSP</h1></header>
-<main>
-<p><a href="/">← Zur Startseite</a></p><p id="json-access-status" role="status">Zugang wird geprüft …</p>
+<main><p><a href="/">← Zur Startseite</a></p>
+<p id="json-access-status" role="status">Zugang wird geprüft …</p>
 <div id="json-protected-content" hidden>
 <section class="card">
-<h2>JSON ansehen und hochladen</h2>
-<p class="muted">Coachingbogen als JSON auswählen. Wir schlagen ein vorhandenes Spiel vor. Die Zuordnung wird erst nach deiner Bestätigung übernommen.</p>
-<label for="json-file">JSON-Datei auswählen</label>
-<input id="json-file" type="file" accept=".json,application/json">
-<div id="json-dropzone" class="json-dropzone" tabindex="0" role="button" aria-label="JSON-Datei ablegen oder per Klick auswählen"><strong>JSON-Datei hier hineinziehen</strong><small>Drag &amp; Drop oder anklicken, um eine Datei auszuwählen (max. 5 MB)</small></div>
-<p id="parse-status" role="status" aria-live="polite"></p>
-<div id="preview" hidden>
-<h3>Erkannte Angaben</h3><div class="info" id="file-details"></div>
-<label for="game-select">Spiel zuordnen</label>
-<select id="game-select"><option value="">Ohne Spielzuordnung speichern</option></select>
-<p id="match-advice" class="notice" role="status"></p>
-<div class="row"><button id="save-json" type="button">JSON speichern und Auswahl bestätigen</button><button id="clear-json" type="button" class="secondary">Auswahl zurücksetzen</button></div>
-<details><summary>Original-JSON ansehen</summary><pre id="original-json"></pre></details>
+<h2>JSON-Dateien hochladen</h2>
+<p class="muted">Mehrere Coachingbögen gleichzeitig auswählen oder hineinziehen. Neue Dateien werden zunächst ohne Spielzuordnung gespeichert und erscheinen unten in der Eingangsliste. Doppelte Dateien werden erkannt und nicht erneut gespeichert.</p>
+<label for="json-file">JSON-Dateien auswählen (auch mehrere gleichzeitig)</label>
+<input id="json-file" type="file" multiple accept=".json,application/json">
+<div id="json-dropzone" class="json-dropzone" tabindex="0" role="button" aria-label="Mehrere JSON-Dateien ablegen oder per Klick auswählen">
+<strong>JSON-Dateien hier hineinziehen</strong>
+<small>Mehrfachauswahl oder Drag &amp; Drop · max. 5 MB je Datei</small>
 </div>
+<p id="batch-status" role="status" aria-live="polite"></p>
+<ul id="batch-results" aria-live="polite"></ul>
 </section>
 <section class="card">
-<h2>Bereits gespeicherte JSON-Dateien</h2>
-<p class="muted">Nicht zugeordnete Dateien bleiben erhalten und können später einem Spiel zugewiesen werden.</p>
-<div id="saved-status" role="status"></div>
-<div class="scroll"><table><thead><tr><th>Datei</th><th>Erkannte Daten</th><th>Spielzuordnung</th><th>Aktion</th></tr></thead><tbody id="saved-list"></tbody></table></div>
+<h2>JSON-Eingangsliste</h2>
+<p class="muted">Offene Dateien können nacheinander zugeordnet werden. Du kannst die Seite verlassen und die Zuordnungen später fortsetzen.</p>
+<div class="row"><label for="queue-filter">Anzeigen:</label>
+<select id="queue-filter" style="max-width:250px"><option value="open">Nur offene</option><option value="all">Alle Dateien</option><option value="done">Nur zugeordnete</option></select></div>
+<p id="saved-status" role="status"></p>
+<div class="scroll"><table><thead><tr><th>Datei</th><th>Erkanntes Spiel</th><th>Status</th><th>Aktion</th></tr></thead><tbody id="saved-list"></tbody></table></div>
+<div id="review-panel" tabindex="-1" hidden>
+<h3 id="review-title">JSON zuordnen</h3>
+<div class="info" id="file-details"></div>
+<label for="game-select">Passendes Spiel auswählen</label>
+<select id="game-select"><option value="">Noch nicht zuordnen</option></select>
+<p id="match-advice" class="notice"></p>
+<div class="row">
+<button id="assign-json" type="button">Zuordnung bestätigen und weiter</button>
+<button id="skip-json" type="button" class="secondary">Später bearbeiten</button>
+</div>
+<p id="review-status" role="status" class="action-note"></p>
+<details id="json-source"><summary>Original-JSON ansehen</summary><pre id="original-json"></pre></details>
+</div>
 </section>
 <p><a href="/json-auswerten.html">Zur späteren JSON-Auswertung</a></p>
 </div></main>
 <script type="module">
 import {sb,requireAdmin} from "/portal-workflow.js";
 const $=id=>document.getElementById(id);
-let user=null,games=[],imports=[],pending=null;
+let user=null,games=[],imports=[],activeId=null,uploading=false;
 const bucket="portal-observation-jsons";
 const fields={match_date:"spieldatum",home:"heimmannschaft",away:"gastmannschaft",referee:"schiedsrichter",coach:"coach",league:"spielklasse"};
-const norm=x=>String(x||"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\b(e\.?v\.?|fc|tsv|sv|sc|spvgg|dj?k|sg|vfl|fsv)\b/g,"").replace(/[^a-z0-9]/g,"");
-const showDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||"")?d.slice(8,10)+"."+d.slice(5,7)+"."+d.slice(0,4):d||"–";
 const str=x=>typeof x==="string"?x.trim():"";
-const teamScore=(a,b)=>{const x=norm(a),y=norm(b);return x&&y&&(x===y||x.length>=5&&y.includes(x)||y.length>=5&&x.includes(y))?1:0;};
+const norm=x=>str(x).normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\b(e\.?v\.?|fc|tsv|sv|sc|spvgg|dj?k|sg|vfl|fsv)\b/g,"").replace(/[^a-z0-9]/g,"");
+const showDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||"")?d.slice(8,10)+"."+d.slice(5,7)+"."+d.slice(0,4):d||"–";
+const teamScore=(a,b)=>{const x=norm(a),y=norm(b);return x&&y&&(x===y||x.length>=5&&y.includes(x)||y.length>=5&&x.includes(y))?1:0};
+const displayGame=g=>showDate(g.match_date)+" · "+(g.home||"–")+" – "+(g.away||"–")+" · "+(g.referee_name||"SR offen")+" · "+(g.coach_name||"Coach offen");
 function score(g,d){
  if(!d.match_date||g.match_date!==d.match_date)return -1;
- let pts=5;
- pts+=teamScore(g.home,d.home)*3+teamScore(g.away,d.away)*3;
- pts+=teamScore(g.referee_name,d.referee)*3;
- pts+=teamScore(g.coach_name,d.coach);
- return pts;
+ return 5+teamScore(g.home,d.home)*3+teamScore(g.away,d.away)*3+
+  teamScore(g.referee_name,d.referee)*3+teamScore(g.coach_name,d.coach);
 }
-const displayGame=g=>showDate(g.match_date)+" · "+g.home+" – "+g.away+" · "+(g.referee_name||"SR offen")+" · "+(g.coach_name||"Coach offen");
 function gameOptions(select,value="",target=null){
- select.replaceChildren(new Option("Ohne Spielzuordnung speichern",""));
+ select.replaceChildren(new Option("Noch nicht zuordnen",""));
  const d=target||{};
- const sorted=[...games].sort((a,b)=>score(b,d)-score(a,d)||String(b.match_date).localeCompare(String(a.match_date)));
- for(const g of sorted)select.add(new Option(displayGame(g),g.game_key));
+ for(const g of [...games].sort((a,b)=>score(b,d)-score(a,d)||String(b.match_date).localeCompare(String(a.match_date)))){
+  select.add(new Option(displayGame(g),g.game_key));
+ }
  if(value&&games.some(g=>g.game_key===value))select.value=value;
+}
+function proposal(d){
+ const possibilities=games.map(g=>({g,points:score(g,d)})).sort((a,b)=>b.points-a.points);
+ const best=possibilities[0],second=possibilities[1];
+ if(best&&best.points>=11&&(!second||best.points>second.points)){
+  return {key:best.g.game_key,text:"Passendes Spiel vorgeschlagen. Bitte Spieldatum, Mannschaften und Schiedsrichter prüfen, bevor du bestätigst."};
+ }
+ if(best&&best.points>=5)return {key:"",text:"Keine eindeutige Übereinstimmung. Bitte das richtige Spiel auswählen oder später zuordnen."};
+ return {key:"",text:"Kein passendes Spiel gefunden. Die JSON-Datei bleibt ohne Zuordnung gespeichert."};
+}
+function validate(data){
+ if(!data||typeof data!=="object"||Array.isArray(data))throw Error("Kein gültiges JSON-Coachingobjekt.");
+ const d=Object.fromEntries(Object.entries(fields).map(([k,v])=>[k,str(data[v])]));
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(d.match_date)||Number.isNaN(Date.parse(d.match_date+"T00:00:00Z")))
+  throw Error("Kein gültiges Spieldatum.");
+ if(!d.home||!d.away||!d.referee)throw Error("Spieldatum, Mannschaften oder Schiedsrichter fehlen.");
+ return d;
+}
+function identity(item){
+ const value=item?.json_body?.id||item?.body?.id;
+ return typeof value==="string"?value.trim():"";
+}
+function canonical(data){
+ if(Array.isArray(data))return data.map(canonical);
+ if(data&&typeof data==="object")return Object.fromEntries(Object.keys(data).sort().map(k=>[k,canonical(data[k])]));
+ return data;
+}
+const canonicalText=obj=>JSON.stringify(canonical(obj));
+async function hashFile(file){
+ const digest=await crypto.subtle.digest("SHA-256",await file.arrayBuffer());
+ return [...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,"0")).join("");
+}
+function existingMatch(hash,body){
+ const sourceId=typeof body.id==="string"?body.id.trim():"";
+ const parsed=canonicalText(body);
+ return imports.find(x=>x.sha256===hash||
+  (sourceId&&identity(x)===sourceId)||
+  (x.json_body&&canonicalText(x.json_body)===parsed));
+}
+function batchResult(filename,text,kind="success",itemId=null){
+ const li=document.createElement("li");li.className=kind;
+ const b=document.createElement("strong");b.textContent=filename+" – ";
+ li.append(b,document.createTextNode(text));
+ if(itemId){const btn=document.createElement("button");btn.type="button";btn.className="secondary";btn.style.marginLeft="10px";btn.textContent="Datei öffnen";btn.onclick=()=>{
+  $("queue-filter").value="all";renderList();openReview(itemId);
+ };li.append(btn);}
+ $("batch-results").append(li);
 }
 function details(d){
  const box=$("file-details");box.replaceChildren();
- for(const [label,val] of [["Spieldatum",showDate(d.match_date)],["Heimmannschaft",d.home],["Gastmannschaft",d.away],["Schiedsrichter",d.referee],["Coach",d.coach],["Spielklasse",d.league]]){
-  const el=document.createElement("p"),b=document.createElement("strong");b.textContent=label+": ";el.append(b,document.createTextNode(val||"–"));box.append(el);
+ for(const [label,val] of [["Spieldatum",showDate(d.match_date)],["Heim",d.home],["Gast",d.away],["Schiedsrichter",d.referee],["Coach",d.coach],["Spielklasse",d.league]]){
+  const p=document.createElement("p"),b=document.createElement("strong");b.textContent=label+": ";
+  p.append(b,document.createTextNode(val||"–"));box.append(p);
  }
 }
-function propose(d){
- const selected=games.map(g=>({g,points:score(g,d)})).sort((a,b)=>b.points-a.points);
- const best=selected[0],runnerUp=selected[1];
- const unambiguous=best&&best.points>=11&&(!runnerUp||best.points>runnerUp.points);
- if(unambiguous){$("game-select").value=best.g.game_key;$("match-advice").textContent="Vorschlag anhand von Spieldatum und mindestens zwei weiteren passenden Angaben. Bitte Spiel und Schiedsrichter prüfen und erst dann speichern.";}
- else if(best?.points>=5){$("match-advice").textContent="Kein eindeutiger Treffer. Bitte ein Spiel manuell auswählen oder zunächst ohne Zuordnung speichern.";}
- else{$("match-advice").textContent="Kein passendes Spiel gefunden. Die Datei kann ohne Zuordnung gespeichert werden.";}
+function readData(item){
+ const src=item.json_body||{};
+ return {match_date:item.match_date||str(src.spieldatum),home:item.home||str(src.heimmannschaft),
+ away:item.away||str(src.gastmannschaft),referee:item.referee_name||str(src.schiedsrichter),
+ coach:item.coach_name||str(src.coach),league:str(src.spielklasse)};
 }
-function validate(data){
- if(!data||typeof data!=="object"||Array.isArray(data))throw Error("Die Datei enthält keinen JSON-Coachingbogen.");
- const d=Object.fromEntries(Object.entries(fields).map(([k,v])=>[k,str(data[v])]));
- if(!d.match_date||!/^\d{4}-\d{2}-\d{2}$/.test(d.match_date)||Number.isNaN(Date.parse(d.match_date+"T00:00:00Z")))throw Error("Die JSON-Datei enthält kein gültiges Spieldatum.");
- if(!d.home||!d.away||!d.referee)throw Error("Spieldatum, Heim-/Gastmannschaft und Schiedsrichter müssen vorhanden sein.");
- return d;
+function openReview(id){
+ const item=imports.find(x=>x.id===id);
+ if(!item)return;
+ activeId=id;
+ const data=readData(item);
+ $("review-title").textContent="Datei zuordnen: "+item.file_name;
+ details(data);
+ gameOptions($("game-select"),item.game_key||"",data);
+ const proposed=proposal(data);
+ if(!item.game_key&&proposed.key)$("game-select").value=proposed.key;
+ $("match-advice").textContent=item.game_key?"Bisherige Zuordnung ist vorausgewählt. Änderungen bitte ausdrücklich bestätigen.":proposed.text;
+ $("review-status").textContent="";
+ $("original-json").textContent=JSON.stringify(item.json_body,null,2);
+ $("json-source").open=false;
+ $("review-panel").hidden=false;
+ $("review-panel").focus({preventScroll:true});
+ $("review-panel").scrollIntoView({behavior:"smooth",block:"nearest"});
 }
-async function hashFile(file){const bytes=await file.arrayBuffer();const digest=await crypto.subtle.digest("SHA-256",bytes);return [...new Uint8Array(digest)].map(n=>n.toString(16).padStart(2,"0")).join("");}
-function reset(){pending=null;$("json-file").value="";$("preview").hidden=true;$("original-json").textContent="";$("parse-status").textContent="";}
-$("clear-json").onclick=reset;
-let droppedJsonFile=null;
-$("json-file").addEventListener("change",async()=>{
- resetPreview();
- const file=droppedJsonFile||$("json-file").files?.[0];droppedJsonFile=null;if(!file)return;
- if(file.size>5242880){$("parse-status").textContent="Die Datei ist größer als 5 MB.";return;}
- if(!/\.json$/i.test(file.name)){$("parse-status").textContent="Bitte eine .json-Datei auswählen.";return;}
- try{
-  const raw=await file.text(),body=JSON.parse(raw),d=validate(body);
-  pending={file,body,d,raw};
-  details(d);gameOptions($("game-select"),"",d);propose(d);
-  $("original-json").textContent=JSON.stringify(body,null,2);$("preview").hidden=false;
-  $("parse-status").textContent="Datei erkannt: "+file.name;
- }catch(e){$("parse-status").textContent="Datei nicht lesbar: "+e.message;}
-});
-const dropzone=$("json-dropzone");
-dropzone.addEventListener("click",()=>$("json-file").click());
-dropzone.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("json-file").click();}});
-dropzone.addEventListener("dragenter",e=>{e.preventDefault();dropzone.classList.add("drag-over");});
-dropzone.addEventListener("dragover",e=>{e.preventDefault();e.dataTransfer.dropEffect="copy";dropzone.classList.add("drag-over");});
-dropzone.addEventListener("dragleave",e=>{if(!dropzone.contains(e.relatedTarget))dropzone.classList.remove("drag-over");});
-dropzone.addEventListener("drop",e=>{
- e.preventDefault();
- e.stopPropagation();
- dropzone.classList.remove("drag-over");
- const files=e.dataTransfer?.files||[];
- if(files.length!==1){resetPreview();$("parse-status").textContent="Bitte genau eine JSON-Datei hineinziehen.";return;}
- droppedJsonFile=files[0];
- $("json-file").value="";
- $("json-file").dispatchEvent(new Event("change"));
-});
-document.addEventListener("dragover",e=>{if(e.dataTransfer?.types?.includes("Files"))e.preventDefault();});
-document.addEventListener("drop",e=>{if(e.dataTransfer?.types?.includes("Files"))e.preventDefault();});
-function resetPreview(){pending=null;$("preview").hidden=true;$("original-json").textContent="";$("parse-status").textContent="";}
-function assignmentValid(d,key){
+function nextOpen(){
+ const next=imports.filter(x=>!x.game_key).sort((a,b)=>String(a.created_at).localeCompare(String(b.created_at)))[0];
+ if(next)openReview(next.id);else{activeId=null;$("review-panel").hidden=true;}
+}
+function assignmentValid(data,key){
  if(!key)return true;
- const g=games.find(g=>g.game_key===key);
- if(!g)return false;
- // Auswahl bei Widerspruch bewusst bestätigen statt stillschweigend falsch zuordnen.
- if(g.match_date!==d.match_date){
-  return confirm("ACHTUNG: Das ausgewählte Spiel hat ein anderes Spieldatum als die JSON-Datei. Trotzdem zuordnen?");
- }
- if(!teamScore(g.home,d.home)||!teamScore(g.away,d.away)){
-  return confirm("ACHTUNG: Die Mannschaften stimmen nicht vollständig überein. Bitte kontrollieren: "+displayGame(g)+". Trotzdem zuordnen?");
- }
- if(g.referee_name&&!teamScore(g.referee_name,d.referee)){
-  return confirm("ACHTUNG: Der Schiedsrichtername weicht vom Spiel ab. Trotzdem zuordnen?");
- }
+ const g=games.find(x=>x.game_key===key);
+ if(!g){alert("Dieses Spiel ist nicht mehr vorhanden.");return false;}
+ if(g.match_date!==data.match_date)return confirm("ACHTUNG: Das Spieldatum unterscheidet sich von der JSON-Datei. Trotzdem zuordnen?");
+ if(!teamScore(g.home,data.home)||!teamScore(g.away,data.away))
+  return confirm("ACHTUNG: Die Mannschaften unterscheiden sich von den JSON-Angaben. Trotzdem diesem Spiel zuordnen?\n"+displayGame(g));
+ if(g.referee_name&&!teamScore(g.referee_name,data.referee))
+  return confirm("ACHTUNG: Der Schiedsrichter weicht von den JSON-Angaben ab. Trotzdem zuordnen?");
  return true;
 }
-$("save-json").onclick=async()=>{
- if(!pending)return;
- const {file,body,d}=pending,key=$("game-select").value;
- if(!assignmentValid(d,key))return;
- const btn=$("save-json");btn.disabled=true;
+$("assign-json").onclick=async()=>{
+ const item=imports.find(x=>x.id===activeId);if(!item)return;
+ const key=$("game-select").value;
+ if(!key){$("review-status").textContent="Wähle ein Spiel aus, oder klicke auf „Später bearbeiten“.";return;}
+ if(!assignmentValid(readData(item),key))return;
+ const btn=$("assign-json");btn.disabled=true;
  try{
-  const sha256=await hashFile(file);
-  const existing=imports.find(x=>x.sha256===sha256);
-  if(existing)throw Error("Diese JSON-Datei ist bereits gespeichert"+(existing.game_key?" und einem Spiel zugeordnet":" (noch ohne Spielzuordnung)")+". Du kannst die Zuordnung unten ändern.");
-  const id=crypto.randomUUID();
-  const path=user.id+"/"+id+".json";
-  const upload=await sb.storage.from(bucket).upload(path,file,{contentType:"application/json",upsert:false});
-  if(upload.error)throw upload.error;
-  const row={id,owner_id:user.id,file_name:file.name,storage_path:path,sha256,json_body:body,game_key:key||null,match_date:d.match_date,home:d.home,away:d.away,referee_name:d.referee,coach_name:d.coach,assigned_at:key?new Date().toISOString():null};
-  const write=await sb.from("portal_json_imports").insert(row);
-  if(write.error){await sb.storage.from(bucket).remove([path]);throw write.error;}
-  $("parse-status").textContent="JSON erfolgreich gespeichert"+(key?" und dem ausgewählten Spiel zugeordnet.":" (noch ohne Spielzuordnung).");
-  pending=null;$("json-file").value="";$("preview").hidden=true;
+  const {error}=await sb.from("portal_json_imports").update({game_key:key,assigned_at:new Date().toISOString()})
+    .eq("owner_id",user.id).eq("id",item.id);
+  if(error)throw error;
+  $("review-status").textContent="Zuordnung gespeichert.";
   await refreshImports();
- }catch(e){$("parse-status").textContent="Speichern fehlgeschlagen: "+e.message;}
+  nextOpen();
+ }catch(e){$("review-status").textContent="Speichern fehlgeschlagen: "+e.message;}
  finally{btn.disabled=false;}
 };
-async function refreshImports(){
- const r=await sb.from("portal_json_imports").select("id,file_name,sha256,game_key,match_date,home,away,referee_name,coach_name,created_at").eq("owner_id",user.id).order("created_at",{ascending:false});
- if(r.error)throw r.error;
- imports=r.data||[];
- $("saved-status").textContent=imports.length+" JSON-Datei(en) gespeichert.";
+$("skip-json").onclick=()=>{
+ const open=imports.filter(x=>!x.game_key).sort((a,b)=>String(a.created_at).localeCompare(String(b.created_at)));
+ const pos=open.findIndex(x=>x.id===activeId);
+ if(open.length>1&&pos>=0)openReview(open[(pos+1)%open.length].id);
+ else{activeId=null;$("review-panel").hidden=true;}
+};
+$("queue-filter").addEventListener("change",renderList);
+function renderList(){
+ const open=imports.filter(x=>!x.game_key).length,done=imports.length-open;
+ $("saved-status").textContent=imports.length+" JSON-Datei(en) gespeichert · "+open+" offen · "+done+" zugeordnet.";
+ const mode=$("queue-filter").value;
+ const filtered=[...imports].filter(x=>mode==="open"?!x.game_key:mode==="done"?Boolean(x.game_key):true);
+ filtered.sort((a,b)=>Number(Boolean(a.game_key))-Number(Boolean(b.game_key))||
+  String(a.created_at).localeCompare(String(b.created_at)));
  const tb=$("saved-list");tb.replaceChildren();
- for(const item of imports){
-  const tr=document.createElement("tr"),a=document.createElement("td"),b=document.createElement("td"),c=document.createElement("td"),d=document.createElement("td");
-  a.textContent=item.file_name;b.textContent=showDate(item.match_date)+" · "+(item.home||"–")+" – "+(item.away||"–")+" · "+(item.referee_name||"–");
-  const sel=document.createElement("select");sel.setAttribute("aria-label","Spiel für "+item.file_name);
-  gameOptions(sel,item.game_key,{match_date:item.match_date,home:item.home,away:item.away,referee:item.referee_name,coach:item.coach_name});
-  c.append(sel);
-  const btn=document.createElement("button");btn.type="button";btn.textContent="Zuordnung speichern";btn.disabled=true;
-  sel.addEventListener("change",()=>{btn.disabled=sel.value===(item.game_key||"");});
-  btn.onclick=async()=>{
-   const key=sel.value;
-   if(!assignmentValid({match_date:item.match_date,home:item.home,away:item.away,referee:item.referee_name},key))return;
-   btn.disabled=true;
-   const up=await sb.from("portal_json_imports").update({game_key:key||null,assigned_at:key?new Date().toISOString():null}).eq("owner_id",user.id).eq("id",item.id);
-   if(up.error){alert("Zuordnung fehlgeschlagen: "+up.error.message);btn.disabled=false;return;}
-   try{await refreshImports();}catch(error){$("saved-status").textContent=error.message;}
-  };
+ if(!filtered.length){
+  const tr=document.createElement("tr"),cell=document.createElement("td");
+  cell.colSpan=4;cell.textContent=imports.length?"Für diesen Filter sind keine Dateien vorhanden.":"Noch keine JSON-Dateien gespeichert.";
+  tr.append(cell);tb.append(tr);
+ }
+ for(const item of filtered){
+  const tr=document.createElement("tr");
+  const a=document.createElement("td"),b=document.createElement("td"),c=document.createElement("td"),d=document.createElement("td");
+  a.dataset.label="Datei";b.dataset.label="Erkannt";c.dataset.label="Status";d.dataset.label="Aktion";
+  a.textContent=item.file_name;
+  b.textContent=showDate(item.match_date)+" · "+(item.home||"–")+" – "+(item.away||"–")+" · "+(item.referee_name||"–");
+  c.textContent=item.game_key?"✓ Zugeordnet":"Offen";
+  c.className="row-status tag "+(item.game_key?"done":"open");
+  if(item.game_key){const g=games.find(g=>g.game_key===item.game_key);c.title=g?displayGame(g):item.game_key;}
+  const btn=document.createElement("button");btn.type="button";
+  btn.textContent=item.game_key?"Ansehen / ändern":"Jetzt zuordnen";
+  btn.onclick=()=>openReview(item.id);
   d.append(btn);tr.append(a,b,c,d);tb.append(tr);
  }
 }
+async function refreshImports(){
+ const {data,error}=await sb.from("portal_json_imports")
+  .select("id,file_name,sha256,json_body,game_key,match_date,home,away,referee_name,coach_name,created_at")
+  .eq("owner_id",user.id).order("created_at",{ascending:false});
+ if(error)throw error;
+ imports=data||[];renderList();
+}
+async function processFiles(files){
+ if(!user||uploading)return;
+ uploading=true;$("json-file").disabled=true;
+ $("json-dropzone").setAttribute("aria-busy","true");
+ $("batch-results").replaceChildren();
+ const list=[...files];let uploaded=0,duplicates=0,errors=0;
+ for(const [idx,file] of list.entries()){
+  $("batch-status").textContent="Verarbeite "+(idx+1)+" von "+list.length+": "+file.name;
+  try{
+   if(!/\.json$/i.test(file.name))throw Error("Keine .json-Datei.");
+   if(!file.size||file.size>5242880)throw Error("Datei leer oder größer als 5 MB.");
+   const body=JSON.parse(await file.text()),d=validate(body);
+   const sha256=await hashFile(file);
+   const found=existingMatch(sha256,body);
+   if(found){
+    duplicates++;
+    batchResult(file.name,"Bereits vorhanden – nicht erneut gespeichert.", "existing",found.id);
+    continue;
+   }
+   const id=crypto.randomUUID(),path=user.id+"/"+id+".json";
+   const storage=await sb.storage.from(bucket).upload(path,file,{contentType:"application/json",upsert:false});
+   if(storage.error)throw storage.error;
+   const row={id,owner_id:user.id,file_name:file.name,storage_path:path,sha256,json_body:body,
+     game_key:null,match_date:d.match_date,home:d.home,away:d.away,referee_name:d.referee,coach_name:d.coach,assigned_at:null};
+   const saved=await sb.from("portal_json_imports").insert(row);
+   if(saved.error){
+    const cleanup=await sb.storage.from(bucket).remove([path]);
+    if(cleanup.error)console.warn("Nicht verwendete JSON-Datei konnte nicht bereinigt werden:",cleanup.error.message);
+    if(saved.error.code==="23505"){
+     await refreshImports();
+     const matched=existingMatch(sha256,body);
+     duplicates++;
+     batchResult(file.name,"Bereits vorhanden – nicht erneut gespeichert.","existing",matched?.id||null);
+     continue;
+    }
+    throw saved.error;
+   }
+   imports.push({...row,created_at:new Date().toISOString()});
+   uploaded++;
+   batchResult(file.name,"Gespeichert, Spielzuordnung noch offen.","success",id);
+  }catch(error){
+   errors++;
+   batchResult(file.name,"Nicht übernommen: "+error.message,"error");
+  }
+ }
+ $("batch-status").textContent="Fertig: "+uploaded+" neu gespeichert, "+duplicates+" bereits vorhanden, "+errors+" nicht übernommen. Du kannst jetzt die offenen Dateien nacheinander zuordnen.";
+ uploading=false;$("json-file").disabled=false;$("json-dropzone").removeAttribute("aria-busy");$("json-file").value="";
+ try{await refreshImports();}catch(e){$("batch-status").textContent+=" Achtung: Liste konnte nicht aktualisiert werden: "+e.message;}
+ if(uploaded&&$("review-panel").hidden){const next=imports.filter(x=>!x.game_key).sort((a,b)=>String(a.created_at).localeCompare(String(b.created_at)))[0];if(next)openReview(next.id);}
+}
+$("json-file").addEventListener("change",()=>{void processFiles($("json-file").files||[]);});
+const zone=$("json-dropzone");
+zone.onclick=()=>{if(!uploading)$("json-file").click();};
+zone.addEventListener("keydown",e=>{
+ if((e.key==="Enter"||e.key===" ")&&!uploading){e.preventDefault();$("json-file").click();}
+});
+for(const evt of ["dragenter","dragover"])zone.addEventListener(evt,e=>{
+ e.preventDefault();if(!uploading){zone.classList.add("drag-over");e.dataTransfer.dropEffect="copy";}
+});
+zone.addEventListener("dragleave",e=>{if(!zone.contains(e.relatedTarget))zone.classList.remove("drag-over");});
+zone.addEventListener("drop",e=>{
+ e.preventDefault();e.stopPropagation();zone.classList.remove("drag-over");
+ if(uploading)return;
+ const files=e.dataTransfer?.files;if(files?.length)void processFiles(files);
+});
+for(const evt of ["dragover","drop"])document.addEventListener(evt,e=>{
+ if(e.dataTransfer?.types?.includes("Files"))e.preventDefault();
+});
 try{
  const access=await requireAdmin();user=access.user;
- $("json-access-status").hidden=true;$("json-protected-content").hidden=false;
- const result=await sb.from("portal_games").select("game_key,match_date,home,away,referee_name,coach_name").eq("owner_id",user.id).order("match_date",{ascending:false});
- if(result.error)throw result.error;games=result.data||[];
+ $("json-access-status").hidden=true;
+ $("json-protected-content").hidden=false;
+ const {data,error}=await sb.from("portal_games")
+   .select("game_key,match_date,home,away,referee_name,coach_name")
+   .eq("owner_id",user.id).order("match_date",{ascending:false});
+ if(error)throw error;games=data||[];
  await refreshImports();
-}catch(e){$("json-access-status").hidden=false;$("json-access-status").textContent="Zugang oder Laden fehlgeschlagen: "+e.message;}
-</script><script type="module" src="/portal-ui.js"></script></body></html>
+}catch(e){
+ $("json-access-status").hidden=false;
+ $("json-access-status").textContent="Zugang oder Laden fehlgeschlagen: "+e.message;
+}
+</script>
+<script type="module" src="/portal-ui.js"></script>
+</body></html>
