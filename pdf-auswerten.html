@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PDF-Coachingauswertung – Coachingportal MSP</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f6fa;color:#142b46;font:15px/1.55 system-ui,sans-serif}
+header{background:#142b46;color:#fff;padding:20px}main{max-width:1100px;margin:auto;padding:20px;min-width:0}
+section{background:white;border:1px solid #d9e3ec;border-radius:12px;padding:22px;margin:14px 0}
+h2,h3{margin:0 0 12px}h4{margin:15px 0 6px}a{color:#17568c}
+.field-grid{display:grid;grid-template-columns:minmax(180px,2fr) minmax(120px,1fr) minmax(120px,1fr);gap:12px}
+label{font-weight:650;display:block}label input,label select{display:block;width:100%;font:inherit;margin-top:5px;padding:11px;min-height:42px;border:1px solid #9fb3c6;border-radius:8px;background:#fff;min-width:0}
+button{font:inherit;background:#142b46;color:#fff;border:1px solid #142b46;border-radius:8px;padding:10px 15px;cursor:pointer;min-height:43px}
+button.secondary{background:white;color:#142b46}button:disabled{opacity:.6;cursor:wait}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.muted{color:#5d7184}.small{font-size:13px}.notice{background:#f0f5fa;border-left:4px solid #7393af;border-radius:6px;padding:12px;margin:12px 0}
+.warn{background:#fff7e7;border-color:#c28a3f}.status{font-weight:600;min-height:1.5em}
+.stats{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}.stat{border:1px solid #d9e3ec;border-radius:10px;padding:12px 18px;flex:1;min-width:120px}.stat strong{display:block;font-size:26px}
+.table-scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:650px}th,td{text-align:left;border-bottom:1px solid #e1e8f0;padding:9px;vertical-align:top}th{color:#48627a}
+.state{font-size:12px;font-weight:700}.state.yes{color:#167446}.state.no{color:#985b16}.state.err{color:#b53131}
+.report-document{white-space:pre-wrap;overflow-wrap:anywhere;font:15px/1.65 system-ui,sans-serif;border:1px solid #e4ebf1;border-radius:9px;padding:18px;background:#fff}
+.source-item{border-left:3px solid #91a9bf;padding:8px 13px;margin:10px 0;background:#f8fafc}
+.source-item p{margin:4px 0}.source-item a{font-weight:600;font-size:13px}
+details{border:1px solid #e1e8ef;border-radius:8px;padding:10px 12px;margin:9px 0}summary{cursor:pointer;font-weight:650}
+details pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.55 ui-monospace,Consolas,monospace;max-height:380px;overflow:auto;background:#f6f8fa;padding:12px}
+[hidden]{display:none!important}
+@media(max-width:767px){main{padding:10px}section{padding:15px}.field-grid{grid-template-columns:1fr}.actions button{width:100%}table{min-width:620px}.report-document{padding:12px}}
+@media print{
+ body{background:#fff;color:#000;font:11pt/1.5 Arial,sans-serif}header,.no-print,nav,#source-details{display:none!important}
+ main{padding:0;max-width:none}section{border:0;padding:0;margin:0}
+ #report-section{display:block!important}#report-section h2{margin-top:0}
+ .report-document{border:0;padding:0;font:11pt/1.5 Arial,sans-serif}
+ .stats{display:flex}.stat{border:1px solid #aaa;padding:6px;min-width:0}
+ @page{size:A4;margin:15mm}
+}
+</style></head><body>
+<header><h1>Coachingportal MSP</h1></header>
+<main>
+<p class="no-print"><a href="/">← Zur Startseite</a></p>
+<p id="access-status" role="status">Zugang wird geprüft …</p>
+<div id="private" hidden>
+<section class="no-print">
+<h2>PDF-Auswertung der Schiedsrichterbögen</h2>
+<p class="muted">Bereits im Portal gespeicherte Beobachtungsbögen nach Schiedsrichter und Zeitraum auswerten. Die Auswertung arbeitet mit den tatsächlich aus dem PDF auslesbaren Textstellen. Fehlende oder gescannte, nicht auslesbare Bögen werden sichtbar gekennzeichnet.</p>
+<div class="field-grid">
+<label>Schiedsrichter<select id="referee"><option value="">Bitte auswählen</option></select></label>
+<label>Von<input id="from" type="date"></label>
+<label>Bis<input id="to" type="date"></label>
+</div>
+<div class="actions">
+<button type="button" id="analyze">PDF-Auswertung erstellen</button>
+<button type="button" id="clear" class="secondary">Auswertung zurücksetzen</button>
+</div>
+<p id="status" class="status" role="status" aria-live="polite"></p>
+<div class="notice small">Es werden keine neuen Bögen hochgeladen oder vorhandene Spielzuordnungen verändert. Die PDF-Inhalte werden im Browser verarbeitet. Diese erste Auswertung ist <strong>textbasiert, ohne KI-Interpretation</strong> und ersetzt keine fachliche Coachingbewertung.</div>
+</section>
+<section id="coverage" class="no-print" hidden>
+<h3>Gefundene Spiele und PDF-Bögen</h3>
+<div id="coverage-stats" class="stats"></div>
+<div class="table-scroll"><table><thead><tr><th>Datum</th><th>Spiel</th><th>Coach</th><th>PDF-Status</th><th>Quelle</th></tr></thead><tbody id="coverage-rows"></tbody></table></div>
+</section>
+<section id="report-section" hidden>
+<h2>Zusammenfassende PDF-Coachingauswertung</h2>
+<div class="actions no-print"><button id="print-report" type="button">Als PDF drucken / speichern</button><button id="copy-report" type="button" class="secondary">Zusammenfassung kopieren</button></div>
+<p id="report-action-status" class="small no-print" role="status"></p>
+<div id="report-document" class="report-document"></div>
+<div id="source-details" class="no-print">
+<h3 style="margin-top:24px">Textbelege aus den einzelnen PDFs</h3>
+<p class="muted small">Die folgenden Passagen sind automatisch gefundene Textstellen. Die Einordnung beruht auf Signalwörtern und Themenbegriffen – bitte die jeweilige Quelle kontrollieren.</p>
+<div id="evidence"></div>
+<h3 style="margin-top:22px">Vollständiger ausgelesener Text je PDF</h3>
+<div id="raw-pdfs"></div>
+</div>
+</section>
+</div>
+</main>
+<script type="module">
+import {requireAdmin,sb,viewPdfBlob,dateDE} from "/portal-workflow.js";
+const $=id=>document.getElementById(id);
+let userId="",games=[],documents=[],people=[],running=false,reportText="";
+const topics=[
+ {key:"Entscheidungsqualität und Spielleitung",rx:/zweik[aä]mpf|entscheidung|handspiel|vorteil|foul|freisto[sß]|abseits|einwurf|spielfortsetzung|spielleitung/i},
+ {key:"Disziplinarkontrolle und persönliche Strafen",rx:/verwarn|gelbe karte|rote karte|platzverweis|disziplin|unsportlich|pers[oö]nliche strafe|trainerverhalten/i},
+ {key:"Kommunikation und Auftreten",rx:/kommunikation|k[oö]rpersprache|auftreten|pers[oö]nlichkeit|ansprache|pfiff|zeichengebung|handzeichen|akzeptanz|souver[aä]n|spielmanagement/i},
+ {key:"Stellungsspiel und Fitness",rx:/stellungsspiel|laufweg|fitness|laufleist|sprint|diagonale|antizipation|positionierung|abstand|n[aä]he zum spiel/i},
+ {key:"Organisation und Spielvorbereitung",rx:/spielvorbereitung|administrativ|organisation|absprache|ausr[uü]stung|trikot|kabine|spielfeldkontrolle|anreise|spielbericht/i}
+];
+const positive=/\b(sehr gut|hervorragend|souver[aä]n|sicher(?:e|er|es|en)?|positiv|gelungen|[uü]berzeugend|exzellent|stark(?:e|er|es|en)?|lobenswert|vorbildlich|korrekt|konsequent|gute leistung|[uü]berdurchschnittlich)\b/i;
+const improve=/\b(verbesser\w*|optimier\w*|k[uü]nftig|sollte|sollten|fehlt\w*|fehlend\w*|unsicher\w*|kritisch\w*|schw[aä]ch\w*|nicht optimal|zu sp[aä]t|unzureichend|ausbauf[aä]hig|verpasst|defizit\w*|vermeidbar|empfehl\w*)\b/i;
+const norm=x=>String(x||"").trim().toLocaleLowerCase("de-DE");
+const name=(g)=>String(g.referee_name||g.referee_id||"Unbekannt");
+const displayGame=g=>dateDE(g.match_date)+" · "+(g.home||"–")+" – "+(g.away||"–");
+const todayIso=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");};
+const serialDate=d=>Date.parse(d+"T12:00:00");
+function seasonStart(){const d=new Date(),year=d.getMonth()>=6?d.getFullYear():d.getFullYear()-1;return year+"-07-01";}
+function setStatus(text){$("status").textContent=text;}
+function getMatches(){
+ const personKey=$("referee").value,from=$("from").value,to=$("to").value;
+ if(!personKey)throw Error("Bitte einen Schiedsrichter auswählen.");
+ if(!from||!to||from>to)throw Error("Bitte einen gültigen Zeitraum auswählen.");
+ return games.filter(g=>!g.is_test&&String(g.referee_id||norm(g.referee_name))===personKey&&g.match_date>=from&&g.match_date<=to)
+ .sort((a,b)=>gDate(a)-gDate(b));
+}
+function gDate(g){return serialDate(g.match_date);}
+function chooseDocs(g){
+ return documents.filter(d=>d.game_key===g.game_key||(!d.game_key&&g.pdf_id===d.document_id))
+ .filter((d,i,all)=>all.findIndex(x=>x.document_id===d.document_id)===i);
+}
+function textParts(page){
+ const items=page.items||[];const out=[];let row=[],lastY=null;
+ const flush=()=>{const line=row.join(" ").replace(/\s+/g," ").trim();if(line)out.push(line);row=[];};
+ for(const t of items){
+  if(typeof t.str!=="string")continue;
+  const str=t.str.trim();
+  const y=Array.isArray(t.transform)?Math.round(t.transform[5]):null;
+  if(lastY!==null&&y!==null&&Math.abs(y-lastY)>3)flush();
+  if(str)row.push(str);
+  if(y!==null)lastY=y;
+  if(t.hasEOL){flush();lastY=null;}
+ }
+ flush();return out;
+}
+async function getPdfLib(){
+ const lib=await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs");
+ lib.GlobalWorkerOptions.workerSrc="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
+ return lib;
+}
+async function readPdf(pdfjs,doc){
+ const blob=await viewPdfBlob(userId,doc.document_id);
+ if(!(blob instanceof Blob))throw Error("PDF-Datei konnte nicht geladen werden.");
+ const pdf=await pdfjs.getDocument({data:new Uint8Array(await blob.arrayBuffer())}).promise;
+ const pages=[];
+ try{
+  if(pdf.numPages>40)throw Error("PDF mit mehr als 40 Seiten – bitte einzeln prüfen.");
+  for(let i=1;i<=pdf.numPages;i++){
+   const page=await pdf.getPage(i);
+   const text=await page.getTextContent();
+   pages.push({page:i,text:textParts(text).join("\n")});
+   page.cleanup();
+  }
+ }finally{await pdf.destroy();}
+ return pages;
+}
+function sentences(page){
+ const cleaned=page.text.replace(/\s*\n\s*/g," ").replace(/\s+/g," ").trim();
+ if(!cleaned)return [];
+ let chunks=cleaned.split(/(?<=[.!?;])\s+(?=[„"A-ZÄÖÜ0-9])/);
+ if(chunks.length<2)chunks=cleaned.match(/.{1,340}(?:\s|$)/g)||[cleaned];
+ const res=[];
+ for(let chunk of chunks){
+  chunk=chunk.trim();
+  if(chunk.length>590){const pieces=chunk.match(/.{1,360}(?:\s|$)/g)||[chunk];res.push(...pieces.map(x=>x.trim()).filter(x=>x.length>35));}
+  else if(chunk.length>35)res.push(chunk);
+ }
+ return res;
+}
+function evidenceFor(results){
+ const evidence=[];
+ for(const r of results)for(const p of r.pages){
+  for(const sentence of sentences(p)){
+   const matched=topics.filter(t=>t.rx.test(sentence));
+   if(!matched.length)continue;
+   const good=positive.test(sentence),next=improve.test(sentence);
+   for(const t of matched){
+    const kind=good&&!next?"positive":next&&!good?"improve":good&&next?"mixed":"general";
+    evidence.push({topic:t.key,kind,text:sentence,game:r.game,page:p.page,doc:r.doc});
+   }
+  }
+ }
+ return evidence;
+}
+const quotes=(entries,max=5)=>entries.slice(0,max).map(e=>"• "+dateDE(e.game.match_date)+" ("+e.game.home+" – "+e.game.away+", S. "+e.page+"): „"+e.text+"“").join("\n");
+const unique=(ar)=>[...new Set(ar)];
+function buildReport(associated,successes,missing,unreadable,errors,ev){
+ const g=associated[0]?.game;
+ const from=$("from").value,to=$("to").value;
+ const referee=g?name(g):$("referee").selectedOptions[0]?.textContent||"–";
+ const blocks=[
+ "ZUSAMMENFASSENDE PDF-COACHINGAUSWERTUNG",
+ "Schiedsrichter: "+referee,
+ "Zeitraum: "+dateDE(from)+" bis "+dateDE(to),
+ "Spielansetzungen im Zeitraum: "+associated.length,
+ "Davon mit PDF-Beobachtungsbogen: "+associated.filter(x=>x.docs.length>0).length,
+ "PDF-Dokumente mit auslesbarem Text: "+successes.length,
+ "Fehlende PDF-Bögen: "+missing.length,
+ "Nicht auslesbare PDFs: "+unreadable.length,
+ "Fehler beim Auslesen: "+errors.length,
+ "",
+ "1. DATENBASIS",
+ successes.length?successes.map(r=>"- "+displayGame(r.game)+" · Coach: "+(r.game.coach_name||"nicht hinterlegt")+" · PDF: "+(r.doc.file_name||"Beobachtungsbogen")).join("\n"):"Keine PDF-Inhalte konnten zuverlässig ausgelesen werden.",
+ ""
+ ];
+ if(missing.length)blocks.push("Spiele ohne PDF:\n"+missing.map(x=>"- "+displayGame(x.game)).join("\n"),"");
+ if(unreadable.length)blocks.push("PDF ohne auslesbaren Text (z. B. Scan):\n"+unreadable.map(x=>"- "+displayGame(x.game)+" · "+x.doc.file_name).join("\n"),"");
+ if(errors.length)blocks.push("PDF mit Lesefehler:\n"+errors.map(x=>"- "+displayGame(x.game)+" · "+x.message).join("\n"),"");
+ blocks.push("2. POSITIVE HINWEISE AUS DEN PDF-TEXTEN");
+ const good=ev.filter(e=>e.kind==="positive");
+ if(good.length)for(const topic of topics){
+  const found=good.filter(e=>e.topic===topic.key);
+  if(found.length)blocks.push(topic.key+" ("+new Set(found.map(e=>e.doc.document_id)).size+" Bogen/Bögen)\n"+quotes(found,5));
+ }
+ else blocks.push("Keine eindeutig positiven Signalformulierungen automatisch zugeordnet. Das bedeutet nicht, dass keine Stärken vorhanden sind.");
+ blocks.push("","3. VERBESSERUNGSANSÄTZE AUS DEN PDF-TEXTEN");
+ const needed=ev.filter(e=>e.kind==="improve");
+ if(needed.length)for(const topic of topics){
+  const found=needed.filter(e=>e.topic===topic.key);
+  if(found.length)blocks.push(topic.key+" ("+new Set(found.map(e=>e.doc.document_id)).size+" Bogen/Bögen)\n"+quotes(found,5));
+ }
+ else blocks.push("Keine eindeutigen Verbesserungssignale automatisch erkannt. Bitte Originalbögen prüfen.");
+ blocks.push("","4. THEMEN IM ZEITLICHEN VERLAUF");
+ if(successes.length<2)blocks.push("Eine Entwicklung über mehrere Spiele ist aus den vorhandenen lesbaren PDF-Bögen nicht nachweisbar.");
+ else{
+  for(const topic of topics){
+   const relevant=ev.filter(e=>e.topic===topic.key),dates=unique(relevant.map(e=>e.game.match_date)).sort();
+   if(dates.length)blocks.push("- "+topic.key+": in "+dates.length+" Spieldatum/-daten angesprochen ("+dates.map(dateDE).join(", ")+").");
+  }
+  blocks.push("Die Häufigkeit eines erwähnten Themas ist kein Nachweis einer Verbesserung oder Verschlechterung. Für eine belastbare Entwicklungsbewertung müssen die beschriebenen Spielszenen und Bewertungen fachlich miteinander verglichen werden.");
+ }
+ blocks.push("","5. GESAMTFAZIT UND GRENZEN");
+ const mentioned=topics.filter(t=>ev.some(e=>e.topic===t.key)).map(t=>t.key);
+ blocks.push(successes.length?"Die auslesbaren Coachingbögen enthalten dokumentierte Hinweise zu: "+(mentioned.join(", ")||"keinem automatisch erkannten Themenbereich")+". Die oben angeführten Belege sind wörtliche Textauszüge aus den PDF-Dateien.":"Eine inhaltliche Coachingauswertung ist mangels auslesbarer PDF-Texte nicht möglich.");
+ blocks.push("Automatisch markierte positive und kritische Formulierungen sind Suchtreffer, keine eigenständig verifizierten Leistungsbewertungen. Nicht erkannte Passagen werden dadurch nicht als neutral bewertet. Scans ohne Textebene benötigen gesonderte OCR. Es wurden keine Spielszenen, Minuten oder Bewertungen ergänzt.");
+ return blocks.join("\n");
+}
+function addCell(tr,content,klass){
+ const td=document.createElement("td");
+ if(content instanceof Node)td.append(content);else td.textContent=String(content??"–");
+ if(klass)td.className=klass;tr.append(td);return td;
+}
+function printCoverage(associated,successes,unreadable,errors){
+ const st=$("coverage-stats");st.replaceChildren();
+ const withPdf=associated.filter(x=>x.docs.length>0).length,readableGames=new Set(successes.map(x=>x.game.game_key)).size;
+ for(const [label,count] of [["Spiele",associated.length],["Mit PDF",withPdf],["Lesbare Spiele",readableGames],["Ohne PDF",associated.length-withPdf]]){
+  const el=document.createElement("div");el.className="stat";
+  const strong=document.createElement("strong");strong.textContent=String(count);
+  const name=document.createElement("span");name.textContent=label;
+  el.append(strong,name);st.append(el);
+ }
+ const tbody=$("coverage-rows");tbody.replaceChildren();
+ for(const entry of associated){
+  const tr=document.createElement("tr");
+  addCell(tr,dateDE(entry.game.match_date));addCell(tr,(entry.game.home||"–")+" – "+(entry.game.away||"–"));
+  addCell(tr,entry.game.coach_name||"–");
+  if(!entry.docs.length){addCell(tr,"Kein PDF","state no");addCell(tr,"–");}
+  else{
+   const successCount=successes.filter(x=>x.game.game_key===entry.game.game_key).length;
+   const scanCount=unreadable.filter(x=>x.game.game_key===entry.game.game_key).length;
+   const errorCount=errors.filter(x=>x.game.game_key===entry.game.game_key).length;
+   addCell(tr,successCount?"Text auslesbar ("+successCount+")":scanCount?"PDF ohne Textebene":errorCount?"Lesefehler":"PDF vorhanden",successCount?"state yes":scanCount||errorCount?"state err":"state no");
+   const links=document.createElement("div");
+   for(const doc of entry.docs){
+    const a=document.createElement("a");a.href="/beobachtungsbogen-ansehen.html?pdf="+encodeURIComponent(doc.document_id);
+    a.textContent=doc.file_name||"PDF ansehen";a.target="_blank";a.rel="noopener noreferrer";
+    links.append(a,document.createElement("div"));
+   }
+   addCell(tr,links);
+  }
+  tbody.append(tr);
+ }
+ $("coverage").hidden=false;
+}
+function showEvidence(successes,ev){
+ const root=$("evidence");root.replaceChildren();
+ for(const topic of topics){
+  const list=ev.filter(e=>e.topic===topic.key);
+  if(!list.length)continue;
+  const section=document.createElement("div");
+  const heading=document.createElement("h4");heading.textContent=topic.key+" · "+list.length+" Texttreffer";section.append(heading);
+  for(const e of list.slice(0,12)){
+   const wrap=document.createElement("div");wrap.className="source-item";
+   const p=document.createElement("p");p.textContent=e.text;
+   const a=document.createElement("a");a.href="/beobachtungsbogen-ansehen.html?pdf="+encodeURIComponent(e.doc.document_id);
+   a.target="_blank";a.rel="noopener noreferrer";a.textContent=dateDE(e.game.match_date)+" · "+e.game.home+" – "+e.game.away+" · PDF-Seite "+e.page;
+   const label=document.createElement("small");label.className="muted";label.textContent=" · "+({positive:"positive Signalformulierung",improve:"Verbesserungshinweis",mixed:"gemischte Formulierung",general:"Themenbezug"})[e.kind];
+   wrap.append(p,a,label);section.append(wrap);
+  }
+  root.append(section);
+ }
+ if(!root.childElementCount){const p=document.createElement("p");p.textContent="Keine thematisch erkannten Passagen. Die vollständigen PDF-Texte stehen unten zur Kontrolle.";root.append(p);}
+ const raw=$("raw-pdfs");raw.replaceChildren();
+ for(const r of successes){
+  const item=document.createElement("details"),summary=document.createElement("summary"),body=document.createElement("pre");
+  summary.textContent=displayGame(r.game)+" · "+(r.doc.file_name||"PDF");
+  body.textContent=r.pages.map(p=>"--- Seite "+p.page+" ---\n"+p.text).join("\n\n");
+  item.append(summary,body);raw.append(item);
+ }
+}
+async function run(){
+ if(running)return;
+ let matches;
+ try{matches=getMatches();}catch(e){setStatus(e.message);return;}
+ if(!matches.length){setStatus("Keine Spiele dieses Schiedsrichters im ausgewählten Zeitraum gefunden.");$("coverage").hidden=true;$("report-section").hidden=true;return;}
+ running=true;$("analyze").disabled=true;
+ $("report-section").hidden=true;$("coverage").hidden=true;
+ const entries=matches.map(game=>({game,docs:chooseDocs(game)}));
+ const missing=entries.filter(x=>!x.docs.length);
+ const successes=[],unreadable=[],errors=[];
+ const tasks=entries.flatMap(e=>e.docs.map(doc=>({game:e.game,doc})));
+ let pdfjs=null;
+ try{
+  if(tasks.length)pdfjs=await getPdfLib();
+  for(let i=0;i<tasks.length;i++){
+   const item=tasks[i];setStatus("Lese PDF "+(i+1)+" von "+tasks.length+": "+displayGame(item.game));
+   try{
+    const pages=await readPdf(pdfjs,item.doc);
+    if(pages.reduce((sum,p)=>sum+p.text.replace(/\s/g,"").length,0)<90)
+      unreadable.push({...item,pages});
+    else successes.push({...item,pages});
+   }catch(e){errors.push({...item,message:e?.message||"Unbekannter Lesefehler"});}
+  }
+  successes.sort((a,b)=>gDate(a.game)-gDate(b.game));
+  const ev=evidenceFor(successes);
+  reportText=buildReport(entries,successes,missing,unreadable,errors,ev);
+  $("report-document").textContent=reportText;
+  printCoverage(entries,successes,unreadable,errors);
+  showEvidence(successes,ev);
+  $("report-section").hidden=false;
+  setStatus("Auswertung abgeschlossen: "+successes.length+" lesbare PDF(s), "+missing.length+" Spiel(e) ohne PDF, "+unreadable.length+" nicht auslesbar, "+errors.length+" Lesefehler.");
+ }catch(error){setStatus("Auswertung fehlgeschlagen: "+(error?.message||error));}
+ finally{running=false;$("analyze").disabled=false;}
+}
+$("analyze").addEventListener("click",()=>void run());
+$("clear").addEventListener("click",()=>{
+ $("report-section").hidden=true;$("coverage").hidden=true;$("report-action-status").textContent="";reportText="";setStatus("");
+});
+$("print-report").onclick=()=>{if(reportText)window.print();};
+$("copy-report").onclick=async()=>{
+ try{await navigator.clipboard.writeText(reportText);$("report-action-status").textContent="Zusammenfassung kopiert.";}
+ catch(e){$("report-action-status").textContent="Kopieren nicht möglich: "+e.message;}
+};
+try{
+ const {user}=await requireAdmin();userId=user.id;
+ const [gameResult,docResult]=await Promise.all([
+  sb.from("portal_games").select("owner_id,game_key,match_date,home,away,referee_id,referee_name,coach_name,pdf_id,is_test").eq("owner_id",userId),
+  sb.from("portal_observations").select("document_id,game_key,referee_id,storage_path,file_name").eq("owner_id",userId)
+ ]);
+ if(gameResult.error)throw gameResult.error;if(docResult.error)throw docResult.error;
+ games=gameResult.data||[];documents=docResult.data||[];
+ const byPerson=new Map();
+ for(const g of games){
+  if(g.is_test)continue;
+  const id=String(g.referee_id||norm(g.referee_name));if(!id||id==="")continue;
+  const label=name(g),prev=byPerson.get(id);
+  if(!prev||label.length>prev.length)byPerson.set(id,label);
+ }
+ for(const [id,label] of [...byPerson].sort((a,b)=>a[1].localeCompare(b[1],"de"))){
+  $("referee").add(new Option(label,id));
+ }
+ const now=todayIso();$("from").value=seasonStart();$("to").value=now;
+ const urlId=new URLSearchParams(location.search).get("referee");
+ if(urlId&&byPerson.has(urlId))$("referee").value=urlId;
+ $("access-status").hidden=true;$("private").hidden=false;
+ setStatus(games.length+" Spiele und "+documents.length+" PDF-Bögen im Portal gefunden. Bitte Schiedsrichter auswählen.");
+}catch(error){$("access-status").textContent="Zugang oder Laden fehlgeschlagen: "+(error?.message||error);}
+</script>
+<script type="module" src="/portal-ui.js"></script></body></html>
