@@ -46,11 +46,11 @@ details pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.55 ui-monosp
 <label>Bis<input id="to" type="date"></label>
 </div>
 <div class="actions">
-<button type="button" id="analyze">Gesamt-Sichtungsbogen mit KI erstellen</button>
+<button type="button" id="analyze">ChatGPT-Vorlage erstellen</button>
 <button type="button" id="clear" class="secondary">Auswertung zurücksetzen</button>
 </div>
 <p id="status" class="status" role="status" aria-live="polite"></p>
-<div class="notice small">Es werden keine neuen Bögen hochgeladen oder vorhandene Spielzuordnungen verändert. Für die KI-Zusammenfassung werden die PDF-Texte an den geschützten Server und den konfigurierten KI-Dienst übermittelt. Die Auswertung muss fachlich geprüft werden. Ohne konfigurierten KI-Dienst erscheint nur ein regelbasierter Entwurf.</div>
+<div class="notice small">Die PDF-Bögen werden im Browser ausgelesen und thematisch vorsortiert. Der fertige Prompt samt Originaltexten wird nur hier angezeigt. Erst durch das Einfügen in ChatGPT übergibst du die Inhalte. Kein API-Key erforderlich.</div>
 </section>
 <section id="coverage" class="no-print" hidden>
 <h3>Gefundene Spiele und PDF-Bögen</h3>
@@ -60,7 +60,7 @@ details pre{white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.55 ui-monosp
 <section id="report-section" hidden>
 <h2>Gesamt-Sichtungsbogen nach BSA-Vorlage</h2>
 <p class="muted small no-print">Thematisch gegliederter Vortragsbericht aus den vorhandenen Bogeninhalten. Die Belegstellen findest du unten auf dieser Seite.</p>
-<div class="actions no-print"><button id="print-report" type="button">Als PDF drucken / speichern</button><button id="copy-report" type="button" class="secondary">Zusammenfassung kopieren</button></div>
+<div class="actions no-print"><button id="print-report" type="button">Als PDF drucken / speichern</button><button id="copy-report" type="button" class="secondary">Alles für ChatGPT kopieren</button></div>
 <p id="report-action-status" class="small no-print" role="status"></p>
 <div id="report-document" class="report-document"></div>
 <div id="source-details" class="no-print">
@@ -218,6 +218,42 @@ function reportTopicList(all){
  if(names.length===1)return names[0];
  return names.slice(0,-1).join(", ")+" sowie "+names[names.length-1];
 }
+function makeTransfer(successes,ev,missing,unreadable,errors){
+ const lines=[
+ "MASTER-PROMPT – GESAMT-SICHTUNGSBOGEN BSA UNTERFRANKEN",
+ "Erstelle als erfahrener Schiedsrichter-Coach einen vollständigen, ausführlichen Gesamt-Sichtungsbogen in der dritten Person aus den folgenden Beobachtungen. Die BSA-Vorlage bestimmt Aufbau und Reihenfolge.",
+ "1. SPIELDATEN: Schiedsrichter, Spielpaarungen, Daten und Coaches.",
+ "2. FAZIT: fundierte Gesamtbeurteilung und Entwicklung über die Spiele.",
+ "3. POSITIVE ASPEKTE: drei konkrete Stärken mit Beispielen.",
+ "4. OPTIMIERBARE BEREICHE: drei konkrete Verbesserungsansätze.",
+ "5. ENTWICKLUNGSTHEMEN DES SR: drei überprüfbare Förderziele.",
+ "6. BEWERTUNGSKATEGORIEN: Administratives & spielbezogene Vorbereitung; Entscheidungsqualität; Disziplinarkontrolle; Auftreten & Persönlichkeit; Stellungsspiel & Fitness. Jeweils Bewertung ++, +, o, -, -- oder nicht bewertbar sowie ausführlicher Kommentar.",
+ "Führe Inhalte aller Spiele fachlich zusammen. Benenne wiederkehrende Beobachtungen, Unterschiede und Entwicklungen. Verwende zwei kurze wortgetreue Zitate mit Quellenangabe, sofern belegbar. Spielszenen, Minuten und Bewertungen nur bei belastbaren Belegen. Keine erfundenen Tatsachen. Die automatische thematische Vorsortierung ist fehleranfällig: Prüfe Aussagen anhand der vollständigen Originaltexte. Formuliere einen vollständigen Sichtungsbogen, keine Stichwortliste.",
+ "",
+ "SCHIEDSRICHTER: "+(successes[0]?name(successes[0].game):$("referee").selectedOptions[0]?.textContent||"–"),
+ "ZEITRAUM: "+dateDE($("from").value)+" bis "+dateDE($("to").value),
+ "DATENLAGE: "+successes.length+" lesbare PDF-Bögen; "+missing.length+" Spiele ohne PDF; "+unreadable.length+" nicht auslesbar; "+errors.length+" Lesefehler.",
+ "",
+ "THEMATISCH VORSORTIERTE TEXTZUSAMMENFASSUNG"
+ ];
+ for(const t of topics){
+  lines.push("","## "+t.key);
+  const relevant=ev.filter(e=>e.topic===t.key);
+  for(const [kind,label] of [["positive","Mögliche Stärken"],["improve","Mögliche Verbesserungen"],["mixed","Gemischte Aussagen"],["general","Weitere Beobachtungen"]]){
+   const chosen=distinctEvidence(relevant.filter(e=>e.kind===kind),10);
+   if(!chosen.length)continue;
+   lines.push(label+":");
+   for(const e of chosen)lines.push("- "+e.text+" [Spiel: "+displayGame(e.game)+"; Coach: "+(e.game.coach_name||"nicht angegeben")+"; Seite: "+e.page+"]");
+  }
+  if(!relevant.length)lines.push("Keine eindeutig zugeordneten Textstellen.");
+ }
+ lines.push("","VOLLSTÄNDIGE ORIGINALTEXTE ZUR FACHLICHEN PRÜFUNG");
+ for(const x of successes){
+  lines.push("","--- "+displayGame(x.game)+" | Coach: "+(x.game.coach_name||"nicht angegeben")+" | "+(x.doc.file_name||"PDF")+" ---");
+  for(const p of x.pages)lines.push("PDF-Seite "+p.page+":\n"+p.text);
+ }
+ return lines.join("\n");
+}
 function buildReport(associated,successes,missing,unreadable,errors,ev){
  const referee=associated[0]?.game?name(associated[0].game):$("referee").selectedOptions[0]?.textContent||"–";
  const dates=unique(successes.map(x=>x.game.match_date)).sort();
@@ -362,24 +398,12 @@ async function run(){
   successes.sort((a,b)=>gDate(a.game)-gDate(b.game));
   const ev=evidenceFor(successes);
   reportText=buildReport(entries,successes,missing,unreadable,errors,ev);
-  let aiWarning="";
-  if(successes.length){
-   setStatus("Erstelle fachlich zusammengeführten Sichtungsbogen mit KI …");
-   try{
-    const {data:{session}}=await sb.auth.getSession();
-    if(!session?.access_token)throw Error("Bitte erneut anmelden.");
-    const sources=successes.map(x=>({game:displayGame(x.game),coach:x.game.coach_name||"",file:x.doc.file_name||"",text:x.pages.map(p=>"PDF-Seite "+p.page+"\\n"+p.text).join("\\n\\n").slice(0,35000)}));
-    const ai=await fetch("/api/ki-sichtungsbogen",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+session.access_token},body:JSON.stringify({referee:name(successes[0].game),from:$("from").value,to:$("to").value,sources})});
-    const result=await ai.json();
-    if(!ai.ok)throw Error(result.error||"KI-Auswertung nicht verfügbar.");
-    reportText=result.report;
-   }catch(error){aiWarning="KI-Auswertung nicht verfügbar: "+error.message+" Angezeigt wird ein regelbasierter Entwurf. ";}
-  }
+  reportText=makeTransfer(successes,ev,missing,unreadable,errors);
   $("report-document").textContent=reportText;
   printCoverage(entries,successes,unreadable,errors);
   showEvidence(successes,ev);
   $("report-section").hidden=false;
-  setStatus(aiWarning+"Auswertung abgeschlossen: "+successes.length+" lesbare PDF(s), "+missing.length+" Spiel(e) ohne PDF, "+unreadable.length+" nicht auslesbar, "+errors.length+" Lesefehler.");
+  setStatus("ChatGPT-Vorlage erstellt. "+successes.length+" lesbare PDF(s), "+missing.length+" Spiel(e) ohne PDF, "+unreadable.length+" nicht auslesbar, "+errors.length+" Lesefehler.");
  }catch(error){setStatus("Auswertung fehlgeschlagen: "+(error?.message||error));}
  finally{running=false;$("analyze").disabled=false;}
 }
