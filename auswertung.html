@@ -79,12 +79,17 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 #coach-selection-count,#coach-export-status{font-size:13px;color:#51677d}
 @media(max-width:767px){.coach-batch-tools{display:grid;gap:2px}.coach-batch-actions button{width:100%}}
 @media(max-width:700px){html,body{width:100%;max-width:100%;overflow-x:hidden}*,*::before,*::after{box-sizing:border-box}main,section,article,.shell,.content{min-width:0;max-width:100%}img,video,iframe,canvas{max-width:100%;height:auto}input,select,textarea,button{max-width:100%}table{max-width:100%}pre{max-width:100%;overflow-x:auto}nav{max-width:100%}}
-#overview td:nth-child(8),#overview th:nth-child(8),#overview td:nth-child(10),#overview th:nth-child(10),#overview td:nth-child(11),#overview th:nth-child(11),#overview td:nth-child(12),#overview th:nth-child(12){text-align:right}
+#overview td:nth-child(8),#overview th:nth-child(8){text-align:right}
+#overview td:nth-child(n+10),#overview th:nth-child(n+10){text-align:right}
 #overview .total-money{font-weight:700;white-space:nowrap}
 @media(max-width:767px){
  #overview td:nth-child(10):before{content:"Kilometergeld: ";color:#607589;font-weight:500}
- #overview td:nth-child(11):before{content:"Spesen: ";color:#607589;font-weight:500}
- #overview td:nth-child(12):before{content:"Gesamt: ";color:#607589;font-weight:500}
+ #overview td:nth-child(11):before{content:"Spesen gesamt: ";color:#607589;font-weight:500}
+ #overview td:nth-child(12):before{content:"Spesen im Zeitraum: ";color:#607589;font-weight:500}
+ #overview td:nth-child(13):before{content:"Spesen Zukunft: ";color:#607589;font-weight:500}
+ #overview td:nth-child(14):before{content:"Summe gesamt: ";color:#607589;font-weight:500}
+ #overview td:nth-child(15):before{content:"Summe Zeitraum: ";color:#607589;font-weight:500}
+ #overview td:nth-child(16):before{content:"Summe Zukunft: ";color:#607589;font-weight:500}
 }
 </style><style id="portal-menu-initial-gate">nav[aria-label="Hauptmenü"]{opacity:0!important;pointer-events:none!important}body.portal-menu-ready nav[aria-label="Hauptmenü"]{opacity:1!important;pointer-events:auto!important}</style></head><body>
 <header><h1>Coachingportal MSP</h1></header>
@@ -119,7 +124,7 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 <p class="hint">Nach Spiele gesamt absteigend sortiert. Eurobeträge für zukünftige Spiele sind Planwerte. * Fehlende Kilometer machen die Summe unvollständig.</p>
 <div class="tablebox">
 <table id="overview" aria-label="Alle Coaches mit Spielen im Zeitraum, geplanten Spielen und Kilometern">
-<thead><tr><th>Coach / Beobachter</th><th>Spiele gesamt</th><th>Spiele im Zeitraum</th><th>Spiele in Zukunft</th><th>Noch nicht bestätigt</th><th>Kilometer gesamt</th><th>Kilometer im Zeitraum</th><th>Kilometer Zukunft</th><th>Einzelaufstellung</th><th>Kilometergeld (€)</th><th>Spesen (€)</th><th>Gesamt (€)</th></tr></thead>
+<thead><tr><th>Coach / Beobachter</th><th>Spiele gesamt</th><th>Spiele im Zeitraum</th><th>Spiele in Zukunft</th><th>Noch nicht bestätigt</th><th>Kilometer gesamt</th><th>Kilometer im Zeitraum</th><th>Kilometer Zukunft</th><th>Einzelaufstellung</th><th>Kilometergeld (€)</th><th>Spesen gesamt (€)</th><th>Spesen im Zeitraum (€)</th><th>Spesen Zukunft (€)</th><th>Summe gesamt (€)</th><th>Summe Zeitraum (€)</th><th>Summe Zukunft (€)</th></tr></thead>
 <tbody id="overview-rows"></tbody>
 </table></div>
 </div>
@@ -159,13 +164,27 @@ function compareNames(a,b){
  return cmp(lastName(a),lastName(b))||cmp(firstName(a),firstName(b))||cmp(displayName(a),displayName(b))||cmp(a.id,b.id);
 }
 function compareCoachCounts(a,b){return b.totalGames-a.totalGames||compareNames(a.person,b.person);}
+// Splits use exactly the same games and future-games as the portal counters.
 function compensationTotals(item){
- const records=[...item.games,...item.plannedGames].map(gameCompensation);
  const cents=amount=>Math.round(amount*100)/100;
- const mileage=cents(records.reduce((sum,m)=>sum+(m.mileage??0),0));
- const fees=cents(records.reduce((sum,m)=>sum+m.fee,0));
- return {mileage,fees,total:cents(mileage+fees),missing:records.filter(m=>!m.complete).length};
+ const sumRecords=games=>{
+  const entries=games.map(gameCompensation);
+  const mileage=cents(entries.reduce((sum,m)=>sum+(m.mileage??0),0));
+  const fees=cents(entries.reduce((sum,m)=>sum+m.fee,0));
+  return {mileage,fees,total:cents(mileage+fees),missing:entries.filter(m=>!m.complete).length};
+ };
+ const period=sumRecords(item.games);
+ const future=sumRecords(item.plannedGames);
+ const overall={mileage:cents(period.mileage+future.mileage),fees:cents(period.fees+future.fees),total:cents(period.total+future.total),missing:period.missing+future.missing};
+ return {period,future,overall};
 }
+const moneyHeaders=["Kilometergeld (€)","Spesen gesamt (€)","Spesen im Zeitraum (€)","Spesen Zukunft (€)","Summe gesamt (€)","Summe Zeitraum (€)","Summe Zukunft (€)"];
+function moneyValues(summary){
+ const e=compensationTotals(summary);
+ return [e.overall.mileage,e.overall.fees,e.period.fees,e.future.fees,e.overall.total,e.period.total,e.future.total];
+}
+function euroNote(missing){return missing+" Spiel(e) ohne Kilometerangabe: Summe enthält nur bekannte Fahrtkosten und ist unvollständig.";}
+
 function money(value){return value.toLocaleString("de-DE",{style:"currency",currency:"EUR"});}
 function coachRows(persons,from,to){
  return persons.map(person=>({...summarize(person,from,to),person})).sort(compareCoachCounts);
@@ -288,17 +307,25 @@ function renderOverview(){
   const totalCount=document.createElement("td");totalCount.textContent=String(result.totalGames);
   const unconfirmedCount=document.createElement("td");unconfirmedCount.textContent=String(result.unconfirmedGames.length);if(!result.unconfirmedGames.length)unconfirmedCount.className="zero";
   const totalKmCell=document.createElement("td");totalKmCell.textContent=labelKm(result.totalKm);
-  const e=compensationTotals(result);const mileageCell=document.createElement("td");mileageCell.textContent=money(e.mileage);const feesCell=document.createElement("td");feesCell.textContent=money(e.fees);const totalMoneyCell=document.createElement("td");totalMoneyCell.textContent=money(e.total)+(e.missing?" *":"");totalMoneyCell.className="total-money";if(e.missing)totalMoneyCell.title=e.missing+" Spiel(e) ohne Kilometerangabe – Summe unvollständig.";const action=document.createElement("td"),btn=document.createElement("button");
+  const e=compensationTotals(result);
+  const moneyCells=moneyValues(result).map((value,i)=>{
+   const cell=document.createElement("td"),miss=i===4?e.overall.missing:i===5?e.period.missing:i===6?e.future.missing:0;
+   cell.textContent=money(value)+(miss?" *":"");
+   if(i>=4)cell.className="total-money";
+   if(miss)cell.title=euroNote(miss);
+   return cell;
+  });
+  const action=document.createElement("td"),btn=document.createElement("button");
   btn.className="detail-btn";btn.type="button";
   const opened=String(coach.id)===selectedCoachId;
   btn.textContent=opened?"Details schließen":"Details";
   btn.setAttribute("aria-expanded",String(opened));
   btn.setAttribute("aria-controls","details-result");
   btn.addEventListener("click",()=>showCoachDetails(String(coach.id)));
-  action.append(btn);tr.append(name,totalCount,count,planned,unconfirmedCount,totalKmCell,km,plannedKm,action,mileageCell,feesCell,totalMoneyCell);tbody.append(tr);
+  action.append(btn);tr.append(name,totalCount,count,planned,unconfirmedCount,totalKmCell,km,plannedKm,action,...moneyCells);tbody.append(tr);
  }
  if(!ordered.length){
-  const row=document.createElement("tr"),cell=document.createElement("td");cell.colSpan=12;cell.textContent="Noch keine Coaches angelegt.";row.append(cell);tbody.append(row);
+  const row=document.createElement("tr"),cell=document.createElement("td");cell.colSpan=16;cell.textContent="Noch keine Coaches angelegt.";row.append(cell);tbody.append(row);
  }
  $("overview-total").textContent=ordered.length+" Coaches · "+totalGames+" Spiele im Zeitraum · "+games.filter(g=>!g.is_test&&g.match_date>today).length+" geplante Spiele insgesamt · "+labelKm(totalKm);
  updateCoachExportStatus();
@@ -330,17 +357,17 @@ async function exportBatchCoaches(){
  const button=$("export-coaches");button.disabled=true;const previous=button.textContent;button.textContent="Excel wird erstellt …";
  try{
   const ExcelJS=await loadExcelLibrary(),book=new ExcelJS.Workbook();book.creator="Coachingportal MSP";book.title="Coach-Auswertung";book.subject="Spiele, Kilometer und Aufwandsentschädigung";book.created=new Date();book.calcProperties.fullCalcOnLoad=true;
-  const overview=book.addWorksheet("Übersicht");overview.columns=[{width:31},{width:18},{width:21},{width:20},{width:23},{width:21},{width:23},{width:21},{width:19},{width:17},{width:20}];overview.mergeCells("A1:K1");overview.getCell("A1").value="Coach-Auswertung – Spiele und Kilometer";overview.getCell("A1").font={size:16,bold:true,color:{argb:"FFFFFFFF"}};overview.getCell("A1").fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};overview.getRow(1).height=34;
-  overview.getCell("A3").value="Zeitraum";overview.getCell("B3").value=dateDE(from)+" – "+dateDE(to);overview.getCell("A4").value="Auswahl";overview.getCell("B4").value=coachScope==="all"?"Alle Coaches":snapshot.length+" ausgewählte Coaches";overview.getCell("A5").value="Testspiele ausgeschlossen";overview.getCell("B5").value="Ja";overview.mergeCells("A6:K6");overview.getCell("A6").value="Inklusive Zukunft als Planwerte; fehlende Kilometer sind nicht berechnet.";overview.getCell("A6").font={italic:true,color:{argb:"FF6B7280"}};
+  const overview=book.addWorksheet("Übersicht");overview.columns=[31,18,21,20,23,21,23,21,19,22,24,21,22,22,22].map(width=>({width}));overview.mergeCells("A1:O1");overview.getCell("A1").value="Coach-Auswertung – Spiele und Kilometer";overview.getCell("A1").font={size:16,bold:true,color:{argb:"FFFFFFFF"}};overview.getCell("A1").fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};overview.getRow(1).height=34;
+  overview.getCell("A3").value="Zeitraum";overview.getCell("B3").value=dateDE(from)+" – "+dateDE(to);overview.getCell("A4").value="Auswahl";overview.getCell("B4").value=coachScope==="all"?"Alle Coaches":snapshot.length+" ausgewählte Coaches";overview.getCell("A5").value="Testspiele ausgeschlossen";overview.getCell("B5").value="Ja";overview.mergeCells("A6:O6");overview.getCell("A6").value="Inklusive Zukunft als Planwerte; fehlende Kilometer sind nicht berechnet.";overview.getCell("A6").font={italic:true,color:{argb:"FF6B7280"}};
   const details=book.addWorksheet("Einzelspiele");details.columns=[{header:"Datum",width:14},{header:"Coach",width:28},{header:"Begegnung",width:48},{header:"Spielklasse",width:25},{header:"Einsatzart",width:21},{header:"Status",width:18},{header:"Km hin und zurück",width:19},{header:"Kilometerkosten (0,30 €/km)",width:23},{header:"Spesen",width:15},{header:"Aufwandsentschädigung gesamt",width:25},{header:"Abrechnung",width:18},{header:"Coach-ID",width:22}];
   let count=0;for(const item of snapshot){for(const game of item.games){const m=gameCompensation(game);details.addRow([new Date(game.match_date+"T12:00:00Z"),String(item.name),[game.home,game.away].filter(Boolean).join(" – ")||"Coaching",game.league||"",expenseLabel(m.type),"Im Zeitraum",m.km,m.mileage,m.fee,m.total,m.complete?"Vollständig":"Kilometer fehlen",String(item.person.id)]);count++}for(const game of item.plannedGames){const m=gameCompensation(game);details.addRow([new Date(game.match_date+"T12:00:00Z"),String(item.name),[game.home,game.away].filter(Boolean).join(" – ")||"Coaching",game.league||"",expenseLabel(m.type),"Geplant (Zukunft)",m.km,m.mileage,m.fee,m.total,m.complete?"Kilometer vorhanden":"Kilometer noch offen",String(item.person.id)]);count++}}
   details.getColumn(1).numFmt="dd.mm.yyyy";details.getColumn(7).numFmt='0.##" km"';for(const n of [8,9,10])details.getColumn(n).numFmt='€ #,##0.00';details.getColumn(12).hidden=true;details.views=[{state:"frozen",ySplit:1}];details.autoFilter={from:"A1",to:"L"+Math.max(1,count+1)};
   // Gleiche Reihenfolge und dieselben Kennzahlen wie in der Coach-Tabelle des Portals.
-  const coachHeaders=["Coach / Beobachter","Spiele gesamt","Spiele im Zeitraum","Spiele in Zukunft","Noch nicht bestätigt","Kilometer gesamt","Kilometer im Zeitraum","Kilometer Zukunft","Kilometergeld (€)","Spesen (€)","Gesamt (€)"];
+  const coachHeaders=["Coach / Beobachter","Spiele gesamt","Spiele im Zeitraum","Spiele in Zukunft","Noch nicht bestätigt","Kilometer gesamt","Kilometer im Zeitraum","Kilometer Zukunft",...moneyHeaders];
   coachHeaders.forEach((header,i)=>overview.getRow(7).getCell(i+1).value=header);
   for(const [i,item] of snapshot.entries()){
    const row=overview.getRow(8+i);
-   const e=compensationTotals(item);const values=[item.name,item.totalGames,item.games.length,item.plannedGames.length,item.unconfirmedGames.length,item.totalKm,item.sum,item.plannedSum,e.mileage,e.fees,e.total];if(e.missing)row.getCell(11).note=e.missing+" Spiel(e) ohne Kilometerangabe: Gesamtsumme unvollständig.";
+   const e=compensationTotals(item);const values=[item.name,item.totalGames,item.games.length,item.plannedGames.length,item.unconfirmedGames.length,item.totalKm,item.sum,item.plannedSum,...moneyValues(item)];if(e.overall.missing){row.getCell(13).note=euroNote(e.overall.missing);row.getCell(14).note=euroNote(e.period.missing);row.getCell(15).note=euroNote(e.future.missing);}
    values.forEach((value,j)=>row.getCell(j+1).value=value);
   }
   const total=overview.getRow(8+snapshot.length);total.getCell(1).value="GESAMT";
@@ -352,17 +379,15 @@ async function exportBatchCoaches(){
    snapshot.reduce((sum,item)=>sum+item.totalKm,0),
    snapshot.reduce((sum,item)=>sum+item.sum,0),
    snapshot.reduce((sum,item)=>sum+item.plannedSum,0),
-   snapshot.reduce((sum,item)=>sum+compensationTotals(item).mileage,0),
-   snapshot.reduce((sum,item)=>sum+compensationTotals(item).fees,0),
-   snapshot.reduce((sum,item)=>sum+compensationTotals(item).total,0)
+   ...moneyHeaders.map((_,i)=>Math.round(snapshot.reduce((sum,item)=>sum+moneyValues(item)[i],0)*100)/100)
   ];
   coachTotals.forEach((value,i)=>total.getCell(i+2).value=value);
-  for(const n of [6,7,8])overview.getColumn(n).numFmt='0.##" km"';for(const n of [9,10,11])overview.getColumn(n).numFmt='€ #,##0.00';
+  for(const n of [6,7,8])overview.getColumn(n).numFmt='0.##" km"';for(let n=9;n<=15;n++)overview.getColumn(n).numFmt='€ #,##0.00';
   overview.views=[{state:"frozen",ySplit:7}];
-  overview.autoFilter={from:"A7",to:"K"+Math.max(8,7+snapshot.length)};
+  overview.autoFilter={from:"A7",to:"O"+Math.max(8,7+snapshot.length)};
   total.eachCell(cell=>{cell.font={bold:true,color:{argb:"FF142B46"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE8F0F8"}}});
   for(const sheet of [overview,details]){const row=sheet.getRow(sheet===overview?7:1);row.height=28;row.eachCell(cell=>{cell.font={bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};cell.alignment={vertical:"middle"}})}
-  const bytes=await book.xlsx.writeBuffer(),blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="Coaches_Auswertung_"+from+"_bis_"+to+".xlsx";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);$("coach-export-status").textContent="Excel nach Spiele gesamt sortiert; Kilometerkosten, Spesen und Gesamtsumme ergänzt.";
+  const bytes=await book.xlsx.writeBuffer(),blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="Coaches_Auswertung_"+from+"_bis_"+to+".xlsx";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);$("coach-export-status").textContent="Excel erstellt: Spesen und Gesamtsummen nach gesamt, Zeitraum und Zukunft aufgeschlüsselt.";
  }catch(error){$("coach-export-status").textContent="Excel-Export fehlgeschlagen: "+error.message}finally{button.textContent=previous;updateCoachExportStatus()}
 }
 $("export-coaches").addEventListener("click",exportBatchCoaches);
@@ -387,23 +412,23 @@ async function exportExcel(){
  try{
   const ExcelJS=await loadExcelLibrary(),book=new ExcelJS.Workbook();book.creator="Coachingportal MSP";book.title="Coaching-Auswertung";book.subject="Spiele, Kilometer und Aufwandsentschädigung";book.created=new Date();book.calcProperties.fullCalcOnLoad=true;
   const sum=book.addWorksheet("Übersicht"),detail=book.addWorksheet("Einzelspiele");
-  sum.columns=[{width:31},{width:18},{width:21},{width:20},{width:23},{width:21},{width:23},{width:21},{width:19},{width:17},{width:20}];
-  sum.mergeCells("A1:K1");sum.getCell("A1").value="Coaching-Auswertung – Spiele und Kilometer";
+  sum.columns=[31,18,21,20,23,21,23,21,19,22,24,21,22,22,22].map(width=>({width}));
+  sum.mergeCells("A1:O1");sum.getCell("A1").value="Coaching-Auswertung – Spiele und Kilometer";
   sum.getCell("A1").font={size:16,bold:true,color:{argb:"FFFFFFFF"}};
   sum.getCell("A1").fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};
-  sum.getRow(1).height=34;sum.getCell("A3").value="Coach";sum.getCell("B3").value=current.name;sum.getCell("A4").value="Zeitraum";sum.getCell("B4").value=(current.from?dateDE(current.from):"Beginn offen")+" – "+(current.to?dateDE(current.to):"Ende offen");sum.mergeCells("A6:K6");sum.getCell("A6").value="Inklusive Zukunft als Planwerte; fehlende Kilometer sind nicht berechnet.";sum.getCell("A6").font={italic:true,color:{argb:"FF6B7280"}};
+  sum.getRow(1).height=34;sum.getCell("A3").value="Coach";sum.getCell("B3").value=current.name;sum.getCell("A4").value="Zeitraum";sum.getCell("B4").value=(current.from?dateDE(current.from):"Beginn offen")+" – "+(current.to?dateDE(current.to):"Ende offen");sum.mergeCells("A6:O6");sum.getCell("A6").value="Inklusive Zukunft als Planwerte; fehlende Kilometer sind nicht berechnet.";sum.getCell("A6").font={italic:true,color:{argb:"FF6B7280"}};
   detail.columns=[{header:"Datum",width:14},{header:"Begegnung",width:45},{header:"Einsatzart",width:21},{header:"Status",width:20},{header:"Km hin und zurück",width:19},{header:"Kilometerkosten (0,30 €/km)",width:23},{header:"Spesen",width:15},{header:"Aufwandsentschädigung gesamt",width:25},{header:"Abrechnung",width:18}];
   const rows=[...current.games.map(game=>({game,status:"Im Zeitraum"})),...current.plannedGames.map(game=>({game,status:"Geplant (Zukunft)"}))].map(x=>({...x,m:gameCompensation(x.game)}));
   for(const {game,m,status} of rows)detail.addRow([new Date(game.match_date+"T12:00:00Z"),[game.home,game.away].filter(Boolean).join(" – ")||"Coaching",expenseLabel(m.type),status,m.km,m.mileage,m.fee,m.total,m.complete?"Kilometer vorhanden":"Kilometer fehlen"]);
   detail.getColumn(1).numFmt="dd.mm.yyyy";detail.getColumn(5).numFmt='0.##" km"';for(const n of [6,7,8])detail.getColumn(n).numFmt='€ #,##0.00';detail.views=[{state:"frozen",ySplit:1}];detail.autoFilter={from:"A1",to:"I"+Math.max(1,rows.length+1)};
   // Auch beim Export eines einzelnen Coaches dieselbe Portal-Spaltenfolge verwenden.
-  const coachHeaders=["Coach / Beobachter","Spiele gesamt","Spiele im Zeitraum","Spiele in Zukunft","Noch nicht bestätigt","Kilometer gesamt","Kilometer im Zeitraum","Kilometer Zukunft","Kilometergeld (€)","Spesen (€)","Gesamt (€)"];
+  const coachHeaders=["Coach / Beobachter","Spiele gesamt","Spiele im Zeitraum","Spiele in Zukunft","Noch nicht bestätigt","Kilometer gesamt","Kilometer im Zeitraum","Kilometer Zukunft",...moneyHeaders];
   coachHeaders.forEach((header,i)=>sum.getRow(7).getCell(i+1).value=header);
-  const e=compensationTotals(current);const values=[current.name,current.totalGames,current.games.length,current.plannedGames.length,current.unconfirmedGames.length,current.totalKm,current.sum,current.plannedSum,e.mileage,e.fees,e.total];if(e.missing)sum.getRow(8).getCell(11).note=e.missing+" Spiel(e) ohne Kilometerangabe: Gesamtsumme unvollständig.";
+  const e=compensationTotals(current);const values=[current.name,current.totalGames,current.games.length,current.plannedGames.length,current.unconfirmedGames.length,current.totalKm,current.sum,current.plannedSum,...moneyValues(current)];if(e.overall.missing){sum.getRow(8).getCell(13).note=euroNote(e.overall.missing);if(e.period.missing)sum.getRow(8).getCell(14).note=euroNote(e.period.missing);if(e.future.missing)sum.getRow(8).getCell(15).note=euroNote(e.future.missing);}
   values.forEach((value,i)=>sum.getRow(8).getCell(i+1).value=value);
-  for(const n of [6,7,8])sum.getColumn(n).numFmt='0.##" km"';for(const n of [9,10,11])sum.getColumn(n).numFmt='€ #,##0.00';
+  for(const n of [6,7,8])sum.getColumn(n).numFmt='0.##" km"';for(let n=9;n<=15;n++)sum.getColumn(n).numFmt='€ #,##0.00';
   sum.views=[{state:"frozen",ySplit:7}];
-  sum.autoFilter={from:"A7",to:"K8"};
+  sum.autoFilter={from:"A7",to:"O8"};
   const summaryHeader=sum.getRow(7);summaryHeader.height=28;summaryHeader.eachCell(cell=>{cell.font={bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};cell.alignment={vertical:"middle"}});
   for(const sheet of [sum,detail]){const row=sheet.getRow(1);row.eachCell(cell=>{cell.font={bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}}})}
   const bytes=await book.xlsx.writeBuffer(),blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="Coaching_Auswertung_"+current.from+"_bis_"+current.to+".xlsx";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
