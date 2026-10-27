@@ -18,7 +18,59 @@
 .ref-note-entry{padding:11px 12px;border:1px solid #dce5ee;border-radius:9px;background:white;white-space:pre-wrap;overflow-wrap:anywhere}
 .ref-note-entry time{display:block;margin-bottom:5px;font-size:12px;font-weight:700;color:#55708a}
 .ref-note-entry p{margin:0;white-space:pre-wrap}
-@media(max-width:650px){.ref-notes{padding:11px}.ref-notes button{width:100%}}@media(max-width:650px){.coach-thumb,.coach-initials{width:56px;height:56px}.ref-card{padding:10px}}@media(min-width:1100px){.portal-content main{max-width:none;width:100%;box-sizing:border-box;padding:28px clamp(24px,3vw,58px)}.portal-content{min-width:0}.ref-cards{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:18px}.ref-card{padding:18px}.ref-card summary{min-height:74px}}@media(min-width:1700px){.ref-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}</style><header><h1>Coachingportal MSP</h1></header><div class="portal-shell"><nav class="portal-sidebar" aria-label="Hauptmenü"><strong>Menü</strong><a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html">Spiele</a><a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html" aria-current="page">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav><div class="portal-content"><main><p><a href="/">← Startseite</a> · <a href="/verwaltung.html">Schiedsrichterverwaltung</a></p><section><h2>Schiedsrichter</h2><p id="status">Zugriff wird geprüft …</p><div class="ref-sort"><label for="referee-sort">Alphabetisch sortieren nach:</label><select id="referee-sort" aria-label="Schiedsrichter sortieren"><option value="last">Nachname (A–Z)</option><option value="first">Vorname (A–Z)</option></select></div><label for="ref-search">Schiedsrichter suchen</label><input id="ref-search" type="search" placeholder="Name eingeben …" autocomplete="off" style="display:block;width:100%;box-sizing:border-box;padding:12px;font:inherit;border:1px solid #b9c8d7;border-radius:9px;margin:8px 0 14px"><div id="rows" class="ref-cards"></div><p id="hint" hidden>Neue Schiedsrichter kannst du unter „Schiedsrichterverwaltung“ erfassen.</p></section></main></div></div><script type="module">
+@media(max-width:650px){.ref-notes{padding:11px}.ref-notes button{width:100%}}@media(max-width:650px){.coach-thumb,.coach-initials{width:56px;height:56px}.ref-card{padding:10px}}@media(min-width:1100px){.portal-content main{max-width:none;width:100%;box-sizing:border-box;padding:28px clamp(24px,3vw,58px)}.portal-content{min-width:0}.ref-cards{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:18px}.ref-card{padding:18px}.ref-card summary{min-height:74px}}@media(min-width:1700px){.ref-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* Visitenkarte: Foto zuerst, Name/Status daneben, klare Datenbereiche darunter. */
+.ref-card{overflow:hidden;border-color:#d5e0eb;box-shadow:0 3px 14px rgba(20,43,70,.035)}
+.ref-card>summary{display:block;list-style:none;padding:8px;min-width:0}
+.ref-card>summary::-webkit-details-marker{display:none}
+.ref-summary-top{display:grid;grid-template-columns:76px minmax(0,1fr);align-items:center;gap:15px;min-width:0}
+.ref-avatar{width:76px;height:76px;flex:none;position:relative;overflow:hidden;border-radius:15px;background:#dce9f5;border:1px solid #c3d6e9;box-sizing:border-box}
+.ref-avatar-photo{width:100%;height:100%;object-fit:cover;display:block}
+.ref-avatar-photo[hidden],.ref-avatar-placeholder[hidden]{display:none!important}
+.ref-avatar-placeholder{display:block;position:relative;width:100%;height:100%;background:linear-gradient(135deg,#dce9f5,#edf4fa)}
+.ref-avatar-placeholder:before{content:"";position:absolute;top:13px;left:50%;width:25px;height:25px;margin-left:-12.5px;border-radius:50%;background:#9bb6cc}
+.ref-avatar-placeholder:after{content:"";position:absolute;bottom:4px;left:50%;width:55px;height:31px;transform:translateX(-50%);border-radius:36px 36px 9px 9px;background:#9bb6cc}
+.ref-card-heading{gap:7px;min-width:0}
+.referee-title-line{align-items:flex-start;gap:7px}
+.coach-card-title .referee-full-name{font-size:19px;font-weight:800;line-height:1.2;display:block;width:100%;color:#142b46;overflow-wrap:anywhere}
+.coach-card-title .referee-subtitle{font-size:13px;color:#5a7188;line-height:1.35}
+.ref-summary-data{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:13px}
+.ref-info-group,.ref-games-section{min-width:0;background:white;border:1px solid #dce5ee;border-radius:10px;padding:12px}
+.ref-info-group h3,.ref-games-section h3{margin:0 0 9px;color:#365774;font-size:12px;text-transform:uppercase;letter-spacing:.035em;font-weight:800}
+.ref-info-row{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:3px 9px;margin:6px 0;font-size:13px;font-weight:450;line-height:1.35}
+.ref-info-key{color:#536c83}
+.ref-info-value{color:#142b46;font-size:13px;font-weight:700;text-align:right;overflow-wrap:anywhere}
+.ref-games-section{grid-column:1/-1}
+.ref-game-counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:0}
+.ref-game-count{display:flex;flex-direction:column;justify-content:center;gap:4px;white-space:normal;padding:10px 5px;background:#f1f6fb;border-radius:8px;text-align:center;font-size:12px;line-height:1.3}
+.ref-game-count strong{font-size:21px;line-height:1.15;font-weight:800}
+.ref-card>.details{margin-top:12px;padding:14px 6px 6px;border-top:1px solid #dce5ee}
+.ref-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.ref-panel{min-width:0;padding:15px;border:1px solid #dce5ee;border-radius:10px;background:white}
+.ref-panel h3{margin:0 0 12px;font-size:15px;color:#274760}
+.ref-panel .ref-panel-field{display:grid;grid-template-columns:minmax(72px,auto) minmax(0,1fr);gap:8px;font-size:13px;line-height:1.5;margin:7px 0}
+.ref-panel .ref-panel-label{color:#5b7185}
+.ref-panel .ref-panel-value{font-weight:650;overflow-wrap:anywhere;min-width:0}
+.ref-card .contact{display:block;padding:15px}
+.ref-contact-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}
+.ref-quick-links{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 14px}
+.ref-quick-links a{margin:0!important}
+.ref-card .ref-notes{margin-top:12px}
+.ref-card .ref-summary-docs{border:1px solid #dce5ee;background:white;border-radius:10px;margin-top:12px;padding:15px}
+.ref-card .ref-summary-docs h3{margin:0 0 12px;font-size:15px;color:#274760}
+@media(max-width:650px){
+ .ref-card>summary{padding:5px}
+ .ref-summary-top{grid-template-columns:62px minmax(0,1fr);gap:11px}
+ .ref-avatar{width:62px;height:62px;border-radius:12px}
+ .ref-avatar-placeholder:before{top:9px}
+ .ref-avatar-placeholder:after{width:47px;height:26px}
+ .coach-card-title .referee-full-name{font-size:17px}
+ .ref-summary-data,.ref-detail-grid{grid-template-columns:minmax(0,1fr);gap:8px}
+ .ref-info-group,.ref-games-section{padding:11px}
+ .ref-card>.details{padding:12px 2px 4px}
+ .ref-game-count strong{font-size:19px}
+}
+</style><header><h1>Coachingportal MSP</h1></header><div class="portal-shell"><nav class="portal-sidebar" aria-label="Hauptmenü"><strong>Menü</strong><a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html">Spiele</a><a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html" aria-current="page">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav><div class="portal-content"><main><p><a href="/">← Startseite</a> · <a href="/verwaltung.html">Schiedsrichterverwaltung</a></p><section><h2>Schiedsrichter</h2><p id="status">Zugriff wird geprüft …</p><div class="ref-sort"><label for="referee-sort">Alphabetisch sortieren nach:</label><select id="referee-sort" aria-label="Schiedsrichter sortieren"><option value="last">Nachname (A–Z)</option><option value="first">Vorname (A–Z)</option></select></div><label for="ref-search">Schiedsrichter suchen</label><input id="ref-search" type="search" placeholder="Name eingeben …" autocomplete="off" style="display:block;width:100%;box-sizing:border-box;padding:12px;font:inherit;border:1px solid #b9c8d7;border-radius:9px;margin:8px 0 14px"><div id="rows" class="ref-cards"></div><p id="hint" hidden>Neue Schiedsrichter kannst du unter „Schiedsrichterverwaltung“ erfassen.</p></section></main></div></div><script type="module">
 import {cloudPeople} from "/portal-people.js";
 import {refereeBirthDetails} from "/portal-birthdate.js";
 import {createClient} from "https://esm.sh/@supabase/supabase-js@2.57.4";
@@ -97,35 +149,107 @@ if(!user){
       for(const r of filtered){
         const name=r.name||[r.first,r.last].filter(Boolean).join(" ")||"Unbenannt";
         const card=document.createElement("details");card.className="ref-card";
-        const summary=document.createElement("summary");const initials=document.createElement("div");initials.className="coach-initials";initials.textContent=[r.first,r.last].filter(Boolean).map(x=>String(x).charAt(0).toUpperCase()).join("")||name.split(/\\s+/).map(x=>x[0]).slice(0,2).join("").toUpperCase();summary.append(initials);if(r.photoPath){const {data:photo,error:photoError}=await sb.storage.from("portal-coach-photos").createSignedUrl(r.photoPath,3600);if(!photoError&&photo?.signedUrl){const img=document.createElement("img");img.className="coach-thumb";img.alt="Profilfoto von "+name;img.src=photo.signedUrl;img.onerror=()=>{img.replaceWith(initials);initials.hidden=false};initials.hidden=true;summary.append(img)}}const title=document.createElement("div");title.className="coach-card-title";const line=document.createElement("div");line.className="referee-title-line";const bold=document.createElement("strong");bold.textContent=name;const active=r.status!=="inaktiv";const statusBadge=document.createElement("span");statusBadge.className="referee-status "+(active?"active":"inactive");statusBadge.textContent=active?"Aktiv":"Inaktiv";line.append(bold,statusBadge);const isEWK=r.ewk===true||r.ewk==="ja";let ewkDisplay="";if(isEWK){const ewkBadge=document.createElement("span");ewkBadge.className="referee-status ewk";const rawWhen=String(r.ewkWhen||"aktuell");const match=rawWhen.match(/^(\d{4})-(0[1-9]|1[0-2])(?:-\d{2})?$/);ewkDisplay=match?match[2]+"."+match[1]:"Aktuell";ewkBadge.textContent="EWK · "+ewkDisplay;line.append(ewkBadge);}title.append(line);const sub=document.createElement("small");sub.textContent=[r.club,r.city].filter(Boolean).join(" · ")||"Qualifikation: "+(r.qualification||r.qualifikation||"nicht hinterlegt");title.append(sub);
-const assYes=r.assistantSuitable===true||r.assistantSuitable==="ja";
-const assDefined=r.assistantSuitable===true||r.assistantSuitable===false||r.assistantSuitable==="ja"||r.assistantSuitable==="nein";
-const gradeDetails=[];
-if(r.gameClass)gradeDetails.push("Spielklasse: "+r.gameClass);
-if(assDefined)gradeDetails.push("Assistent: "+(assYes?"Ja"+(r.assistantClass?" · "+r.assistantClass:""):"Nein"));
-if(gradeDetails.length){const grade=document.createElement("small");grade.textContent=gradeDetails.join("  |  ");title.append(grade)}
-const birth=refereeBirthDetails(r.birth);const birthLine=document.createElement("small");birthLine.className="referee-birth-info";birthLine.textContent="Geburtstag: "+(birth.birthday||"nicht hinterlegt")+" · Alter: "+(birth.age===null?"–":birth.age+" Jahre");title.append(birthLine);const count=document.createElement("div");count.className="ref-game-counts";const refId=String(r.id);const seasonLabel="Saison "+seasonYear+"/"+String(seasonYear+1).slice(-2);const stats=[["Gesamt",totalCounts.get(refId)||0], [seasonLabel,seasonCounts.get(refId)||0],["Geplant",plannedCounts.get(refId)||0]];for(const [label,value] of stats){const item=document.createElement("span");item.className="ref-game-count";const statLabel=document.createElement("span");statLabel.textContent=label+":";const statValue=document.createElement("strong");statValue.textContent=gamesError?"–":String(value);item.append(statLabel,statValue);count.append(item);}count.title="Gesamt: alle bisherigen Spiele vor heute; Saison: 01.07."+seasonYear+" bis 30.06."+(seasonYear+1)+", bis gestern; geplant: heute und später. Testspiele ausgeschlossen.";title.append(count);summary.append(title);summary.setAttribute("aria-label",name+" – "+(active?"Aktiv":"Inaktiv")+(isEWK?" – EWK "+ewkDisplay:"")+": "+stats.map(([label,value])=>label+": "+(gamesError?"–":value)).join(", "));card.append(summary);
+        const summary=document.createElement("summary");
+        const header=document.createElement("div");header.className="ref-summary-top";
+        const avatar=document.createElement("div");avatar.className="ref-avatar";
+        const noPhoto=document.createElement("span");noPhoto.className="ref-avatar-placeholder";
+        noPhoto.setAttribute("aria-label","Kein Profilfoto hinterlegt");noPhoto.setAttribute("role","img");
+        avatar.append(noPhoto);
+        if(r.photoPath){
+          const {data:photo,error:photoError}=await sb.storage.from("portal-coach-photos").createSignedUrl(r.photoPath,3600);
+          if(!photoError&&photo?.signedUrl){
+            const img=document.createElement("img");
+            img.className="ref-avatar-photo";img.alt="Profilfoto von "+name;
+            img.hidden=true;
+            img.onload=()=>{img.hidden=false;noPhoto.hidden=true};
+            img.onerror=()=>{img.remove();noPhoto.hidden=false};
+            avatar.append(img);img.src=photo.signedUrl;
+          }
+        }
+        const title=document.createElement("div");title.className="coach-card-title ref-card-heading";
+        const line=document.createElement("div");line.className="referee-title-line";
+        const bold=document.createElement("strong");bold.className="referee-full-name";bold.textContent=name;
+        const active=r.status!=="inaktiv";
+        const statusBadge=document.createElement("span");statusBadge.className="referee-status "+(active?"active":"inactive");
+        statusBadge.textContent=active?"Aktiv":"Inaktiv";
+        line.append(bold,statusBadge);
+        const isEWK=r.ewk===true||r.ewk==="ja";
+        let ewkDisplay="";
+        if(isEWK){
+          const ewkBadge=document.createElement("span");ewkBadge.className="referee-status ewk";
+          const rawWhen=String(r.ewkWhen||"aktuell");
+          const match=rawWhen.match(/^([0-9]{4})-(0[1-9]|1[0-2])(?:-[0-9]{2})?$/);
+          ewkDisplay=match?match[2]+"."+match[1]:"Aktuell";
+          ewkBadge.textContent="EWK · "+ewkDisplay;line.append(ewkBadge);
+        }
+        title.append(line);
+        const sub=document.createElement("small");sub.className="referee-subtitle";
+        sub.textContent=[r.club,r.city].filter(Boolean).join(" · ")||"Schiedsrichter";
+        title.append(sub);
+        header.append(avatar,title);
+        summary.append(header);
+        const details=document.createElement("div");details.className="ref-summary-data";
+        const addInfo=(group,label,value)=>{
+          const row=document.createElement("div");row.className="ref-info-row";
+          const key=document.createElement("span");key.className="ref-info-key";key.textContent=label;
+          const val=document.createElement("strong");val.className="ref-info-value";val.textContent=value;
+          row.append(key,val);group.append(row);
+        };
+        const birth=refereeBirthDetails(r.birth);
+        const personal=document.createElement("section");personal.className="ref-info-group";
+        const personalLabel=document.createElement("h3");personalLabel.textContent="Persönliche Daten";personal.append(personalLabel);
+        addInfo(personal,"Geburtstag",birth.birthday||"–");
+        addInfo(personal,"Alter",birth.age===null?"–":birth.age+" Jahre");
+        details.append(personal);
+        const grades=document.createElement("section");grades.className="ref-info-group";
+        const gradeLabel=document.createElement("h3");gradeLabel.textContent="Einsatzbereich";grades.append(gradeLabel);
+        addInfo(grades,"Spielklasse",r.gameClass||"–");
+        const assYes=r.assistantSuitable===true||r.assistantSuitable==="ja";
+        const assDefined=r.assistantSuitable===true||r.assistantSuitable===false||r.assistantSuitable==="ja"||r.assistantSuitable==="nein";
+        addInfo(grades,"Assistent",assDefined?(assYes?"Ja":"Nein"):"–");
+        if(assYes&&r.assistantClass)addInfo(grades,"Assistenten-Klasse",r.assistantClass);
+        details.append(grades);
+        const gamesSection=document.createElement("section");gamesSection.className="ref-games-section";
+        const gamesTitle=document.createElement("h3");gamesTitle.textContent="Spiele";gamesSection.append(gamesTitle);
+        const count=document.createElement("div");count.className="ref-game-counts";
+        const refId=String(r.id);const seasonLabel="Saison "+seasonYear+"/"+String(seasonYear+1).slice(-2);
+        const stats=[["Gesamt",totalCounts.get(refId)||0],[seasonLabel,seasonCounts.get(refId)||0],["Geplant",plannedCounts.get(refId)||0]];
+        for(const [label,value] of stats){
+          const item=document.createElement("span");item.className="ref-game-count";
+          const statLabel=document.createElement("span");statLabel.textContent=label;
+          const statValue=document.createElement("strong");statValue.textContent=gamesError?"–":String(value);
+          item.append(statLabel,statValue);count.append(item);
+        }
+        count.title="Gesamt: alle bisherigen Spiele vor heute; Saison: 01.07."+seasonYear+" bis 30.06."+(seasonYear+1)+", bis gestern; geplant: heute und später. Testspiele ausgeschlossen.";
+        gamesSection.append(count);details.append(gamesSection);
+        summary.append(details);
+        summary.setAttribute("aria-label",name+" – "+(active?"Aktiv":"Inaktiv")+(isEWK?" – EWK "+ewkDisplay:"")+": "+stats.map(([label,value])=>label+": "+(gamesError?"–":value)).join(", "));
+        card.append(summary);
         
-        const contact=document.createElement("div");contact.className="contact";
+        const contact=document.createElement("section");contact.className="ref-panel contact";
+        const contactHeading=document.createElement("h3");contactHeading.textContent="Kontakt";contact.append(contactHeading);
         const phone=r.phoneMobile||r.phonePrivate||r.phoneBusiness||r.phone||"";
         const mail=r.mail||r.email||"";
         const city=r.city||"";
         for(const [label,value,prefix] of [["Telefon",phone,"tel:"],["E-Mail",mail,"mailto:"],["Wohnort",city,""]]){
-          const line=document.createElement("div");line.append(document.createTextNode(label+": "));
-          if(value&&prefix){const link=document.createElement("a");link.href=prefix+(prefix==="tel:"?String(value).replace(/[^+\\d]/g,""):value);link.textContent=value;line.append(link)}else line.append(document.createTextNode(value||"–"));
-          contact.append(line);
+          const field=document.createElement("div");field.className="ref-panel-field";
+          const labelSpan=document.createElement("span");labelSpan.className="ref-panel-label";labelSpan.textContent=label;
+          const val=document.createElement("span");val.className="ref-panel-value";
+          if(value&&prefix){const link=document.createElement("a");link.href=prefix+(prefix==="tel:"?String(value).replace(/[^+0-9]/g,""):value);link.textContent=value;val.append(link)}
+          else val.textContent=value||"–";
+          field.append(labelSpan,val);contact.append(field);
         }
         if(phone){
           const digits=String(phone).replace(/\D/g,"");
           const international=digits.startsWith("00")?digits.slice(2):digits.startsWith("0")?"49"+digits.slice(1):digits;
           if(international){
-            const actions=document.createElement("div");actions.className="ref-actions";
+            const actions=document.createElement("div");actions.className="ref-actions ref-contact-actions";
             const call=document.createElement("a");call.href="tel:"+String(phone).replace(/[^+\d]/g,"");call.textContent="📞 Anrufen";actions.append(call);
             const whatsapp=document.createElement("a");whatsapp.href="https://wa.me/"+international;whatsapp.target="_blank";whatsapp.rel="noopener noreferrer";whatsapp.textContent="WhatsApp schreiben";whatsapp.setAttribute("aria-label","WhatsApp-Chat mit "+name+" öffnen");actions.append(whatsapp);
             contact.append(actions);
           }
         }
-        card.append(contact);
+        const detailsGrid=document.createElement("div");detailsGrid.className="ref-detail-grid";detailsGrid.append(contact);
         // Chronologische, serverseitig gespeicherte Notizen zu genau diesem Schiedsrichter.
         const noteSection=document.createElement("section");noteSection.className="ref-notes";noteSection.setAttribute("aria-label","Notizen zu "+name);
         const noteHeading=document.createElement("h3");noteHeading.textContent="Notizen";noteSection.append(noteHeading);
@@ -162,14 +286,21 @@ const birth=refereeBirthDetails(r.birth);const birthLine=document.createElement(
           finally{noteButton.disabled=false;}
         };
         card.addEventListener("toggle",()=>{if(card.open&&!notesLoaded)void loadRefereeNotes()});
-        const more=document.createElement("div");more.className="details";more.append(noteSection);
+        const more=document.createElement("div");more.className="details";
+        const extra=document.createElement("section");extra.className="ref-panel";
+        const extraHeading=document.createElement("h3");extraHeading.textContent="Weitere Angaben";extra.append(extraHeading);
         for(const [label,value] of [["Straße",[r.street,r.houseNumber].filter(Boolean).join(" ")],["PLZ",r.zip],["Verein",r.club],["Schiedsrichter seit",r.since]]){
-          if(!value)continue;const p=document.createElement("p");p.textContent=label+": "+value;more.append(p);
+          if(!value)continue;
+          const field=document.createElement("div");field.className="ref-panel-field";
+          const labelSpan=document.createElement("span");labelSpan.className="ref-panel-label";labelSpan.textContent=label;
+          const val=document.createElement("span");val.className="ref-panel-value";val.textContent=value;
+          field.append(labelSpan,val);extra.append(field);
         }
-        const analysisLink=document.createElement("a");analysisLink.className="edit";analysisLink.href="/pdf-auswerten.html?referee="+encodeURIComponent(r.id);analysisLink.textContent="Coaching-Zusammenfassung";more.append(analysisLink);
-        const gamesLink=document.createElement("a");gamesLink.className="edit";gamesLink.href="/spiele.html?referee="+encodeURIComponent(r.id);gamesLink.textContent="Zeig mir Spiele";more.append(gamesLink);
+        detailsGrid.append(extra);more.append(detailsGrid);
+        const quickLinks=document.createElement("div");quickLinks.className="ref-quick-links";const analysisLink=document.createElement("a");analysisLink.className="edit";analysisLink.href="/pdf-auswerten.html?referee="+encodeURIComponent(r.id);analysisLink.textContent="Coaching-Zusammenfassung";quickLinks.append(analysisLink);
+        const gamesLink=document.createElement("a");gamesLink.className="edit";gamesLink.href="/spiele.html?referee="+encodeURIComponent(r.id);gamesLink.textContent="Zeig mir Spiele";quickLinks.append(gamesLink);more.append(quickLinks,noteSection);
         
-        const summaryBox=document.createElement("div");summaryBox.className="details";const summaryTitle=document.createElement("h3");summaryTitle.textContent="Coaching-Zusammenfassungen";summaryBox.append(summaryTitle);
+        const summaryBox=document.createElement("div");summaryBox.className="details ref-summary-docs";const summaryTitle=document.createElement("h3");summaryTitle.textContent="Coaching-Zusammenfassungen";summaryBox.append(summaryTitle);
         const summaryList=document.createElement("div");summaryList.textContent="Wird geladen …";summaryBox.append(summaryList);more.append(summaryBox);
         async function openPdfTab(makeBlob,title){
           // Der Tab wird synchron beim Klick geöffnet, vor dem Laden aus Storage.
