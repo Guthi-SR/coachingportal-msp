@@ -159,11 +159,11 @@ if(!user){
           const {data:photo,error:photoError}=await sb.storage.from("portal-coach-photos").createSignedUrl(r.photoPath,3600);
           if(!photoError&&photo?.signedUrl){
             const img=document.createElement("img");
-            img.className="ref-avatar-photo";img.alt="Profilfoto von "+name;img.src=photo.signedUrl;
+            img.className="ref-avatar-photo";img.alt="Profilfoto von "+name;
             img.hidden=true;
             img.onload=()=>{img.hidden=false;noPhoto.hidden=true};
             img.onerror=()=>{img.remove();noPhoto.hidden=false};
-            avatar.append(img);
+            avatar.append(img);img.src=photo.signedUrl;
           }
         }
         const title=document.createElement("div");title.className="coach-card-title ref-card-heading";
@@ -296,9 +296,9 @@ if(!user){
           const val=document.createElement("span");val.className="ref-panel-value";val.textContent=value;
           field.append(labelSpan,val);extra.append(field);
         }
-        detailsGrid.append(extra);more.append(detailsGrid,noteSection);
+        detailsGrid.append(extra);more.append(detailsGrid);
         const quickLinks=document.createElement("div");quickLinks.className="ref-quick-links";const analysisLink=document.createElement("a");analysisLink.className="edit";analysisLink.href="/pdf-auswerten.html?referee="+encodeURIComponent(r.id);analysisLink.textContent="Coaching-Zusammenfassung";quickLinks.append(analysisLink);
-        const gamesLink=document.createElement("a");gamesLink.className="edit";gamesLink.href="/spiele.html?referee="+encodeURIComponent(r.id);gamesLink.textContent="Zeig mir Spiele";quickLinks.append(gamesLink);more.append(quickLinks);
+        const gamesLink=document.createElement("a");gamesLink.className="edit";gamesLink.href="/spiele.html?referee="+encodeURIComponent(r.id);gamesLink.textContent="Zeig mir Spiele";quickLinks.append(gamesLink);more.append(quickLinks,noteSection);
         
         const summaryBox=document.createElement("div");summaryBox.className="details ref-summary-docs";const summaryTitle=document.createElement("h3");summaryTitle.textContent="Coaching-Zusammenfassungen";summaryBox.append(summaryTitle);
         const summaryList=document.createElement("div");summaryList.textContent="Wird geladen …";summaryBox.append(summaryList);more.append(summaryBox);
