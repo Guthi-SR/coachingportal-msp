@@ -203,9 +203,11 @@ if(!user){
           if(error){summaryList.textContent="Laden fehlgeschlagen: "+error.message;return;}
           if(!data?.length){summaryList.textContent="Noch keine Coaching-Zusammenfassung gespeichert.";return;}
           for(const item of data){
-            const isShort=String(item.report_text||"").trimStart().startsWith("KURZFASSUNG DES SICHTUNGSBOGENS");
-            const kind=isShort?"Sichtungsbogen – Kurzfassung":"Gesamt-Sichtungsbogen";
-            const filename=(isShort?"Sichtungsbogen-Kurzfassung-":"Gesamt-Sichtungsbogen-")
+            const documentText=String(item.report_text||"").trimStart();
+            const isShort=documentText.startsWith("KURZFASSUNG DES SICHTUNGSBOGENS");
+            const isStrengths=documentText.startsWith("STÄRKEN-SCHWÄCHEN-ANALYSE DES SICHTUNGSBOGENS");
+            const kind=isStrengths?"Sichtungsbogen – Stärken-Schwächen-Analyse":isShort?"Sichtungsbogen – Kurzfassung":"Gesamt-Sichtungsbogen";
+            const filename=(isStrengths?"Sichtungsbogen-Staerken-Schwaechen-":isShort?"Sichtungsbogen-Kurzfassung-":"Gesamt-Sichtungsbogen-")
               +name.replace(/[^a-zA-Z0-9äöüÄÖÜß_-]+/g,"-")+"-"+item.period_from+".pdf";
             const wrap=document.createElement("div");
             wrap.style.cssText="border:1px solid #dce5ee;border-radius:9px;padding:12px;margin:9px 0;overflow-wrap:anywhere";
