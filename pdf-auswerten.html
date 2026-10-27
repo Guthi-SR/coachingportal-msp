@@ -606,6 +606,37 @@ function renderStrengths(value){
  strengthsText=STRENGTHS_HEADING+"\n\n"+value.trim();
  $("strengths-section").hidden=false;$("strengths-status").textContent="";
 }
+function renderFive(value){
+ const sections=splitSections(value,["FÜNF POSITIVE ASPEKTE","FÜNF OPTIMIERBARE ASPEKTE"]);
+ const read=(heading)=>{
+  const rows=sections.get(heading);
+  if(!rows)throw Error("Vierte Zusammenfassung: Rubrik „"+heading+"“ fehlt.");
+  const list=[];let current=null;
+  for(const raw of rows){
+   const line=String(raw).replace(/^#{1,6}\s*/,"").replace(/^\*\*(.*?)\*\*$/,"$1").trim();
+   if(!line)continue;
+   const m=line.match(/^([1-9][0-9]*)[.)]\s+(.+)$/);
+   if(m){if(current)list.push(current);current={number:Number(m[1]),text:m[2]};}
+   else if(current)current.text+=" "+line;
+   else throw Error("Vierte Zusammenfassung: In „"+heading+"“ beginnt der Text nicht bei Punkt 1.");
+  }
+  if(current)list.push(current);
+  if(list.length!==5||list.some((p,i)=>p.number!==i+1||!p.text.trim()))
+   throw Error("Vierte Zusammenfassung: „"+heading+"“ braucht genau fünf nummerierte Punkte (1. bis 5.).");
+  return list;
+ };
+ const positives=read("FÜNF POSITIVE ASPEKTE");
+ const improvements=read("FÜNF OPTIMIERBARE ASPEKTE");
+ const root=$("five-preview");root.replaceChildren();
+ const main=document.createElement("h1");main.textContent="COACHING-ZUSAMMENFASSUNG";root.append(main);
+ const meta=document.createElement("p");meta.className="five-meta";meta.textContent="Schiedsrichter: "+($("referee").selectedOptions[0]?.textContent||"–")+" · Zeitraum: "+dateDE($("from").value)+" bis "+dateDE($("to").value);root.append(meta);
+ for(const [title,list] of [["5 POSITIVE ASPEKTE",positives],["5 OPTIMIERBARE ASPEKTE",improvements]]){
+  const heading=document.createElement("h2");heading.textContent=title;root.append(heading);
+  for(const item of list){const p=document.createElement("p");p.className="five-item";p.textContent=item.number+". "+item.text;root.append(p);}
+ }
+ fiveText=FIVE_HEADING+"\n\n"+value.trim();
+ $("five-section").hidden=false;$("five-status").textContent="";
+}
 function renderFinished(text){
  const lines=text.replace(/\r/g,"").split("\n");
  const clean=x=>x.replace(/^#{1,6}\s*/,"").replace(/\*\*/g,"").replace(/^\s*[-*]\s+/,"").trim();
@@ -707,12 +738,14 @@ function renderFinished(text){
   if(quick.trim())renderShort(quick);else{$("short-section").hidden=true;shortText="";}
   const strengths=content(STRENGTHS_HEADING);
   if(strengths.trim())renderStrengths(strengths);else{$("strengths-section").hidden=true;strengthsText="";}
+  const five=content(FIVE_HEADING);
+  if(five.trim())renderFive(five);else{$("five-section").hidden=true;$("five-preview").replaceChildren();fiveText="";}
   return [];
 }
 $("render-final").onclick=()=>{
  try{const value=$("return-input").value.trim();if(!value)throw Error("Bitte zuerst den ChatGPT-Sichtungsbogen einfügen.");
-  renderFinished(value);$("save-final").disabled=false;$("print-final").disabled=false;$("return-status").textContent="Gesamt-Sichtungsbogen und Kurzfassung erstellt."+(strengthsText?" Die Stärken-Schwächen-Analyse ist als dritte Variante verfügbar.":" In dieser Eingabe fehlt noch die dritte Stärken-Schwächen-Analyse.")+" Jede verfügbare Variante wird separat gespeichert.";
- }catch(e){$("final-preview").hidden=true;$("short-section").hidden=true;shortText="";$("strengths-section").hidden=true;strengthsText="";$("save-final").disabled=true;$("print-final").disabled=true;$("return-status").textContent=e.message;}
+  renderFinished(value);$("save-final").disabled=false;$("print-final").disabled=false;$("return-status").textContent="Gesamt-Sichtungsbogen und Kurzfassung erstellt."+(strengthsText?" Die Stärken-Schwächen-Analyse ist als dritte Variante verfügbar.":" In dieser Eingabe fehlt noch die dritte Stärken-Schwächen-Analyse.")+(fiveText?" Die vierte Coaching-Zusammenfassung mit 5 positiven und 5 optimierbaren Punkten ist erstellt.":" Die vierte Coaching-Zusammenfassung fehlt im eingefügten Text.")+" Jede verfügbare Variante wird separat gespeichert.";
+ }catch(e){$("final-preview").hidden=true;$("short-section").hidden=true;shortText="";$("strengths-section").hidden=true;strengthsText="";$("five-section").hidden=true;$("five-preview").replaceChildren();fiveText="";$("save-final").disabled=true;$("print-final").disabled=true;$("return-status").textContent=e.message;}
 };
 function createSummaryPdf(rootId="final-preview"){const root=$(rootId);if(!root||!root.textContent.trim())throw Error("Bitte zuerst den Sichtungsbogen erstellen.");const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});const width=176,top=18,bottom=278;let y=top;const write=(value,size=10,bold=false,gap=3)=>{pdf.setFont("helvetica",bold?"bold":"normal");pdf.setFontSize(size);const lines=pdf.splitTextToSize(String(value||""),width);const step=size*0.44;for(const line of lines){if(y+step>bottom){pdf.addPage();y=top;}pdf.text(line,17,y);y+=step;}y+=gap;};for(const node of root.querySelectorAll("h1,h2,h3,p,table")){if(node.tagName==="TABLE"){for(const row of node.querySelectorAll("tr"))write([...row.querySelectorAll("th,td")].map(c=>c.textContent.trim()).join("  |  "),9,false,1);continue;}write(node.textContent,node.tagName==="H1"?15:node.tagName==="H2"?12:node.tagName==="H3"?11:10,/^H[123]$/.test(node.tagName),node.tagName==="P"?3:5);}return pdf.output("blob");}
 $("save-final").onclick=async()=>{
@@ -734,6 +767,7 @@ $("save-final").onclick=async()=>{
    {id:crypto.randomUUID(),content:shortText,blob:createSummaryPdf("short-preview")}
   ];
   if(strengthsText&&!$("strengths-section").hidden)docs.push({id:crypto.randomUUID(),content:strengthsText,blob:createSummaryPdf("strengths-preview")});
+  if(fiveText&&!$("five-section").hidden)docs.push({id:crypto.randomUUID(),content:fiveText,blob:createSummaryPdf("five-preview")});
   btn.disabled=true;
   status.textContent=docs.length+" Sichtungsbögen mit Text und jeweils eigener PDF werden gespeichert …";
   for(const doc of docs){
@@ -752,7 +786,7 @@ $("save-final").onclick=async()=>{
   const {error}=await sb.from("portal_coaching_summaries").insert(rows);
   if(error)throw error;
   uploadedPaths.length=0;
-  status.textContent=docs.length+" Dokumente beim Schiedsrichter gespeichert: Gesamt-Sichtungsbogen, Kurzfassung"+(docs.length===3?" und Stärken-Schwächen-Analyse":"")+", jeweils mit eigenem Text und PDF.";
+  status.textContent=docs.length+" Dokumente beim Schiedsrichter gespeichert: "+["Gesamt-Sichtungsbogen","Kurzfassung",...(strengthsText&&!$("strengths-section").hidden?["Stärken-Schwächen-Analyse"]:[]),...(fiveText&&!$("five-section").hidden?["Coaching-Zusammenfassung (5+5)"]:[])].join(", ")+", jeweils mit eigenem Text und PDF.";
  }catch(e){
   let cleanupError=null;
   if(uploadedPaths.length){
@@ -767,8 +801,10 @@ $("copy-short").onclick=async()=>{if(!shortText)return;try{await navigator.clipb
 $("print-short").onclick=()=>{if($("short-section").hidden)return;document.body.classList.add("print-short");window.print();};
 $("copy-strengths").onclick=async()=>{if(!strengthsText)return;try{await navigator.clipboard.writeText(strengthsText);$("strengths-status").textContent="Analyse kopiert.";}catch(e){$("strengths-status").textContent="Kopieren nicht möglich: "+e.message;}};
 $("print-strengths").onclick=()=>{if($("strengths-section").hidden)return;document.body.classList.add("print-strengths");window.print();};
-window.addEventListener("afterprint",()=>document.body.classList.remove("print-final","print-short","print-strengths"));
-$("clear-final").onclick=()=>{$("return-input").value="";$("final-preview").replaceChildren();$("final-preview").hidden=true;$("short-preview").replaceChildren();$("short-section").hidden=true;shortText="";$("strengths-preview").replaceChildren();$("strengths-section").hidden=true;strengthsText="";$("save-final").disabled=true;$("print-final").disabled=true;$("return-status").textContent="";};
+$("copy-five").onclick=async()=>{if(!fiveText)return;try{await navigator.clipboard.writeText(fiveText);$("five-status").textContent="Coaching-Zusammenfassung kopiert.";}catch(e){$("five-status").textContent="Kopieren nicht möglich: "+e.message;}};
+$("print-five").onclick=()=>{if($("five-section").hidden)return;document.body.classList.add("print-five");window.print();};
+window.addEventListener("afterprint",()=>document.body.classList.remove("print-final","print-short","print-strengths","print-five"));
+$("clear-final").onclick=()=>{$("return-input").value="";$("final-preview").replaceChildren();$("final-preview").hidden=true;$("short-preview").replaceChildren();$("short-section").hidden=true;shortText="";$("strengths-preview").replaceChildren();$("strengths-section").hidden=true;strengthsText="";$("five-preview").replaceChildren();$("five-section").hidden=true;fiveText="";$("save-final").disabled=true;$("print-final").disabled=true;$("return-status").textContent="";};
 
 $("analyze").addEventListener("click",()=>void run());
 $("clear").addEventListener("click",()=>{
