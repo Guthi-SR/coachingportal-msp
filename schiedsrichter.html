@@ -363,8 +363,9 @@ if(!user){
             const documentText=String(item.report_text||"").trimStart();
             const isShort=documentText.startsWith("KURZFASSUNG DES SICHTUNGSBOGENS");
             const isStrengths=documentText.startsWith("STÄRKEN-SCHWÄCHEN-ANALYSE DES SICHTUNGSBOGENS");
-            const kind=isStrengths?"Sichtungsbogen – Stärken-Schwächen-Analyse":isShort?"Sichtungsbogen – Kurzfassung":"Gesamt-Sichtungsbogen";
-            const filename=(isStrengths?"Sichtungsbogen-Staerken-Schwaechen-":isShort?"Sichtungsbogen-Kurzfassung-":"Gesamt-Sichtungsbogen-")
+            const isFive=documentText.startsWith("COACHING-ZUSAMMENFASSUNG – 5 POSITIVE UND 5 OPTIMIERBARE ASPEKTE");
+            const kind=isFive?"Coaching-Zusammenfassung – 5 positive und 5 optimierbare Aspekte":isStrengths?"Sichtungsbogen – Stärken-Schwächen-Analyse":isShort?"Sichtungsbogen – Kurzfassung":"Gesamt-Sichtungsbogen";
+            const filename=(isFive?"Coaching-Zusammenfassung-5plus5-":isStrengths?"Sichtungsbogen-Staerken-Schwaechen-":isShort?"Sichtungsbogen-Kurzfassung-":"Gesamt-Sichtungsbogen-")
               +name.replace(/[^a-zA-Z0-9äöüÄÖÜß_-]+/g,"-")+"-"+item.period_from+".pdf";
             const wrap=document.createElement("div");
             wrap.style.cssText="border:1px solid #dce5ee;border-radius:9px;padding:12px;margin:9px 0;overflow-wrap:anywhere";
