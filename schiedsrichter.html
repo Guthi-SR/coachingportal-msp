@@ -372,11 +372,13 @@ if(!user){
             const label=document.createElement("strong");
             label.textContent=kind+" · "+item.period_from+" bis "+item.period_to+" · "+item.game_count+" Spiele";
             wrap.append(label);
-            const actions=document.createElement("div");actions.className="ref-actions";actions.style.marginTop="9px";
+            const actions=document.createElement("div");actions.className="ref-actions";actions.style.cssText="margin-top:12px;display:flex;flex-wrap:wrap;gap:10px";
+            // Große, gut erreichbare Schaltflächen für die PDF-Aktionen auf dem Handy.
+            const largePdfAction=(button)=>{button.style.cssText="min-height:52px;min-width:170px;padding:13px 18px;font-size:16px;font-weight:650;border-radius:10px;line-height:1.25;touch-action:manipulation;flex:1 1 170px;cursor:pointer";};
             const view=document.createElement("button");
             view.type="button";view.textContent="PDF ansehen";
             view.onclick=()=>openPdfTab(()=>savedPdf(item),kind);
-            actions.append(view);
+            largePdfAction(view);actions.append(view);
             const download=document.createElement("button");
             download.type="button";download.textContent="PDF herunterladen";
             download.onclick=async()=>{
@@ -385,7 +387,7 @@ if(!user){
               catch(err){alert("PDF-Download fehlgeschlagen: "+(err?.message||err));}
               finally{download.disabled=false;}
             };
-            actions.append(download);
+            largePdfAction(download);actions.append(download);
             // Testphase: Teilen nur im eigenen Schiedsrichter-Testprofil.
             if(String(name||"").trim().toLocaleLowerCase("de-DE")==="daniel gutermuth"){
               const share=document.createElement("button");
@@ -405,7 +407,7 @@ if(!user){
                   if(err?.name!=="AbortError")alert("PDF konnte nicht geteilt werden: "+(err?.message||err));
                 }finally{share.disabled=false;}
               };
-              actions.append(share);
+              largePdfAction(share);actions.append(share);
             }
             // Historische Bögen mit eingebetteter statt separat gespeicherter Kurzfassung.
             const legacy=String(item.report_text||"").match(/(?:^|\n)KURZFASSUNG DES SICHTUNGSBOGENS\s*\n([\s\S]*)$/);
