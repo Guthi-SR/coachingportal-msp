@@ -386,6 +386,27 @@ if(!user){
               finally{download.disabled=false;}
             };
             actions.append(download);
+            // Testphase: Teilen nur im eigenen Schiedsrichter-Testprofil.
+            if(String(name||"").trim().toLocaleLowerCase("de-DE")==="daniel gutermuth"){
+              const share=document.createElement("button");
+              share.type="button";share.textContent="PDF per WhatsApp teilen";
+              share.title="Öffnet die iPhone-Teilen-Funktion; WhatsApp und Empfänger dort auswählen.";
+              share.onclick=async()=>{
+                share.disabled=true;
+                try{
+                  const blob=await savedPdf(item);
+                  const file=new File([blob],filename,{type:"application/pdf"});
+                  if(!navigator.share||!navigator.canShare?.({files:[file]})){
+                    alert("Das Teilen von PDF-Dateien wird in diesem Browser nicht unterstützt. Bitte das Portal in Safari auf dem iPhone öffnen.");
+                    return;
+                  }
+                  await navigator.share({files:[file]});
+                }catch(err){
+                  if(err?.name!=="AbortError")alert("PDF konnte nicht geteilt werden: "+(err?.message||err));
+                }finally{share.disabled=false;}
+              };
+              actions.append(share);
+            }
             // Historische Bögen mit eingebetteter statt separat gespeicherter Kurzfassung.
             const legacy=String(item.report_text||"").match(/(?:^|\n)KURZFASSUNG DES SICHTUNGSBOGENS\s*\n([\s\S]*)$/);
             if(legacy&&!isShort){
