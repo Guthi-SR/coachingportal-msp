@@ -365,12 +365,17 @@ if(!user){
             const isStrengths=documentText.startsWith("STÄRKEN-SCHWÄCHEN-ANALYSE DES SICHTUNGSBOGENS");
             const isFive=documentText.startsWith("COACHING-ZUSAMMENFASSUNG – 5 POSITIVE UND 5 OPTIMIERBARE ASPEKTE");
             const kind=isFive?"Coaching-Zusammenfassung – 5 positive und 5 optimierbare Aspekte":isStrengths?"Sichtungsbogen – Stärken-Schwächen-Analyse":isShort?"Sichtungsbogen – Kurzfassung":"Gesamt-Sichtungsbogen";
-            const filename=(isFive?"Coaching-Zusammenfassung-5plus5-":isStrengths?"Sichtungsbogen-Staerken-Schwaechen-":isShort?"Sichtungsbogen-Kurzfassung-":"Gesamt-Sichtungsbogen-")
-              +name.replace(/[^a-zA-Z0-9äöüÄÖÜß_-]+/g,"-")+"-"+item.period_from+".pdf";
+            const formatGermanDate=(value)=>{
+              const match=String(value||"").match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+              return match?match[3]+"."+match[2]+"."+match[1]:String(value||"");
+            };
+            const periodLabel=formatGermanDate(item.period_from)+" bis "+formatGermanDate(item.period_to);
+            const displayName=kind+" – "+name+" – "+periodLabel;
+            const filename=displayName.replace(/[\\/:*?"<>|]/g,"-").replace(/\\s+/g," ").trim()+".pdf";
             const wrap=document.createElement("div");
             wrap.style.cssText="border:1px solid #dce5ee;border-radius:9px;padding:12px;margin:9px 0;overflow-wrap:anywhere";
             const label=document.createElement("strong");
-            label.textContent=kind+" · "+item.period_from+" bis "+item.period_to+" · "+item.game_count+" Spiele";
+            label.textContent=displayName;
             wrap.append(label);
             const actions=document.createElement("div");actions.className="ref-actions";actions.style.cssText="margin-top:12px;display:flex;flex-wrap:wrap;gap:10px";
             // Große, gut erreichbare Schaltflächen für die PDF-Aktionen auf dem Handy.
