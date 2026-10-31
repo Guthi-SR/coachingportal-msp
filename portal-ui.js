@@ -269,6 +269,7 @@ if(nav){
  };
  for(const [href,label] of [["/","Startseite"],["/spiele-anlegen.html","Spiele anlegen"],["/spiele.html","Spiele"],["/coachingplanung.html","Coachingplanung"],["/auswertung.html","Auswertung"],["/beobachtungsbogen-erfassen.html","Beobachtungsbogen erfassen"],["/beobachtungsboegen.html","Beobachtungsbögen"],["/coach-beobachter.html","Coach-Beobachter"]])ensureMainLink(href,label,"/spiele.html");
  ensureMainLink("/pdf-auswerten.html","PDF auswerten","/auswertung.html");
+ ensureMainLink("/sammelauswertung.html","Sammelauswertung","/pdf-auswerten.html");
  ensureMainLink("/verwaltung.html","Schiedsrichterverwaltung","/beobachtungsboegen.html");
  ensureMainLink("/schiedsrichter.html","Schiedsrichter","/verwaltung.html");
  if(!nav.querySelector("#portal-administration-menu")){
