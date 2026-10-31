@@ -1,0 +1,41 @@
+<!doctype html><html lang="de"><meta charset="utf-8"><title>Sammelauswertung</title><body><h1>Sammelauswertung</h1><p>Aufträge werden in Supabase gespeichert. Die Bearbeitung erfolgt hier in ChatGPT ohne OpenAI-API.</p><p><a href="/schiedsrichter.html">Zurück</a></p><label>Von <input id="from" type="date"></label><label>Bis <input id="to" type="date"></label><p><button id="all">Alle auswählen</button> <button id="none">Auswahl aufheben</button></p><div id="people"></div><button id="save">Aufträge speichern</button><h2>Geschützte PDF-Übergabe</h2><p>Für die ausgewählten Schiedsrichter werden zeitlich begrenzte Links zu den Originalbögen erzeugt. Nur nach bewusstem Klick auf „Links erzeugen“. Die Links enthalten Zugriff auf vertrauliche Bewertungen und dürfen nicht öffentlich geteilt werden.</p><button id="links">PDF-Links für 10 Minuten erzeugen</button><div id="handoff"></div><h2>Auftragsstatus</h2><button id="refresh">Aktualisieren</button><div id="jobs"></div><p id="status">Lade …</p><script type="module">
+import {requireAdmin,sb} from "/portal-workflow.js";
+const $=id=>document.getElementById(id);let uid,people=[];
+const norm=s=>String(s||"").trim().toLowerCase();
+const today=()=>new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Berlin",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+async function refresh(){const {data,error}=await sb.from("portal_summary_requests").select("referee_name,period_from,period_to,status").eq("owner_id",uid).order("created_at",{ascending:false}).limit(100);if(error)throw error;$("jobs").replaceChildren();for(const row of data){const p=document.createElement("p");p.textContent=row.referee_name+" · "+row.period_from+" bis "+row.period_to+" · "+row.status;$("jobs").append(p)}}
+$("refresh").onclick=()=>refresh().catch(e=>$("status").textContent=e.message);
+$("all").onclick=()=>document.querySelectorAll("#people input").forEach(x=>x.checked=true);
+$("none").onclick=()=>document.querySelectorAll("#people input").forEach(x=>x.checked=false);
+$("save").onclick=async()=>{const ids=new Set([...document.querySelectorAll("#people input:checked")].map(x=>x.value)),from=$("from").value,to=$("to").value;if(!ids.size||!from||!to||from>to){$("status").textContent="Bitte Auswahl und Zeitraum prüfen.";return}try{const {data:existing,error:readError}=await sb.from("portal_summary_requests").select("referee_id,status").eq("owner_id",uid).eq("period_from",from).eq("period_to",to);if(readError)throw readError;const known=new Set(existing.filter(x=>x.status!=="fehler").map(x=>x.referee_id));const rows=people.filter(p=>ids.has(p.id)&&!known.has(p.id)).map(p=>({owner_id:uid,referee_id:p.id,referee_name:p.name,period_from:from,period_to:to}));if(rows.length){const {error}=await sb.from("portal_summary_requests").insert(rows);if(error)throw error}$("status").textContent=rows.length+" Aufträge gespeichert. Bitte anschließend hier in ChatGPT die Sammelauswertung starten.";await refresh()}catch(e){$("status").textContent=e.message}};
+
+$("links").onclick=async()=>{
+ const ids=new Set([...document.querySelectorAll("#people input:checked")].map(x=>x.value)),from=$("from").value,to=$("to").value;
+ if(!ids.size||!from||!to||from>to){$("status").textContent="Bitte Schiedsrichter und Zeitraum auswählen.";return}
+ $("links").disabled=true;$("handoff").replaceChildren();
+ try{
+  const [g,d]=await Promise.all([
+   sb.from("portal_games").select("game_key,match_date,referee_id,referee_name,pdf_id,is_test").eq("owner_id",uid).gte("match_date",from).lte("match_date",to),
+   sb.from("portal_observations").select("document_id,game_key,storage_path").eq("owner_id",uid)
+  ]);
+  if(g.error)throw g.error;if(d.error)throw d.error;
+  const seen=new Set();let count=0;
+  for(const game of g.data||[]){
+   if(game.is_test||!ids.has(String(game.referee_id||norm(game.referee_name))))continue;
+   for(const doc of d.data||[]){
+    if(!doc.storage_path||seen.has(doc.document_id)||!(doc.game_key===game.game_key||doc.document_id===game.pdf_id))continue;
+    seen.add(doc.document_id);
+    const {data,error}=await sb.storage.from("portal-observation-pdfs").createSignedUrl(doc.storage_path,600);
+    if(error)throw error;
+    const p=document.createElement("p"),a=document.createElement("a");
+    a.href=data.signedUrl;a.target="_blank";a.rel="noopener noreferrer";
+    a.textContent=(game.referee_name||"Schiedsrichter")+" · "+game.match_date+" · PDF öffnen";
+    p.append(a);$("handoff").append(p);count++;
+   }
+  }
+  $("status").textContent=count+" geschützte PDF-Links erstellt (10 Minuten gültig). ChatGPT kann sie nur verarbeiten, wenn die Links hier übergeben werden und der Abruf möglich ist.";
+ }catch(e){$("status").textContent="PDF-Zugriff fehlgeschlagen: "+e.message}
+ finally{$("links").disabled=false}
+};
+try{const {user}=await requireAdmin();uid=user.id;const {data,error}=await sb.from("portal_people").select("person_id,details").eq("owner_id",uid).eq("kind","referee");if(error)throw error;const map=new Map();for(const g of data){const id=String(g.person_id||g.details?.id||"");const name=String(g.details?.name||[g.details?.first,g.details?.last].filter(Boolean).join(" ")||id);if(id&&!map.has(id))map.set(id,{id,name})}people=[...map.values()].sort((a,b)=>a.name.localeCompare(b.name,"de"));for(const p of people){const l=document.createElement("label"),c=document.createElement("input");c.type="checkbox";c.value=p.id;l.append(c,document.createTextNode(p.name));$("people").append(l,document.createElement("br"))}$("to").value=today();$("from").value=today().slice(0,4)+"-07-01";await refresh();$("status").textContent="Bereit: "+people.length+" Schiedsrichter."}catch(e){$("status").textContent="Fehler: "+e.message}
+</script><script type="module" src="/portal-ui.js"></script></body></html>
