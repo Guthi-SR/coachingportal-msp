@@ -8,7 +8,7 @@ header{background:#142b46;color:#fff;padding:22px}.shell{display:grid;grid-templ
 <a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a>
 <a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav>
 <main><section><h2>Alle Beobachtungsbögen</h2><p>Alle erfassten Bögen – sortiert nach Spieldatum, neueste zuerst. Ein Klick auf den Bogen öffnet nur das PDF in einem separaten Tab.</p>
-<details class="filter-details" id="filterDetails"><summary>Filter anzeigen / einklappen</summary><div class="bogen-filter" aria-label="Beobachtungsbögen filtern"><label>Schiedsrichter<select id="filterRef"><option value="">Alle Schiedsrichter</option></select></label><label>Coach / Beobachter<select id="filterCoach"><option value="">Alle Coaches</option></select></label><label>Bearbeitungsstatus<select id="filterStatus"><option value="">Alle Status</option><option value="unchecked">Noch nicht geprüft</option><option value="checked">Bereits geprüft</option><option value="unsent">Noch nicht versendet</option><option value="sent">Bereits versendet</option><option value="checked-unsent">Geprüft, noch nicht versendet</option></select></label><label>Spieldatum<input id="filterDate" type="date"></label><button type="button" id="filterReset">Filter zurücksetzen</button></div></details><p id="filterCount" aria-live="polite"></p><p id="status" role="status">Bögen werden geladen …</p><table id="table" hidden><thead><tr><th>Spieldatum</th><th>Begegnung</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Beobachtungsbogen</th><th>Zuordnung</th><th>Aktionen</th></tr></thead><tbody id="rows"></tbody></table></section></main></div>
+<p id="mail-intake-controls"><strong>Nicht zugewiesene Bögen: <span id="unassigned-count">–</span></strong> · <a href="/beobachtungsboegen.html?status=unassigned">Nur nicht zugewiesene anzeigen</a> <button type="button" id="mail-check" hidden>📥 WEB.DE-Posteingang jetzt prüfen</button></p><p id="mail-status" role="status"></p><details class="filter-details" id="filterDetails"><summary>Filter anzeigen / einklappen</summary><div class="bogen-filter" aria-label="Beobachtungsbögen filtern"><label>Schiedsrichter<select id="filterRef"><option value="">Alle Schiedsrichter</option></select></label><label>Coach / Beobachter<select id="filterCoach"><option value="">Alle Coaches</option></select></label><label>Bearbeitungsstatus<select id="filterStatus"><option value="">Alle Status</option><option value="unchecked">Noch nicht geprüft</option><option value="checked">Bereits geprüft</option><option value="unsent">Noch nicht versendet</option><option value="sent">Bereits versendet</option><option value="checked-unsent">Geprüft, noch nicht versendet</option><option value="unassigned">Nicht zugewiesene Bögen</option></select></label><label>Spieldatum<input id="filterDate" type="date"></label><button type="button" id="filterReset">Filter zurücksetzen</button></div></details><p id="filterCount" aria-live="polite"></p><p id="status" role="status">Bögen werden geladen …</p><table id="table" hidden><thead><tr><th>Spieldatum</th><th>Begegnung</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Beobachtungsbogen</th><th>Zuordnung</th><th>Aktionen</th></tr></thead><tbody id="rows"></tbody></table></section></main></div>
 <script type="module">import {cloudPeople} from "/portal-people.js";
 import{sb,requirePermission,syncGames,syncObservations,associateUniqueObservations,observationAssignments,localPeople,linkObservation,reassignObservation,deleteObservation,dateDE}from"/portal-workflow.js";
 const status=document.getElementById("status"),rows=document.getElementById("rows");
@@ -16,13 +16,31 @@ try{
  const{user,ownerId,profile}=await requirePermission("reports_view");
  const {data:editPermission}=profile.role==="admin"?{data:true}:await sb.rpc("portal_has_permission",{check_id:user.id,permission_key:"reports_edit"});
  const readOnly=!editPermission;
- const [gameResult,docResult]=await Promise.all([
+ const mailButton=document.getElementById("mail-check");
+ mailButton.hidden=profile.role!=="admin";
+ if(!mailButton.hidden)mailButton.onclick=async()=>{
+  const feedback=document.getElementById("mail-status");
+  mailButton.disabled=true;feedback.textContent="WEB.DE-Posteingang wird geprüft …";
+  try{
+   const {data:{session}}=await sb.auth.getSession();
+   if(!session?.access_token)throw Error("Bitte erneut anmelden.");
+   const response=await fetch("/api/mail-ingest",{method:"POST",headers:{Authorization:"Bearer "+session.access_token}});
+   const result=await response.json();
+   if(!response.ok)throw Error(result.error||"Abruf fehlgeschlagen.");
+   feedback.textContent="Geprüfte Nachrichten: "+result.scanned+" · neue Bögen: "+result.imported+" · zugeordnet: "+result.assigned+" · nicht zugewiesen: "+result.unassigned+" · bereits bekannt: "+result.duplicate+" · Fehler: "+result.failed;
+   if(result.imported>0)setTimeout(()=>location.reload(),1600);
+  }catch(e){feedback.textContent="WEB.DE-Abruf fehlgeschlagen: "+e.message}finally{mailButton.disabled=false}
+ };
+ const [gameResult,docResult,mailResult]=await Promise.all([
   sb.from("portal_games").select("*").eq("owner_id",ownerId).order("match_date",{ascending:false}),
-  sb.from("portal_observations").select("*").eq("owner_id",ownerId).order("created_at",{ascending:false})
+  sb.from("portal_observations").select("*").eq("owner_id",ownerId).order("created_at",{ascending:false}),
+   sb.from("portal_mail_imports").select("document_id,sender,received_at,created_at").eq("owner_id",ownerId)
  ]);
  if(gameResult.error)throw gameResult.error;
  if(docResult.error)throw docResult.error;
  let games=gameResult.data||[],docs=docResult.data||[];
+ const mailInfo=new Map((mailResult.data||[]).map(x=>[x.document_id,x]));
+ document.getElementById("unassigned-count").textContent=String(docs.filter(d=>!games.some(g=>g.game_key===d.game_key||g.pdf_id===d.document_id)).length);
  const refs=await cloudPeople(ownerId,"referee"),coaches=await cloudPeople(ownerId,"coach");
  const person=(list,id)=>{const p=list.find(x=>x.id===id||x.name===id);return p?.name||[p?.first,p?.last].filter(Boolean).join(" ")||"–"};
  const byGame=doc=>games.find(g=>g.game_key===doc.game_key||g.pdf_id===doc.document_id);
@@ -31,7 +49,7 @@ try{
  const displayedPerson=(people,docId,gameId)=>{const direct=person(people,docId);return direct!=="–"?direct:person(people,gameId)};
  const dateValue=(d,g)=>String(g?.match_date||d.match_date||d.created_at||"").slice(0,10);
  const filterRecords=[];
- const applyFilters=()=>{const matching=filterRecords.filter(item=>(!filterRef.value||item.ref===filterRef.value)&&(!filterCoach.value||item.coach===filterCoach.value)&&(!filterDate.value||item.date===filterDate.value)&&(!filterStatus.value||({unchecked:!item.checked,checked:item.checked,unsent:!item.sent,sent:item.sent,"checked-unsent":item.checked&&!item.sent})[filterStatus.value]));rows.replaceChildren(...matching.map(item=>item.row));filterCount.textContent=matching.length+" von "+filterRecords.length+" Bögen angezeigt"+(matching.length===0?" – keine Treffer.":"")};
+ const applyFilters=()=>{const matching=filterRecords.filter(item=>(!filterRef.value||item.ref===filterRef.value)&&(!filterCoach.value||item.coach===filterCoach.value)&&(!filterDate.value||item.date===filterDate.value)&&(!filterStatus.value||({unchecked:!item.checked,checked:item.checked,unsent:!item.sent,sent:item.sent,"checked-unsent":item.checked&&!item.sent,unassigned:item.unassigned})[filterStatus.value]));rows.replaceChildren(...matching.map(item=>item.row));filterCount.textContent=matching.length+" von "+filterRecords.length+" Bögen angezeigt"+(matching.length===0?" – keine Treffer.":"")};
  for(const el of [filterRef,filterCoach,filterDate,filterStatus])el.addEventListener("change",applyFilters);
  document.getElementById("filterReset").addEventListener("click",()=>{filterRef.value="";filterCoach.value="";filterDate.value="";filterStatus.value="";applyFilters()});
  docs.sort((a,b)=>dateValue(b,byGame(b)).localeCompare(dateValue(a,byGame(a)))||(b.created_at||"").localeCompare(a.created_at||""));
@@ -40,7 +58,10 @@ try{
   const values=[dateDE(g?.match_date||String(d.created_at||"").slice(0,10)),g?g.home+" – "+g.away:"Noch keinem Spiel zugeordnet",displayedPerson(refs,d.referee_id,g?.referee_id),displayedPerson(coaches,d.coach_id,g?.coach_id)];
   for(const [i,v] of values.entries()){const td=document.createElement("td");td.dataset.label=["Spieldatum","Begegnung","Schiedsrichter","Coach / Beobachter"][i];td.textContent=v;tr.append(td)}
   const tdPdf=document.createElement("td"),link=document.createElement("a");
-  tdPdf.dataset.label="Beobachtungsbogen";link.href="/beobachtungsbogen-ansehen.html?pdf="+encodeURIComponent(d.document_id);link.target="_blank";link.rel="noopener noreferrer";link.textContent="📘 Bogen";link.setAttribute("aria-label","PDF-Beobachtungsbogen öffnen: "+(d.file_name||"Bogen"));const statusGroup=document.createElement("div");statusGroup.className="bogen-status-group";const flags=[["Eingegangen","Nicht eingegangen",Boolean(d.created_at||d.storage_path||d.document_id)],["Geprüft","Nicht geprüft",Boolean(g?.checked_at)],["Versendet","Nicht versendet",Boolean(g?.sent_at)]];for(const [yes,no,done] of flags){const badge=document.createElement("span");badge.className="bogen-status";badge.dataset.done=String(done);badge.textContent=done?yes:no;statusGroup.append(badge)}tdPdf.append(link,statusGroup);tr.append(tdPdf);
+  tdPdf.dataset.label="Beobachtungsbogen";link.href="/beobachtungsbogen-ansehen.html?pdf="+encodeURIComponent(d.document_id);link.target="_blank";link.rel="noopener noreferrer";link.textContent="📘 Bogen";link.setAttribute("aria-label","PDF-Beobachtungsbogen öffnen: "+(d.file_name||"Bogen"));const statusGroup=document.createElement("div");statusGroup.className="bogen-status-group";const flags=[["Eingegangen","Nicht eingegangen",Boolean(d.created_at||d.storage_path||d.document_id)],["Geprüft","Nicht geprüft",Boolean(g?.checked_at)],["Versendet","Nicht versendet",Boolean(g?.sent_at)]];for(const [yes,no,done] of flags){const badge=document.createElement("span");badge.className="bogen-status";badge.dataset.done=String(done);badge.textContent=done?yes:no;statusGroup.append(badge)}tdPdf.append(link,statusGroup);
+  const info=mailInfo.get(d.document_id);
+  if(info){const meta=document.createElement("small");meta.style.display="block";meta.style.marginTop="6px";const date=info.received_at?new Date(info.received_at).toLocaleString("de-DE"):"–";meta.textContent="E-Mail-Eingang: "+date+" · Absender: "+(info.sender||"unbekannt");tdPdf.append(meta)}
+  tr.append(tdPdf);
   const tdAssign=document.createElement("td"),tdActions=document.createElement("td");tdAssign.dataset.label="Zuordnung";tdActions.dataset.label="Aktionen";tdActions.hidden=true;
   const sel=document.createElement("select");sel.setAttribute("aria-label","Spiel zuordnen oder neu zuordnen");
   sel.add(new Option(g?"Anderes Spiel auswählen":"Spiel auswählen",""));
@@ -68,10 +89,10 @@ try{
   };
   editDetails.append(del);
   tr.append(tdActions);rows.append(tr);
-  filterRecords.push({row:tr,ref:normalize(values[2]),coach:normalize(values[3]),date:dateValue(d,g),checked:Boolean(g?.checked_at),sent:Boolean(g?.sent_at)});
+  filterRecords.push({row:tr,ref:normalize(values[2]),coach:normalize(values[3]),date:dateValue(d,g),checked:Boolean(g?.checked_at),sent:Boolean(g?.sent_at),unassigned:!g});
  }
  for(const [select,key] of [[filterRef,"ref"],[filterCoach,"coach"]]){const names=[...new Set(filterRecords.map(r=>r[key]).filter(v=>v&&v!=="–"))].sort((a,b)=>a.localeCompare(b,"de"));for(const name of names){const label=filterRecords.find(r=>r[key]===name)?.row?.children[key==="ref"?2:3]?.textContent||name;select.add(new Option(label,name))}}
- const initialStatus=new URLSearchParams(location.search).get("status");if(["unchecked","checked","unsent","sent","checked-unsent"].includes(initialStatus))filterStatus.value=initialStatus;
+ const initialStatus=new URLSearchParams(location.search).get("status");if(["unchecked","checked","unsent","sent","checked-unsent","unassigned"].includes(initialStatus))filterStatus.value=initialStatus;
  applyFilters();status.textContent=docs.length?docs.length+" Beobachtungsbogen/-bögen vorhanden.":"Noch keine Bögen erfasst.";
  document.getElementById("table").hidden=!docs.length;
 }catch(e){status.textContent="Laden fehlgeschlagen: "+e.message}
