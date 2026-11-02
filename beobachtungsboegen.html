@@ -9,7 +9,7 @@ header{background:#142b46;color:#fff;padding:22px}.shell{display:grid;grid-templ
 <a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a>
 <a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav>
 <main><section><h2>Alle Beobachtungsbögen</h2><p>Alle erfassten Bögen – sortiert nach Spieldatum, neueste zuerst. Ein Klick auf den Bogen öffnet nur das PDF in einem separaten Tab.</p>
-<p id="mail-intake-controls"><strong>Nicht zugewiesene Bögen: <span id="unassigned-count">–</span></strong> · <a href="/beobachtungsboegen.html?status=unassigned">Nur nicht zugewiesene anzeigen</a> <button type="button" id="mail-check" hidden>📥 WEB.DE-Posteingang jetzt prüfen (PDF + JSON)</button> · <a href="/json-ansehen.html">JSON-Eingangsliste öffnen</a></p><p id="mail-status" role="status"></p><details class="filter-details" id="filterDetails"><summary>Filter anzeigen / einklappen</summary><div class="bogen-filter" aria-label="Beobachtungsbögen filtern"><label>Schiedsrichter<select id="filterRef"><option value="">Alle Schiedsrichter</option></select></label><label>Coach / Beobachter<select id="filterCoach"><option value="">Alle Coaches</option></select></label><label>Bearbeitungsstatus<select id="filterStatus"><option value="">Alle Status</option><option value="unchecked">Noch nicht geprüft</option><option value="checked">Bereits geprüft</option><option value="unsent">Noch nicht versendet</option><option value="sent">Bereits versendet</option><option value="checked-unsent">Geprüft, noch nicht versendet</option><option value="unassigned">Nicht zugewiesene Bögen</option></select></label><label>Spieldatum<input id="filterDate" type="date"></label><button type="button" id="filterReset">Filter zurücksetzen</button></div></details><p id="filterCount" aria-live="polite"></p><p id="status" role="status">Bögen werden geladen …</p><table id="table" hidden><thead><tr><th>Spieldatum</th><th>Begegnung</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Beobachtungsbogen</th><th>JSON-Datei</th><th>Zuordnung</th><th>Aktionen</th></tr></thead><tbody id="rows"></tbody></table></section></main></div>
+<p id="mail-intake-controls"><strong>Nicht zugewiesene Bögen: <span id="unassigned-count">–</span></strong> · <a href="/beobachtungsboegen.html?status=unassigned">Nur nicht zugewiesene anzeigen</a> <button type="button" id="mail-check" hidden>📥 WEB.DE-Posteingang jetzt prüfen (PDF + JSON)</button> · <a href="/json-ansehen.html">JSON-Eingangsliste öffnen</a></p><p id="mail-status" role="status"></p><details class="filter-details" id="filterDetails"><summary>Filter anzeigen / einklappen</summary><div class="bogen-filter" aria-label="Beobachtungsbögen filtern"><label>Schiedsrichter<select id="filterRef"><option value="">Alle Schiedsrichter</option></select></label><label>Coach / Beobachter<select id="filterCoach"><option value="">Alle Coaches</option></select></label><label>Bearbeitungsstatus<select id="filterStatus"><option value="">Alle Status</option><option value="unchecked">Noch nicht geprüft</option><option value="checked">Bereits geprüft</option><option value="unsent">Noch nicht versendet</option><option value="sent">Bereits versendet</option><option value="checked-unsent">Geprüft, noch nicht versendet</option><option value="unassigned">Nicht zugewiesene Bögen</option></select></label><label>Spieldatum<input id="filterDate" type="date"></label><button type="button" id="filterReset">Filter zurücksetzen</button></div></details><p id="filterCount" aria-live="polite"></p><p id="status" role="status">Bögen werden geladen …</p><table id="table" hidden><thead><tr><th>Spieldatum</th><th>Begegnung</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Beobachtungsbogen</th><th>JSON-Datei</th><th>Versandhistorie</th><th>Zuordnung</th><th>Aktionen</th></tr></thead><tbody id="rows"></tbody></table></section></main></div>
 <script type="module">import {cloudPeople} from "/portal-people.js";
 import{sb,requirePermission,syncGames,syncObservations,associateUniqueObservations,observationAssignments,localPeople,linkObservation,reassignObservation,deleteObservation,dateDE}from"/portal-workflow.js";
 const status=document.getElementById("status"),rows=document.getElementById("rows");
@@ -35,18 +35,22 @@ try{
    if(result.imported>0||result.jsonImported>0)setTimeout(()=>location.reload(),2500);
   }catch(e){feedback.textContent="WEB.DE-Abruf fehlgeschlagen: "+e.message}finally{mailButton.disabled=false}
  };
- const [gameResult,docResult,mailResult,jsonResult]=await Promise.all([
+ const [gameResult,docResult,mailResult,jsonResult,dispatchResult]=await Promise.all([
   sb.from("portal_games").select("*").eq("owner_id",ownerId).order("match_date",{ascending:false}),
   sb.from("portal_observations").select("*").eq("owner_id",ownerId).order("created_at",{ascending:false}),
    sb.from("portal_mail_imports").select("document_id,sender,received_at,created_at").eq("owner_id",ownerId),
   profile.role==="admin"
    ?sb.from("portal_json_imports").select("id,game_key,match_date,home,away,referee_name,file_name").eq("owner_id",ownerId)
-   :Promise.resolve({data:[],error:null})
+   :Promise.resolve({data:[],error:null}),
+  sb.from("portal_mail_log").select("game_key,recipient,sent_at").eq("owner_id",ownerId).eq("kind","bogen_versendet").eq("is_test",false).order("sent_at",{ascending:false})
  ]);
  if(gameResult.error)throw gameResult.error;
  if(docResult.error)throw docResult.error;
  let games=gameResult.data||[],docs=docResult.data||[];
  const mailInfo=new Map((mailResult.data||[]).map(x=>[x.document_id,x]));
+ const sentEmails=new Map();
+ for(const entry of dispatchResult.data||[]){const list=sentEmails.get(entry.game_key)||[];list.push(entry);sentEmails.set(entry.game_key,list)}
+ const formatDispatchDate=value=>value?new Date(value).toLocaleString("de-DE",{timeZone:"Europe/Berlin"}):"–";
  const jsonItems=jsonResult.error?[]:(jsonResult.data||[]);
  const jsonByGame=new Map();
  for(const item of jsonItems)if(item.game_key&&!jsonByGame.has(item.game_key))jsonByGame.set(item.game_key,item);
@@ -106,6 +110,20 @@ try{
   }
   if(!tdJson.children.length)tdJson.append(jsonMarker);
   tr.append(tdJson);
+  const tdHistory=document.createElement("td");tdHistory.dataset.label="Versandhistorie";
+  if(g){
+   const entries=(sentEmails.get(g.game_key)||[]).map(entry=>({date:entry.sent_at,route:"Portal-E-Mail",to:entry.recipient||"Nicht bekannt",note:"Versand bestätigt"}));
+   if(g.sent_manual_at)entries.push({date:g.sent_manual_at,route:g.sent_manual_method==="whatsapp"?"WhatsApp":"Externe E-Mail",to:g.referee_email||"Nicht dokumentiert",note:g.manual_note||"Manuell bestätigt"});
+   if(!entries.length&&g.sent_at)entries.push({date:g.sent_at,route:"Portal-E-Mail",to:g.referee_email||"Nicht dokumentiert",note:"Versandstatus vorhanden"});
+   if(entries.length){
+    const details=document.createElement("details"),summary=document.createElement("summary");summary.textContent=entries.length+" Versandnachweis"+(entries.length===1?"":"e");details.append(summary);
+    entries.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+    for(const item of entries){
+     const p=document.createElement("p");p.style.whiteSpace="pre-line";p.style.fontSize="13px";p.textContent=formatDispatchDate(item.date)+" · "+item.route+"\nAn: "+item.to+"\n"+item.note;details.append(p);
+    }tdHistory.append(details);
+   }else tdHistory.textContent="Noch nicht versendet";
+  }else tdHistory.textContent="Keine Spielzuordnung";
+  tr.append(tdHistory);
   const tdAssign=document.createElement("td"),tdActions=document.createElement("td");tdAssign.dataset.label="Zuordnung";tdActions.dataset.label="Aktionen";tdActions.hidden=true;
   const sel=document.createElement("select");sel.setAttribute("aria-label","Spiel zuordnen oder neu zuordnen");
   sel.add(new Option(g?"Anderes Spiel auswählen":"Spiel auswählen",""));
