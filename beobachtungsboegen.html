@@ -25,8 +25,10 @@ try{
    const {data:{session}}=await sb.auth.getSession();
    if(!session?.access_token)throw Error("Bitte erneut anmelden.");
    const response=await fetch("/api/mail-ingest",{method:"POST",headers:{Authorization:"Bearer "+session.access_token}});
-   const result=await response.json();
-   if(!response.ok)throw Error(result.error||"Abruf fehlgeschlagen.");
+   const raw=await response.text();
+   let result;
+   try{result=JSON.parse(raw)}catch{throw Error("Serverfehler ("+response.status+") bei der E-Mail-Abholung. Bitte Fehlerprotokoll prüfen.")}
+   if(!response.ok)throw Error(result.error||"Serverfehler ("+response.status+") beim Abruf.");
    feedback.textContent="Geprüfte Nachrichten: "+result.scanned+" · neue Bögen: "+result.imported+" · zugeordnet: "+result.assigned+" · nicht zugewiesen: "+result.unassigned+" · bereits bekannt: "+result.duplicate+" · Fehler: "+result.failed;
    if(result.imported>0)setTimeout(()=>location.reload(),1600);
   }catch(e){feedback.textContent="WEB.DE-Abruf fehlgeschlagen: "+e.message}finally{mailButton.disabled=false}
