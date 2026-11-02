@@ -66,7 +66,8 @@ export default async function handler(req,res){
    }
   }else{
    const today=new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Berlin",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
-   if(!isTest&&(!g.match_date||g.match_date>=today||!g.coach_id||g.pdf_id||g.received_at||g.sent_at||g.sent_manual_at||["eingegangen","in_bearbeitung","geprueft","zurueck_beobachter"].includes(g.review_status)))return json(res,409,{error:"Erinnerungen sind nur für vergangene Spiele mit zugeordnetem Coach und fehlendem Bogen möglich."});
+   const deadline=new Date(Date.parse(today+"T12:00:00Z")-3*86400000).toISOString().slice(0,10);
+   if(!isTest&&(!g.match_date||g.match_date>deadline||!g.coach_id||g.pdf_id||g.received_at||g.sent_at||g.sent_manual_at||["eingegangen","in_bearbeitung","geprueft","zurueck_beobachter"].includes(g.review_status)))return json(res,409,{error:"Erinnerungen sind erst drei Tage nach dem Spiel bei noch fehlendem Bogen möglich."});
   }
   let result;
   try {
