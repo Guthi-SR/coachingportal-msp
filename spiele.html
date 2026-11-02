@@ -1167,7 +1167,7 @@ $("mail-form").onsubmit=async e=>{
    {testMode:true,testRecipient:$("test-recipient-mode").value,testConfirmed:$("test-confirm").checked}:
    oneTimeOverride?{recipientOverride:email,recipientOverrideConfirmed:true}:{};
   await sendMail(selected.game_key,mailKind,$("mail-subject").value.trim(),$("mail-body").value.trim(),options);
-  $("mail").close();games=await syncGames(userId);await loadDispatchHistory();render();
+  $("mail").close();games=await syncGames(userId);render();void loadDispatchHistory().then(()=>render()).catch(e=>console.warn("Versandhistorie:",e));
   status.textContent=selected.is_test?"TEST-E-Mail erfolgreich versendet. Der offizielle Spielstatus bleibt unverändert.":oneTimeOverride?
    "E-Mail an "+email+" versendet. Die Schiedsrichter-Stammdaten wurden nicht geändert.":"E-Mail erfolgreich versendet und protokolliert.";
  }catch(error){$("mail-error").textContent=error.message;button.disabled=false}
@@ -1188,7 +1188,7 @@ try{
  const coachSelect=$("coach-filter");for(const p of [...coaches].sort((a,b)=>fullName(a).localeCompare(fullName(b),"de")))coachSelect.add(new Option(fullName(p),p.id));
  const requestedCoach=new URLSearchParams(location.search).get("coach");
  if(requestedCoach&&coaches.some(p=>String(p.id)===requestedCoach)){coachFilter=requestedCoach;coachSelect.value=requestedCoach;}
- games=await syncGames(userId);docs=await syncObservations(userId);await loadDispatchHistory();await loadJsonGameKeys(profile?.role==="admin");await reconcileConfirmedVenues();await loadRouteAttempts();
+ games=await syncGames(userId);docs=await syncObservations(userId);void loadDispatchHistory().then(()=>render()).catch(e=>console.warn("Versandhistorie:",e));await loadJsonGameKeys(profile?.role==="admin");await reconcileConfirmedVenues();await loadRouteAttempts();
  if(await associateUniqueObservations(userId,games,docs))games=await syncGames(userId);
  render();void startRouteReview()
 }catch(error){status.textContent="Laden fehlgeschlagen: "+error.message}
