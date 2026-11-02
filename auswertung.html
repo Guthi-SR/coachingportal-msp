@@ -132,8 +132,8 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 <h3 id="details-heading">Einzelaufstellung</h3>
 <p class="hint" id="details-subtitle"></p>
 <div class="tablebox"><table class="summary">
-<thead><tr><th>Coach</th><th>Spiele im Zeitraum</th><th>Geplant (Zukunft)</th><th>Kilometer gesamt</th><th>Kilometer geplant</th><th>Spiele insgesamt</th><th>Kilometer insgesamt</th></tr></thead>
-<tbody><tr><td id="coach-name"></td><td id="game-count"></td><td id="planned-count"></td><td id="unconfirmed-count"></td><td id="km-total"></td><td id="planned-km-total"></td><td id="overall-game-count"></td><td id="overall-km-total"></td></tr></tbody></table></div>
+<thead><tr><th>Coach</th><th>Spiele im Zeitraum</th><th>Zukunft geplant</th><th>Km im Zeitraum</th><th>Km Zukunft geplant</th><th>Spiele insgesamt</th><th>Km insgesamt</th><th>Gesamtsumme im Zeitraum</th><th>Gesamtsumme Zukunft (geplant)</th><th>Gesamtsumme insgesamt</th></tr></thead>
+<tbody><tr><td id="coach-name"></td><td id="game-count"></td><td id="planned-count"></td><td id="km-total"></td><td id="planned-km-total"></td><td id="overall-game-count"></td><td id="overall-km-total"></td><td id="period-money-total"></td><td id="future-money-total"></td><td id="overall-money-total"></td></tr></tbody></table></div>
 <p><button id="export-excel" type="button" disabled>Excel exportieren (.xlsx)</button></p>
 <h3>Spiele im ausgewählten Zeitraum</h3>
 <div class="tablebox"><table class="details-table">
@@ -240,10 +240,13 @@ function showCoachDetails(id){
  $("coach-name").textContent=current.name;
  $("game-count").textContent=current.games.length;
  $("planned-count").textContent=current.plannedGames.length;
- $("unconfirmed-count").textContent=current.unconfirmedGames.length;
- $("planned-km-total").textContent=labelKm(current.plannedSum);
+ const compensation=compensationTotals(current);
+ $("period-money-total").textContent=money(compensation.period.total)+(compensation.period.missing?" *":"");
+ $("future-money-total").textContent=money(compensation.future.total)+(compensation.future.missing?" *":"");
+ $("overall-money-total").textContent=money(compensation.overall.total)+(compensation.overall.missing?" *":"");
+ $("planned-km-total").textContent=labelKm(current.plannedGames.reduce((total,g)=>total+(gameCompensation(g).km??0),0));
  $("overall-game-count").textContent=current.totalGames;
- $("overall-km-total").textContent=labelKm(current.totalKm);
+ $("overall-km-total").textContent=labelKm([...current.games,...current.plannedGames].reduce((total,g)=>total+(gameCompensation(g).km??0),0));
  $("km-total").textContent=labelKm(current.sum);
  $("details-heading").textContent="Einzelaufstellung: "+current.name;
  $("details-subtitle").textContent="Zeitraum "+dateDE(from)+" bis "+dateDE(to);
