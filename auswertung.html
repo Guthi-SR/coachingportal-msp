@@ -138,10 +138,10 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 <h3>Spiele im ausgewählten Zeitraum</h3>
 <div class="tablebox"><table class="details-table">
 <thead><tr><th>Datum</th><th>Coaching</th><th>Einsatzart</th><th>Km hin und zurück</th><th>Fahrtkosten</th><th>Spesen</th><th>Gesamt</th></tr></thead>
-<tbody id="detail-rows"></tbody></table></div>
+<tbody id="detail-rows"></tbody><tfoot id="detail-totals"></tfoot></table></div>
 <p class="hint" id="km-note"></p>
 <h3>Geplante zukünftige Spiele</h3>
-<div class="tablebox"><table class="details-table"><thead><tr><th>Datum</th><th>Coaching</th><th>Einsatzart</th><th>Status</th></tr></thead><tbody id="planned-rows"></tbody></table></div>
+<div class="tablebox"><table class="details-table"><thead><tr><th>Datum</th><th>Coaching</th><th>Einsatzart</th><th>Status</th><th>Km hin und zurück</th><th>Fahrtkosten</th><th>Spesen</th><th>Gesamt</th></tr></thead><tbody id="planned-rows"></tbody><tfoot id="planned-totals"></tfoot></table></div>
 <p class="hint" id="planned-note">Geplante Spiele zeigen alle künftig zugeordneten Spiele, unabhängig vom ausgewählten Auswertungszeitraum.</p>
 </div>
 
@@ -198,7 +198,7 @@ function distance(s){
 function labelKm(value){return value.toLocaleString("de-DE",{maximumFractionDigits:2})+" km"}
 function expenseLabel(type){return ({pateneinsatz:"Pateneinsatz",coaching_gruppe:"Coaching Gruppe",coaching_ksa:"Coaching KSA"})[type]||"Coaching Gruppe"}
 function expenseRate(type){return type==="pateneinsatz"?20:30}
-function gameCompensation(game){const km=distance(game.kilometers_text),mileage=km===null?null:Math.round(km*0.3*100)/100,fee=expenseRate(game.expense_type||"coaching_gruppe");return{km,mileage,fee,total:km===null?null:Math.round((mileage+fee)*100)/100,complete:km!==null,type:game.expense_type||"coaching_gruppe"}}
+function gameCompensation(game){const entered=distance(game.kilometers_text);const planned=game.match_date>today&&game.planned_one_way_km!=null?Number(game.planned_one_way_km)*2:null;const km=entered??(Number.isFinite(planned)&&planned>=0?Math.round(planned*100)/100:null),mileage=km===null?null:Math.round(km*0.3*100)/100,fee=expenseRate(game.expense_type||"coaching_gruppe");return{km,mileage,fee,total:km===null?null:Math.round((mileage+fee)*100)/100,complete:km!==null,type:game.expense_type||"coaching_gruppe"}}
 
 function effectiveRange(){
  const from=$("from").value||defaultFrom,to=$("to").value||berlinToday();
@@ -257,14 +257,30 @@ function showCoachDetails(id){
  if(!current.games.length){
   const row=document.createElement("tr"),td=document.createElement("td");td.colSpan=7;td.textContent="Keine Spiele im gewählten Zeitraum.";row.append(td);tbody.append(row);
  }
- $("km-note").textContent=current.missing?current.missing+" Kilometerangabe(n) sind nicht numerisch und wurden nicht zur Summe addiert.":"";
+ const totals=(list,id,label,colSpan)=>{
+  const sum=compensationTotals({games:list,plannedGames:[]}).period;
+  const foot=$(id);foot.replaceChildren();
+  const tr=document.createElement("tr");tr.style.cssText="font-weight:750;background:#edf3f9;border-top:2px solid #9eb3c8";
+  const head=document.createElement("td");head.colSpan=colSpan;head.textContent=label+" ("+list.length+" Spiele)";tr.append(head);
+  for(const val of [labelKm(list.reduce((n,g)=>n+(gameCompensation(g).km??0),0)),money(sum.mileage),money(sum.fees),money(sum.total)+(sum.missing?" *":"")]){
+   const td=document.createElement("td");td.textContent=val;tr.append(td);
+  }
+  foot.append(tr);
+  return sum.missing;
+ };
+ const periodMissing=totals(current.games,"detail-totals","Gesamtsumme im ausgewählten Zeitraum",3);
+ $("km-note").textContent=periodMissing?euroNote(periodMissing):"";
  const plannedBody=$("planned-rows");plannedBody.replaceChildren();
  for(const game of current.plannedGames){
-  const tr=document.createElement("tr");
-  for(const val of [dateDE(game.match_date),[game.home,game.away].filter(Boolean).join(" – ")||"Coaching",expenseLabel(game.expense_type||"coaching_gruppe"),"Geplant"]){const td=document.createElement("td");td.textContent=val;tr.append(td)}
+  const tr=document.createElement("tr"),m=gameCompensation(game);
+  for(const val of [dateDE(game.match_date),[game.home,game.away].filter(Boolean).join(" – ")||"Coaching",expenseLabel(m.type),"Geplant",m.km===null?"Fehlt":labelKm(m.km),m.mileage===null?"Fehlt":money(m.mileage),money(m.fee),m.total===null?"Unvollständig":money(m.total)]){
+   const td=document.createElement("td");td.textContent=val;tr.append(td);
+  }
   plannedBody.append(tr);
  }
- if(!current.plannedGames.length){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=4;td.textContent="Keine zukünftigen Spiele geplant.";tr.append(td);plannedBody.append(tr)}
+ if(!current.plannedGames.length){const tr=document.createElement("tr"),td=document.createElement("td");td.colSpan=8;td.textContent="Keine zukünftigen Spiele geplant.";tr.append(td);plannedBody.append(tr)}
+ const plannedMissing=totals(current.plannedGames,"planned-totals","Gesamtsumme geplante Spiele",4);
+ $("planned-note").textContent="Geplante Spiele unabhängig vom ausgewählten Zeitraum. Kilometer jeweils für Hin- und Rückfahrt. "+(plannedMissing?euroNote(plannedMissing):"Beträge sind Planwerte.");
  $("details-result").hidden=false;
  $("export-excel").disabled=false;
  renderOverview();
