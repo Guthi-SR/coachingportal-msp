@@ -148,6 +148,12 @@ async function importMail(token, ownerId) {
           const data = await client.fetchOne(String(uid), { source: true }, { uid: true });
           if (!data?.source || data.source.length > 16 * 1024 * 1024) { count.ignored++; continue; }
           const msg = await simpleParser(data.source, { skipHtmlToText: true, skipTextToHtml: true, maxHtmlLengthToParse: 0 });
+          // Only import coaching messages from an exact @srgmsp.de sender address.
+          // A subdomain, another TLD or a display name that mentions srgmsp.de is insufficient.
+          const senders = msg.from?.value || [];
+          const allowedSender = senders.length === 1 && /^[^@\s]+@srgmsp\.de$/i.test(String(senders[0].address || "").trim());
+          const allowedSubject = /coaching/i.test(String(msg.subject || ""));
+          if (!allowedSender || !allowedSubject) { count.ignored++; continue; }
           const attached = (msg.attachments || []).filter(a => /\.pdf$/i.test(a.filename || "") || a.contentType === "application/pdf");
           for (const part of attached.slice(0, 6)) {
             const state = await storeAttachment({ token, ownerId, messageId: String(client.mailbox.uidValidity || "") + ":" + uid, message: msg, attachment: part, games });
