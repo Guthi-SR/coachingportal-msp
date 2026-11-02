@@ -24,7 +24,7 @@ try{
   refreshReview();
   for(const [button,checked] of [[progress,false],[approved,true]])button.addEventListener("click",async()=>{
    progress.disabled=approved.disabled=true;reviewMsg.textContent="Speichern …";
-   try{const updated=await updateGame(ownerId,game.game_key,{checked_at:checked?new Date().toISOString():null});Object.assign(game,updated);refreshReview();reviewMsg.textContent="Gespeichert"}
+   try{const updated=await updateGame(ownerId,game.game_key,{checked_at:checked?(game.checked_at||new Date().toISOString()):null,review_status:checked?"geprueft":"in_bearbeitung",...(checked?{returned_to_observer_at:null,return_note:null}:{})});Object.assign(game,updated);refreshReview();reviewMsg.textContent="Prüfstatus gespeichert"}
    catch(e){reviewMsg.textContent="Fehler: "+e.message}
    finally{progress.disabled=approved.disabled=false}
   });
