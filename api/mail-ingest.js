@@ -123,10 +123,10 @@ async function storeAttachment({ token, ownerId, messageId, message, attachment,
   return assignedGame ? "assigned" : "unassigned";
 }
 async function importMail(token, ownerId) {
-  const host = process.env.EMAIL_IMAP_HOST || "imap.web.de";
-  const port = Number(process.env.EMAIL_IMAP_PORT || 993);
+  const host = "imap.web.de";
+  const port = 993;
   if (process.env.EMAIL_ENABLED !== "true" || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) throw Error("WEB.DE-Zugang in Vercel noch nicht vollständig eingerichtet.");
-  if (host !== "imap.web.de" || port !== 993) throw Error("IMAP-Host und Port müssen imap.web.de:993 sein.");
+
   const client = new ImapFlow({
     host, port, secure: true, auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
     logger: false, connectionTimeout: 12000, greetingTimeout: 12000, socketTimeout: 20000
