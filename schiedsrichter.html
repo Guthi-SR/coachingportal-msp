@@ -186,6 +186,13 @@ if(!user){
         const sub=document.createElement("small");sub.className="referee-subtitle";
         sub.textContent=[r.club,r.city].filter(Boolean).join(" · ")||"Schiedsrichter";
         title.append(sub);
+        const docsLink=document.createElement("a");
+        docsLink.href="/schiedsrichter-profil.html?id="+encodeURIComponent(r.id)+"#profile-observations";
+        docsLink.textContent="📘 Beobachtungsbögen";
+        docsLink.setAttribute("aria-label","Beobachtungsbögen von "+name+" öffnen");
+        docsLink.style.cssText="display:inline-block;margin-top:9px;padding:9px 12px;border-radius:8px;background:#e8f0f8;color:#142b46;font-weight:700;text-decoration:none;border:1px solid #b7c6d5";
+        docsLink.addEventListener("click",event=>event.stopPropagation());
+        title.append(docsLink);
         header.append(avatar,title);
         summary.append(header);
         const details=document.createElement("div");details.className="ref-summary-data";
