@@ -719,6 +719,17 @@ function reviewSelect(g){
  select.addEventListener("change",()=>{const next=select.value;if(next==="zurueck_beobachter"){select.value=reviewState(g);openReturnObserver(g)}else void saveReviewState(g,next)});
  return select;
 }
+function canRemindCoach(g){
+ return !g.is_test&&!!g.coach_id&&!!g.match_date&&g.match_date<currentIso()
+  &&!g.received_at&&!hasBogen(g)&&!g.sent_at&&!g.sent_manual_at
+  &&!["eingegangen","in_bearbeitung","geprueft","zurueck_beobachter"].includes(reviewState(g));
+}
+function reminderHistory(g){
+ if(!g.coach_reminder_at)return null;
+ const item=mobileElement("small","", "Letzte Erinnerung: "+new Date(g.coach_reminder_at).toLocaleString("de-DE",{timeZone:"Europe/Berlin"}));
+ item.style.display="block";item.style.marginTop="5px";
+ return item;
+}
 function hasBogen(g){return !!(g.pdf_id||docs.some(d=>d.game_key===g.game_key))}
 function gamePersonName(game,kind){
  const people=kind==="referee"?refs:coaches;
@@ -902,10 +913,10 @@ function mobileGameCard(g){
    send.title=recipient?"Bogen an hinterlegte E-Mail-Adresse senden":"E-Mail-Adresse in der Schiedsrichterverwaltung ergänzen";
    send.onclick=()=>openMail(g,"bogen_versendet");actions.append(send);
   }
-  if(color==="red"){
+  if(canRemindCoach(g)){
    const reminder=mobileElement("button","","Coach erinnern");reminder.type="button";reminder.disabled=!g.coach_email;
    reminder.title=g.coach_email?"Erinnerung versenden":"E-Mail-Adresse beim Coach fehlt";
-   reminder.onclick=()=>openMail(g,"coach_erinnerung");actions.append(reminder);
+   reminder.onclick=()=>openMail(g,"coach_erinnerung");actions.append(reminder);const history=reminderHistory(g);if(history)actions.append(history);
   }
  }else{
   actions.append(mobileElement("span","small","TEST: E-Mail-Versand nur nach ausdrücklicher Bestätigung. Keine offizielle Statistik."));
@@ -1055,10 +1066,10 @@ function render(){
    send.onclick=()=>openMail(g,"bogen_versendet");sendCell.append(send);
    if(!recipient){const info=document.createElement("small");info.textContent=isAdmin?"Empfängeradresse im Versandfenster eingeben.":"Schiedsrichter-E-Mail in den Stammdaten ergänzen.";sendCell.append(info)}
   }
-  if(cls==="red"&&!g.is_test){
+  if(canRemindCoach(g)){
    const remind=document.createElement("button");remind.type="button";remind.textContent="Erinnerung versenden";
    remind.disabled=!g.coach_email;remind.title=g.coach_email?"Erinnerung an Coach senden":"E-Mail-Adresse beim Coach fehlt";
-   remind.onclick=()=>openMail(g,"coach_erinnerung");sendCell.append(remind)
+   remind.onclick=()=>openMail(g,"coach_erinnerung");sendCell.append(remind);const history=reminderHistory(g);if(history)sendCell.append(history)
   }
   if(g.is_test){
    for(const [kind,label] of [["coach_erinnerung","Testmail Coach"],["bogen_versendet","Bogen versenden"]]){
