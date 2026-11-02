@@ -1,5 +1,6 @@
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
+import { storeJsonAttachment } from "./_mail-json.js";
 // PDF parsing is loaded only when needed; a parser failure must not crash the mail endpoint.
 import { createHash, randomUUID } from "node:crypto";
 
@@ -132,7 +133,7 @@ async function importMail(token, ownerId) {
     logger: false, connectionTimeout: 12000, greetingTimeout: 12000, socketTimeout: 20000
   });
   client.on("error", err => console.error("WEB.DE-IMAP:", String(err?.message || err).slice(0, 180)));
-  const count = { scanned: 0, imported: 0, assigned: 0, unassigned: 0, duplicate: 0, ignored: 0, failed: 0 };
+  const count = { scanned: 0, imported: 0, assigned: 0, unassigned: 0, duplicate: 0, ignored: 0, failed: 0, jsonImported: 0, jsonAssigned: 0, jsonUnassigned: 0, jsonDuplicate: 0, jsonInvalid: 0 };
   const games = await supa("portal_games?owner_id=eq." + ownerId + "&select=game_key,match_date,home,away,referee_name,coach_name,referee_id,coach_id,pdf_id&limit=1000", token);
   await client.connect();
   try {
@@ -154,10 +155,29 @@ async function importMail(token, ownerId) {
           const allowedSender = senders.length === 1 && /^[^@\s]+@srgmsp\.de$/i.test(String(senders[0].address || "").trim());
           const allowedSubject = /coaching/i.test(String(msg.subject || ""));
           if (!allowedSender || !allowedSubject) { count.ignored++; continue; }
-          const attached = (msg.attachments || []).filter(a => /\.pdf$/i.test(a.filename || "") || a.contentType === "application/pdf");
+          const attachments = msg.attachments || [];
+          const attached = attachments.filter(a => /\.pdf$/i.test(a.filename || "") || a.contentType === "application/pdf");
           for (const part of attached.slice(0, 6)) {
-            const state = await storeAttachment({ token, ownerId, messageId: String(client.mailbox.uidValidity || "") + ":" + uid, message: msg, attachment: part, games });
-            count[state]++; if (state === "assigned" || state === "unassigned") count.imported++;
+            try {
+              const state = await storeAttachment({ token, ownerId, messageId: String(client.mailbox.uidValidity || "") + ":" + uid, message: msg, attachment: part, games });
+              count[state]++; if (state === "assigned" || state === "unassigned") count.imported++;
+            } catch (err) {
+              count.failed++;
+              console.error("WEB.DE-PDF konnte nicht verarbeitet werden:", String(err?.message || err).slice(0, 200));
+            }
+          }
+          const jsonAttachments = attachments.filter(a => /\.json$/i.test(a.filename || "") || /^application\/(?:json|[^;]+\+json)(?:;|$)/i.test(a.contentType || ""));
+          for (const part of jsonAttachments.slice(0, 6)) {
+            try {
+              const state = await storeJsonAttachment({ attachment: part, token, ownerId, games, supa });
+              if (state === "assigned") { count.jsonAssigned++; count.jsonImported++; }
+              else if (state === "unassigned") { count.jsonUnassigned++; count.jsonImported++; }
+              else if (state === "duplicate") count.jsonDuplicate++;
+              else count.jsonInvalid++;
+            } catch (err) {
+              count.failed++;
+              console.error("WEB.DE-JSON konnte nicht verarbeitet werden:", String(err?.message || err).slice(0, 200));
+            }
           }
         } catch (err) {
           count.failed++;
