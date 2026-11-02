@@ -161,7 +161,25 @@
  .mobile-card-details .venue-cell{min-width:0;max-width:100%}
  .mobile-km-input{width:100%;box-sizing:border-box}
 }
-@media (min-width:768px) and (max-width:1100px){.mobile-game-list{grid-template-columns:minmax(0,1fr)}}
+/* Compact desktop overview: no sudden expansion after game data loads. */
+@media (min-width:768px) and (max-width:1800px){
+ .mobile-game-list{grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:10px}
+ .mobile-game-card{box-shadow:none;border-radius:9px}
+ .mobile-card-main{padding:10px;gap:5px}
+ .mobile-card-teams{font-size:14px;line-height:1.2;gap:1px}
+ .mobile-card-league{font-size:12px}
+ .mobile-card-top{gap:5px}
+ .mobile-card-pill{font-size:11px;padding:3px 6px}
+ .mobile-card-info{gap:5px;padding-top:7px}
+ .mobile-info{gap:2px}
+ .mobile-info strong{font-size:12px;line-height:1.2}
+ .mobile-info small{font-size:11px}
+ .mobile-km-input{min-height:30px;font-size:12px;padding:4px}
+ .mobile-game-card details>summary{padding:7px 10px;min-height:30px;font-size:12px}
+ .mobile-card-details{padding:10px}
+ .mobile-list-hint{margin:6px 0;font-size:12px}
+}
+@media (min-width:768px) and (max-width:1100px){.mobile-game-list{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))}}
 </style></head><body>
 <header><h1>Coachingportal MSP</h1></header><div class="shell"><nav aria-label="Hauptmenü"><strong>Menü</strong><a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html" aria-current="page">Spiele</a><a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav>
 <main><section><div id="referee-return-wrap" hidden style="margin:0 0 12px"><a id="referee-return-link" href="/schiedsrichter.html" style="display:inline-flex;align-items:center;gap:7px;padding:9px 13px;border:1px solid #b9c9d8;border-radius:8px;background:#f4f8fc;text-decoration:none;font-weight:650">← Zurück zum Schiedsrichter</a></div><h2>Spiele und Bogenstatus</h2><p id="status" role="status">Spiele und Bögen werden geladen …</p>
@@ -927,7 +945,7 @@ function mobileGameCard(g){
  main.append(quick);card.append(main);
  const details=document.createElement("details"),summary=document.createElement("summary");
  summary.textContent="Details & Bearbeiten";details.append(summary);
- if(openCardKeys.has(g.game_key)||(window.innerWidth>=768&&window.innerWidth<=1800))details.open=true;
+ if(openCardKeys.has(g.game_key))details.open=true;
  details.addEventListener("toggle",()=>{if(details.open)openCardKeys.add(g.game_key);else openCardKeys.delete(g.game_key)});
  const inner=mobileElement("div","mobile-card-details");
  inner.append(mobileField("Spielkennung",g.game_key));
