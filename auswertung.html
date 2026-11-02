@@ -57,11 +57,17 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
  #overview td:nth-child(3):before{content:"Spiele im Zeitraum: ";color:#607589;font-weight:500}
  #overview td:nth-child(4):before{content:"Spiele in Zukunft: ";color:#607589;font-weight:500}
  #overview td:nth-child(5):before{content:"Noch nicht bestätigt: ";color:#607589;font-weight:500}
- #overview td:nth-child(6):before{content:"Kilometer gesamt: ";color:#607589;font-weight:500}
- #overview td:nth-child(7):before{content:"Kilometer im Zeitraum: ";color:#607589;font-weight:500}
- #overview td:nth-child(8):before{content:"Kilometer Zukunft: ";color:#607589;font-weight:500}
- #overview td:nth-child(9){grid-column:1/-1}
- #overview td:nth-child(9) button{width:100%;min-height:44px}
+ #overview td:nth-child(6):before{content:"Kilometer Zeitraum: ";color:#607589;font-weight:500}
+ #overview td:nth-child(7):before{content:"Kilometer Zukunft: ";color:#607589;font-weight:500}
+ #overview td:nth-child(8):before{content:"Kilometer gesamt: ";color:#607589;font-weight:500}
+ #overview td:nth-child(9):before{content:"Spesen Zeitraum: ";color:#607589;font-weight:500}
+ #overview td:nth-child(10):before{content:"Spesen Zukunft: ";color:#607589;font-weight:500}
+ #overview td:nth-child(11):before{content:"Spesen gesamt: ";color:#607589;font-weight:500}
+ #overview td:nth-child(12):before{content:"Summe Zeitraum: ";color:#607589;font-weight:500}
+ #overview td:nth-child(13):before{content:"Summe Zukunft: ";color:#607589;font-weight:500}
+ #overview td:nth-child(14):before{content:"Summe gesamt: ";color:#607589;font-weight:500}
+ #overview td:nth-child(15){grid-column:1/-1}
+ #overview td:nth-child(15) button{width:100%;min-height:44px}
  .details-table{min-width:0}
  .details-table td,.details-table th{padding:10px 5px;font-size:13px}
  .summary{min-width:0}
@@ -80,17 +86,9 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 @media(max-width:767px){.coach-batch-tools{display:grid;gap:2px}.coach-batch-actions button{width:100%}}
 @media(max-width:700px){html,body{width:100%;max-width:100%;overflow-x:hidden}*,*::before,*::after{box-sizing:border-box}main,section,article,.shell,.content{min-width:0;max-width:100%}img,video,iframe,canvas{max-width:100%;height:auto}input,select,textarea,button{max-width:100%}table{max-width:100%}pre{max-width:100%;overflow-x:auto}nav{max-width:100%}}
 #overview td:nth-child(8),#overview th:nth-child(8){text-align:right}
-#overview td:nth-child(n+10),#overview th:nth-child(n+10){text-align:right}
+#overview td:nth-child(n+9):nth-child(-n+14),#overview th:nth-child(n+9):nth-child(-n+14){text-align:right}
 #overview .total-money{font-weight:700;white-space:nowrap}
-@media(max-width:767px){
- #overview td:nth-child(10):before{content:"Kilometergeld: ";color:#607589;font-weight:500}
- #overview td:nth-child(11):before{content:"Spesen gesamt: ";color:#607589;font-weight:500}
- #overview td:nth-child(12):before{content:"Spesen im Zeitraum: ";color:#607589;font-weight:500}
- #overview td:nth-child(13):before{content:"Spesen Zukunft: ";color:#607589;font-weight:500}
- #overview td:nth-child(14):before{content:"Summe gesamt: ";color:#607589;font-weight:500}
- #overview td:nth-child(15):before{content:"Summe Zeitraum: ";color:#607589;font-weight:500}
- #overview td:nth-child(16):before{content:"Summe Zukunft: ";color:#607589;font-weight:500}
-}
+
 </style><style id="portal-menu-initial-gate">nav[aria-label="Hauptmenü"]{opacity:0!important;pointer-events:none!important}body.portal-menu-ready nav[aria-label="Hauptmenü"]{opacity:1!important;pointer-events:auto!important}</style></head><body>
 <header><h1>Coachingportal MSP</h1></header>
 <div class="shell"><nav aria-label="Hauptmenü"><strong>Menü</strong>
@@ -124,7 +122,7 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 <p class="hint">Nach Spiele gesamt absteigend sortiert. Eurobeträge für zukünftige Spiele sind Planwerte. * Fehlende Kilometer machen die Summe unvollständig.</p>
 <div class="tablebox">
 <table id="overview" aria-label="Alle Coaches mit Spielen im Zeitraum, geplanten Spielen und Kilometern">
-<thead><tr><th>Coach / Beobachter</th><th>Spiele gesamt</th><th>Spiele im Zeitraum</th><th>Spiele in Zukunft</th><th>Noch nicht bestätigt</th><th>Kilometer gesamt</th><th>Kilometer im Zeitraum</th><th>Kilometer Zukunft</th><th>Einzelaufstellung</th><th>Kilometergeld (€)</th><th>Spesen gesamt (€)</th><th>Spesen im Zeitraum (€)</th><th>Spesen Zukunft (€)</th><th>Summe gesamt (€)</th><th>Summe Zeitraum (€)</th><th>Summe Zukunft (€)</th></tr></thead>
+<thead><tr><th>Coach / Beobachter</th><th>Spiele gesamt</th><th>Spiele im Zeitraum</th><th>Spiele in Zukunft</th><th>Noch nicht bestätigt</th><th>Kilometer Zeitraum</th><th>Kilometer Zukunft</th><th>Kilometer gesamt</th><th>Spesen Zeitraum (€)</th><th>Spesen Zukunft (€)</th><th>Spesen gesamt (€)</th><th>Summe Zeitraum (€)</th><th>Summe Zukunft (€)</th><th>Summe gesamt (€)</th><th>Einzelaufstellung</th></tr></thead>>
 <tbody id="overview-rows"></tbody>
 </table></div>
 </div>
@@ -327,10 +325,11 @@ function renderOverview(){
   const unconfirmedCount=document.createElement("td");unconfirmedCount.textContent=String(result.unconfirmedGames.length);if(!result.unconfirmedGames.length)unconfirmedCount.className="zero";
   const totalKmCell=document.createElement("td");totalKmCell.textContent=labelKm(result.totalKm);
   const e=compensationTotals(result);
-  const moneyCells=moneyValues(result).map((value,i)=>{
-   const cell=document.createElement("td"),miss=i===4?e.overall.missing:i===5?e.period.missing:i===6?e.future.missing:0;
+  const monetary=[e.period.fees,e.future.fees,e.overall.fees,e.period.total,e.future.total,e.overall.total];
+  const moneyCells=monetary.map((value,i)=>{
+   const cell=document.createElement("td"),miss=i===3?e.period.missing:i===4?e.future.missing:i===5?e.overall.missing:0;
    cell.textContent=money(value)+(miss?" *":"");
-   if(i>=4)cell.className="total-money";
+   if(i>=3)cell.className="total-money";
    if(miss)cell.title=euroNote(miss);
    return cell;
   });
@@ -341,10 +340,10 @@ function renderOverview(){
   btn.setAttribute("aria-expanded",String(opened));
   btn.setAttribute("aria-controls","details-result");
   btn.addEventListener("click",()=>showCoachDetails(String(coach.id)));
-  action.append(btn);tr.append(name,totalCount,count,planned,unconfirmedCount,totalKmCell,km,plannedKm,action,...moneyCells);tbody.append(tr);
+  action.append(btn);tr.append(name,totalCount,count,planned,unconfirmedCount,km,plannedKm,totalKmCell,...moneyCells,action);tbody.append(tr);
  }
  if(!ordered.length){
-  const row=document.createElement("tr"),cell=document.createElement("td");cell.colSpan=16;cell.textContent="Noch keine Coaches angelegt.";row.append(cell);tbody.append(row);
+  const row=document.createElement("tr"),cell=document.createElement("td");cell.colSpan=15;cell.textContent="Noch keine Coaches angelegt.";row.append(cell);tbody.append(row);
  }
  $("overview-total").textContent=ordered.length+" Coaches · "+totalGames+" Spiele im Zeitraum · "+games.filter(g=>!g.is_test&&g.match_date>today).length+" geplante Spiele insgesamt · "+labelKm(totalKm);
  updateCoachExportStatus();
