@@ -105,7 +105,7 @@
 </style></head><body>
 <header><h1>Coachingportal MSP</h1></header><div class="shell"><nav aria-label="Hauptmenü"><strong>Menü</strong><a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html" aria-current="page">Spiele</a><a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav>
 <main><section><div id="referee-return-wrap" hidden style="margin:0 0 12px"><a id="referee-return-link" href="/schiedsrichter.html" style="display:inline-flex;align-items:center;gap:7px;padding:9px 13px;border:1px solid #b9c9d8;border-radius:8px;background:#f4f8fc;text-decoration:none;font-weight:650">← Zurück zum Schiedsrichter</a></div><h2>Spiele und Bogenstatus</h2><p id="status" role="status">Spiele und Bögen werden geladen …</p>
-<div class="legend"><span><i class="dot green"></i>Grün: Bogen versendet</span><span><i class="dot yellow"></i>Gelb: Spiel in den nächsten 5 Tagen</span><span><i class="dot red"></i>Rot: 3 Tage nach Spiel noch kein Bogen eingegangen</span></div>
+<div class="legend"><span><i class="dot green"></i>Grün: Bogen versendet</span><span><i class="dot yellow"></i>Gelb: Spiel in den nächsten 5 Tagen</span><span><i class="dot red"></i>Rot: Bogen überfällig oder zurück zum Beobachter</span></div>
 <div class="card" id="global-route-setting-card" style="margin:12px 0;padding:14px">
  <label id="global-route-consent-label" style="display:flex;gap:10px;align-items:flex-start;font-weight:650"><input id="global-route-consent" type="checkbox" style="width:20px;height:20px;flex:none"> Automatische Routenberechnung für alle meine Spiele erlauben</label>
  <p class="small" style="margin:7px 0 0">Diese zentrale Admin-Einstellung wird in Supabase gespeichert und gilt auf allen Geräten. Für die Routenberechnung werden Coach-Wohnadresse und bestätigte Spielstätte an die Kartendienste übertragen. Kilometer werden erst nach deiner Kontrolle gespeichert.</p>
@@ -705,6 +705,7 @@ function reviewState(g){
  return "nicht_eingegangen";
 }
 function reviewLabel(g){return reviewOptions.find(([value])=>value===reviewState(g))?.[1]||"Bogen nicht eingegangen"}
+function gameDisplayColor(g){return !g.is_test&&reviewState(g)==="zurueck_beobachter"?"red":gameColor(g)}
 async function saveReviewState(g,next){
  if(next===reviewState(g))return;
  if(next==="zurueck_beobachter"){openReturnObserver(g);return}
@@ -829,12 +830,12 @@ function testKmInfo(g){
  return "Testspiel – berechnete Strecke: "+distance.toLocaleString("de-DE",{maximumFractionDigits:1})+" km einfach / "+roundtrip.toLocaleString("de-DE",{maximumFractionDigits:1})+" km hin und zurück (nicht abrechnungsrelevant).";
 }
 function mobileGameCard(g){
- const color=g.is_test?"test":gameColor(g);
+ const color=g.is_test?"test":gameDisplayColor(g);
  const card=mobileElement("article","mobile-game-card "+(color||""));
  const top=mobileElement("div","mobile-card-top");
  const date=dateDE(g.match_date)+(g.kickoff?" · "+g.kickoff+" Uhr":"");
  top.append(mobileElement("span","mobile-card-date",date));
- const state=g.is_test?"Testspiel":color==="red"?"Bogen überfällig":color==="yellow"?"Spiel demnächst":color==="green"?"Bogen versendet":reviewLabel(g);
+ const state=g.is_test?"Testspiel":reviewState(g)==="zurueck_beobachter"?"Zurück zum Beobachter":color==="red"?"Bogen überfällig":color==="yellow"?"Spiel demnächst":color==="green"?"Bogen versendet":reviewLabel(g);
  top.append(mobileElement("span","mobile-card-pill",state));
  const teams=mobileElement("div","mobile-card-teams");
  teams.append(mobileElement("div","",g.home||"Heimmannschaft offen"),mobileElement("span","mobile-vs","gegen"),mobileElement("div","",g.away||"Gastmannschaft offen"));
@@ -1017,7 +1018,7 @@ function render(){
  const visible=games.filter(g=>(!refereeFilter||g.referee_id===refereeFilter)&&(!coachFilter||g.coach_id===coachFilter)&&(gameFilter==="future"?g.match_date>=today:gameFilter==="without"?!hasBogen(g):gameFilter==="missing"?!g.is_test&&g.match_date<today&&!g.received_at:true)&&(routeFilter==="all"||routeStatus(g)===routeFilter)).sort(compareGames);
  $("filter-count").textContent=visible.length+" von "+games.length+" Spielen angezeigt.";
  for(const g of visible){
-  const row=document.createElement("tr");const cls=g.is_test?"":gameColor(g);if(cls)row.className=cls;
+  const row=document.createElement("tr");const cls=g.is_test?"":gameDisplayColor(g);if(cls)row.className=cls;
   for(const v of [dateDE(g.match_date),g.kickoff,g.game_key,g.home,g.away,g.league,({pateneinsatz:"Pateneinsatz",coaching_gruppe:"Coaching Gruppe",coaching_ksa:"Coaching KSA"})[g.expense_type||"coaching_gruppe"]])cell(row,v);
    const venueTd=document.createElement("td");venueTd.append(venueCell(g));row.append(venueTd);
   if(g.is_test){const t=row.children[2],flag=document.createElement("span");flag.textContent=" TEST";flag.style.cssText="font-weight:700;color:#9d2936;white-space:nowrap";t.append(flag);}
