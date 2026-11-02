@@ -206,7 +206,7 @@ export function dayDelta(date){
 export function gameColor(game){
  if(game.sent_at||game.sent_manual_at)return "green";
  const delta=dayDelta(game.match_date);
- if(delta<=-5&&!game.received_at)return "red";
+ if(delta<=-3&&!game.received_at&&!game.pdf_id)return "red";
  if(delta>=0&&delta<=5)return "yellow";
  return "";
 }
