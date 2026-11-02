@@ -871,6 +871,13 @@ function mobileGameCard(g){
    selected=g;$("manual-date").value=g.sent_manual_at?String(g.sent_manual_at).slice(0,10):currentIso();
    $("manual-method").value=g.sent_manual_method||"";$("manual-note").value=displayManualNote(g);$("manual-error").textContent="";$("manual").showModal();
   };actions.append(manual);
+  if((g.sent_at||g.sent_manual_at)&&doc&&g.pdf_id){
+   const resend=mobileElement("button","primary","Erneut versenden");
+   resend.type="button";resend.disabled=!isAdmin;
+   resend.title="PDF-Beobachtungsbogen erneut per E-Mail versenden. Öffnet zuerst den Entwurf; es wird noch nichts gesendet.";
+   resend.onclick=()=>openMail(g,"bogen_versendet");
+   actions.append(resend);
+  }
   if(doc&&!g.sent_at&&!g.sent_manual_at){
    const recipient=refereeSendEmail(g);
    const send=mobileElement("button","primary",recipient?"Bogen versenden":"E-Mail fehlt");send.type="button";send.disabled=!recipient;
@@ -1013,6 +1020,15 @@ function render(){
   const manual=document.createElement("button");manual.type="button";manual.textContent=g.sent_manual_at?"Versandnotiz ändern":"Bereits versendet";manual.onclick=()=>{
    selected=g;$("manual-date").value=g.sent_manual_at?String(g.sent_manual_at).slice(0,10):currentIso();$("manual-method").value=g.sent_manual_method||"";$("manual-note").value=displayManualNote(g);$("manual-error").textContent="";$("manual").showModal()
   };sendCell.append(manual);
+  if(sent&&doc&&g.pdf_id&&!g.is_test){
+   const resend=document.createElement("button");
+   resend.type="button";resend.className="primary";resend.textContent="Erneut versenden";
+   resend.style.display="block";resend.style.marginTop="6px";
+   resend.disabled=!isAdmin;
+   resend.title="PDF-Beobachtungsbogen erneut per E-Mail versenden. Öffnet zuerst den Entwurf; es wird noch nichts gesendet.";
+   resend.onclick=()=>openMail(g,"bogen_versendet");
+   sendCell.append(resend);
+  }
   if(doc&&!sent&&!g.is_test){
    const recipient=refereeSendEmail(g);
    const send=document.createElement("button");send.type="button";send.className="primary";send.textContent=(recipient||isAdmin)?"Bogen versenden":"E-Mail fehlt";send.disabled=!recipient&&!isAdmin;
