@@ -19,6 +19,7 @@ pre{max-height:350px;white-space:pre-wrap;overflow:auto;overflow-wrap:anywhere;b
 table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:10px;border-bottom:1px solid #e7eef4;vertical-align:top}
 td{overflow-wrap:anywhere}.scroll{overflow-x:auto}.notice{padding:12px;background:#eff5fb;border-radius:9px}
 .tag{font-size:13px;color:#46617a}.tag.open{color:#9a4d0a}.tag.done{color:#147244}
+.new-import-badge{display:inline-flex;align-items:center;margin:5px 0 5px 8px;padding:4px 8px;background:#e5f1ff;color:#164775;border:1px solid #85b4e7;border-radius:6px;font-size:12px;font-weight:800;letter-spacing:.04em}
 #batch-results{margin:12px 0 0;padding:0;list-style:none}#batch-results li{padding:9px 11px;margin:6px 0;border:1px solid #e0e8f1;border-radius:8px;overflow-wrap:anywhere}
 #batch-results .existing{background:#fff7e8;border-color:#efdbb4}.duplicate-tag{display:inline-block;font-size:12px;font-weight:750;border-radius:5px;background:#b45309;color:white;padding:2px 7px;margin-right:7px}.duplicate-panel{border-left:4px solid #bb7d22}.duplicate-list{list-style:none;margin:8px 0 0;padding:0}.duplicate-list li{padding:12px;margin-top:8px;border:1px solid #ead8b7;border-radius:8px;background:#fffaf0}.duplicate-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:7px}.duplicate-meta{font-size:13px;color:#6b5b45;overflow-wrap:anywhere}#batch-results .success{background:#edf8f1;border-color:#b8e4c9}
 #batch-results .error{background:#fff0f0;border-color:#f2c5c5}
@@ -87,6 +88,7 @@ const fields={match_date:"spieldatum",home:"heimmannschaft",away:"gastmannschaft
 const str=x=>typeof x==="string"?x.trim():"";
 const norm=x=>str(x).normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\b(e\.?v\.?|fc|tsv|sv|sc|spvgg|dj?k|sg|vfl|fsv)\b/g,"").replace(/[^a-z0-9]/g,"");
 const showDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||"")?d.slice(8,10)+"."+d.slice(5,7)+"."+d.slice(0,4):d||"–";
+const newFor24h=createdAt=>{const age=Date.now()-Date.parse(createdAt||"");return Number.isFinite(age)&&age>=0&&age<86400000};
 const teamScore=(a,b)=>{const x=norm(a),y=norm(b);return x&&y&&(x===y||x.length>=5&&y.includes(x)||y.length>=5&&x.includes(y))?1:0};
 const displayGame=g=>showDate(g.match_date)+" · "+(g.home||"–")+" – "+(g.away||"–")+" · "+(g.referee_name||"SR offen")+" · "+(g.coach_name||"Coach offen");
 function score(g,d){
@@ -326,6 +328,13 @@ function renderList(){
   const a=document.createElement("td"),b=document.createElement("td"),c=document.createElement("td"),d=document.createElement("td");
   a.dataset.label="Datei";b.dataset.label="Erkannt";c.dataset.label="Status";d.dataset.label="Aktion";
   a.textContent=item.file_name;
+  if(newFor24h(item.created_at)){
+    const badge=document.createElement("span");
+    badge.className="new-import-badge";badge.textContent="NEU";badge.title="In den letzten 24 Stunden eingelesen";
+    a.append(badge);
+    const remaining=86400000-(Date.now()-Date.parse(item.created_at));
+    setTimeout(()=>badge.remove(),Math.max(0,remaining));
+  }
   b.textContent=showDate(item.match_date)+" · "+(item.home||"–")+" – "+(item.away||"–")+" · "+(item.referee_name||"–");
   c.textContent=item.game_key?"✓ Zugeordnet":"Offen";
   c.className="row-status tag "+(item.game_key?"done":"open");
