@@ -435,6 +435,14 @@ try{
  if(error)throw error;games=data||[];
  await refreshImports();
  await refreshDuplicateNotices();
+ const requestedJson=new URLSearchParams(location.search).get("json");
+ if(requestedJson&&/^[a-f0-9-]{36}$/i.test(requestedJson)){
+  if(imports.some(item=>item.id===requestedJson)){
+   $("queue-filter").value="all";
+   renderList();
+   openReview(requestedJson);
+  }else $("saved-status").textContent+=" Die verlinkte JSON-Datei wurde nicht gefunden.";
+ }
 }catch(e){
  $("json-access-status").hidden=false;
  $("json-access-status").textContent="Zugang oder Laden fehlgeschlagen: "+e.message;
