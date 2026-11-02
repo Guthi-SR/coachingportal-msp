@@ -176,6 +176,8 @@
 import{sb,requirePermission,localGames,localPeople,syncGames,syncObservations,associateUniqueObservations,updateGame,updatePlanningStatus,gameColor,dateDE,reminderBody,sendBody,sendMail}from"/portal-workflow.js";
 const $=id=>document.getElementById(id),status=$("status");let userId="",userEmail="",isAdmin=false,savedRecipientEmail="",games=[],docs=[],jsonGameKeys=null,refs=[],coaches=[],selected=null,returningGame=null,mailKind="",gameFilter="all",refereeFilter="",coachFilter="",sortKey="date",sortDir="desc",routeAttempts=[];
 const currentIso=()=>{const t=new Date();return [t.getFullYear(),String(t.getMonth()+1).padStart(2,"0"),String(t.getDate()).padStart(2,"0")].join("-")};
+const automaticManualNote=method=>"Versandweg: "+(method==="whatsapp"?"WhatsApp":"E-Mail")+" (keine zusätzliche Notiz)";
+const displayManualNote=g=>{const note=g.manual_note||"";return note===automaticManualNote("whatsapp")||note===automaticManualNote("email")?"":note;};
 function person(people,id){return people.find(x=>x.id===id||x.name===id)}
 function fullName(p){return p?.name||[p?.first,p?.last].filter(Boolean).join(" ")||""}
 function refereeSendEmail(g){
@@ -843,7 +845,7 @@ function mobileGameCard(g){
   const manual=mobileElement("button","",g.sent_manual_at?"Versandnotiz ändern":"Bereits versendet");
   manual.type="button";manual.onclick=()=>{
    selected=g;$("manual-date").value=g.sent_manual_at?String(g.sent_manual_at).slice(0,10):currentIso();
-   $("manual-method").value=g.sent_manual_method||"";$("manual-note").value=g.manual_note||"";$("manual-error").textContent="";$("manual").showModal();
+   $("manual-method").value=g.sent_manual_method||"";$("manual-note").value=displayManualNote(g);$("manual-error").textContent="";$("manual").showModal();
   };actions.append(manual);
   if(doc&&!g.sent_at&&!g.sent_manual_at){
    const recipient=refereeSendEmail(g);
@@ -985,7 +987,7 @@ function render(){
   const sendCell=document.createElement("td");const sent=!!(g.sent_at||g.sent_manual_at);
   const label=document.createElement("div");label.textContent=g.is_test?"Testspiel – Test-E-Mail möglich":sent?"✓ Versendet":reviewState(g)==="geprueft"?"✓ Geprüft – noch nicht versendet":g.received_at?"Bogen eingegangen – noch nicht geprüft":"Noch nicht versendet";label.className="small";sendCell.append(label);
   const manual=document.createElement("button");manual.type="button";manual.textContent=g.sent_manual_at?"Versandnotiz ändern":"Bereits versendet";manual.onclick=()=>{
-   selected=g;$("manual-date").value=g.sent_manual_at?String(g.sent_manual_at).slice(0,10):currentIso();$("manual-method").value=g.sent_manual_method||"";$("manual-note").value=g.manual_note||"";$("manual-error").textContent="";$("manual").showModal()
+   selected=g;$("manual-date").value=g.sent_manual_at?String(g.sent_manual_at).slice(0,10):currentIso();$("manual-method").value=g.sent_manual_method||"";$("manual-note").value=displayManualNote(g);$("manual-error").textContent="";$("manual").showModal()
   };sendCell.append(manual);
   if(doc&&!sent&&!g.is_test){
    const recipient=refereeSendEmail(g);
@@ -1095,7 +1097,7 @@ $("manual-form").onsubmit=async e=>{
  if(!date||!["whatsapp","email"].includes(method)){$("manual-error").textContent="Bitte Versanddatum und Versandweg auswählen.";return}
  const button=$("manual-form").querySelector('button[type="submit"]');button.disabled=true;
  try{
-  const updated=await updateGame(userId,selected.game_key,{sent_manual_at:date+"T12:00:00Z",sent_manual_method:method,manual_note:note});
+  const updated=await updateGame(userId,selected.game_key,{sent_manual_at:date+"T12:00:00Z",sent_manual_method:method,manual_note:note||automaticManualNote(method)});
   Object.assign(selected,updated);$("manual").close();render();status.textContent="Bereits erfolgter Versand per "+(method==="whatsapp"?"WhatsApp":"E-Mail")+" dokumentiert. Es wurde keine Nachricht versendet.";
  }catch(error){$("manual-error").textContent="Speichern fehlgeschlagen: "+error.message}
  finally{button.disabled=false}
