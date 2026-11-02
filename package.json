@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "nodemailer": "^7.0.10"
+    "imapflow": "2.9.1",
+    "mailparser": "3.12.4",
+    "nodemailer": "7.0.10",
+    "pdf-parse": "2.4.5"
   }
 }
