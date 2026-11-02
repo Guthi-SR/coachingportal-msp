@@ -22,7 +22,7 @@ export default async function handler(req,res){
   const token=(req.headers.authorization||"").match(/^Bearer (.+)$/)?.[1];
   if(!token)return json(res,401,{error:"Bitte anmelden."});
   const{user,profile}=await account(token);
-  const{gameKey,kind,subject,body,testMode=false,testRecipient="admin",testConfirmed=false}=req.body||{};
+  const{gameKey,kind,subject,body,testMode=false,testRecipient="admin",testConfirmed=false,recipientOverride=null,recipientOverrideConfirmed=false}=req.body||{};
   if(!["bogen_versendet","coach_erinnerung"].includes(kind)||typeof gameKey!=="string"||gameKey.length>100)return json(res,400,{error:"Ungültiger Versandauftrag."});
   if(typeof subject!=="string"||!subject.trim()||subject.length>200||typeof body!=="string"||!body.trim()||body.length>20000)return json(res,400,{error:"Betreff oder Nachricht ungültig."});
   const records=await supa("portal_games?owner_id=eq."+encodeURIComponent(user.id)+"&game_key=eq."+encodeURIComponent(gameKey)+"&select=*",token);
@@ -40,8 +40,16 @@ export default async function handler(req,res){
    if(mailValid(masterAddress))assignedRecipient=masterAddress;
   }
   const isTest=g.is_test===true;
-  const recipient=isTest&&testRecipient==="admin"?(profile.email||user.email):assignedRecipient;
-  if(!mailValid(recipient))return json(res,422,{error:"Beim zugeordneten Empfänger fehlt eine gültige E-Mail-Adresse in den Stammdaten."});
+  // A temporary PDF recipient is allowed only for the current, admin-authorized send.
+  // Never modify the referee's master profile or the game's stored email address.
+  if(recipientOverride!==null&&
+     (kind!=="bogen_versendet"||isTest||typeof recipientOverride!=="string"||
+      !mailValid(recipientOverride.trim())||recipientOverrideConfirmed!==true)){
+   return json(res,400,{error:"Die einmalige Empfängeradresse ist ungültig oder noch nicht bestätigt."});
+  }
+  const recipient=isTest&&testRecipient==="admin"?(profile.email||user.email):
+    recipientOverride!==null?recipientOverride.trim():assignedRecipient;
+  if(!mailValid(recipient))return json(res,422,{error:"Bitte eine gültige Empfänger-E-Mail-Adresse angeben."});
   if(!mailConfigured())return json(res,503,{error:"STRATO-Mailversand noch nicht eingerichtet. Bitte STRATO_SMTP_USER und STRATO_SMTP_PASSWORD in Vercel hinterlegen."});
   const attachments=[];
   if(kind==="bogen_versendet"){
