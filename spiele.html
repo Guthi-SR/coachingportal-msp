@@ -214,11 +214,19 @@ function templateForSend(kind){
   return Array.isArray(stored)?stored.find(x=>x?.id===id)||null:null;
  }catch{return null}
 }
+function reminderDeadline(){
+ const parts=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Berlin",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
+ const get=t=>Number(parts.find(p=>p.type===t).value);
+ const date=new Date(Date.UTC(get("year"),get("month")-1,get("day")+3,12));
+ return new Intl.DateTimeFormat("de-DE",{timeZone:"UTC",day:"2-digit",month:"2-digit",year:"numeric"}).format(date);
+}
 function resolveGamePlaceholders(value,g){
  const fields={
   Heimverein:g.home||"",
   Gastverein:g.away||"",
   Spieldatum:g.match_date?dateDE(g.match_date):"",
+  Abgabedatum:reminderDeadline(),
+  Abgabefrist:reminderDeadline(),
   Spielkennung:g.game_key||"",
   Schiedsrichter:g.referee_name||"",
   Schiedsrichter_Vorname:String(g.referee_name||"").split(" ")[0]||"",
@@ -226,7 +234,7 @@ function resolveGamePlaceholders(value,g){
   Coach_Vorname:g.coach_first_name||String(g.coach_name||"").split(" ")[0]||"",
   Vorname:String(g.referee_name||"").split(" ")[0]||""
  };
- return String(value||"").replace(/\[(Heimverein|Gastverein|Spieldatum|Spielkennung|Schiedsrichter|Schiedsrichter_Vorname|Coach|Coach_Vorname|Vorname)\]/g,(all,key)=>fields[key]??all);
+ return String(value||"").replace(/\[(Heimverein|Gastverein|Spieldatum|Abgabedatum|Abgabefrist|Spielkennung|Schiedsrichter|Schiedsrichter_Vorname|Coach|Coach_Vorname|Vorname)\]/g,(all,key)=>fields[key]??all);
 }
 function cell(row,value){const td=document.createElement("td");td.textContent=value||"–";row.append(td);return td}
 function protectedGame(g){return !!(g.pdf_id||g.received_at||docs.some(d=>d.game_key===g.game_key))}
