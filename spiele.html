@@ -106,6 +106,16 @@
 <header><h1>Coachingportal MSP</h1></header><div class="shell"><nav aria-label="Hauptmenü"><strong>Menü</strong><a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html" aria-current="page">Spiele</a><a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav>
 <main><section><div id="referee-return-wrap" hidden style="margin:0 0 12px"><a id="referee-return-link" href="/schiedsrichter.html" style="display:inline-flex;align-items:center;gap:7px;padding:9px 13px;border:1px solid #b9c9d8;border-radius:8px;background:#f4f8fc;text-decoration:none;font-weight:650">← Zurück zum Schiedsrichter</a></div><h2>Spiele und Bogenstatus</h2><p id="status" role="status">Spiele und Bögen werden geladen …</p>
 <div class="legend"><span><i class="dot green"></i>Grün: Bogen versendet</span><span><i class="dot yellow"></i>Gelb: Spiel in den nächsten 5 Tagen</span><span><i class="dot red"></i>Rot: 5 Tage nach Spiel noch kein Bogen eingegangen</span></div>
+<details id="mail-signature-settings" hidden class="card" style="margin:12px 0;padding:14px">
+ <summary style="font-weight:750;cursor:pointer">✉ Meine E-Mail-Signatur</summary>
+ <form id="mail-signature-form" style="margin-top:12px">
+  <p class="small">Diese Signatur erscheint automatisch unter neuen E-Mail-Entwürfen für Beobachtungsbögen und Coach-Erinnerungen. Du kannst den Entwurf vor dem Versand weiterhin bearbeiten.</p>
+  <label for="mail-signature-text">Persönliche Signatur</label>
+  <textarea id="mail-signature-text" rows="6" maxlength="2000" style="display:block;width:100%;max-width:680px;box-sizing:border-box" placeholder="Mit sportlichen Grüßen&#10;..."></textarea>
+  <div class="actions"><button type="submit" id="mail-signature-save" class="primary">Signatur speichern</button></div>
+  <p id="mail-signature-status" class="small" role="status" aria-live="polite"></p>
+ </form>
+</details>
 <div class="card" id="global-route-setting-card" style="margin:12px 0;padding:14px">
  <label id="global-route-consent-label" style="display:flex;gap:10px;align-items:flex-start;font-weight:650"><input id="global-route-consent" type="checkbox" style="width:20px;height:20px;flex:none"> Automatische Routenberechnung für alle meine Spiele erlauben</label>
  <p class="small" style="margin:7px 0 0">Diese zentrale Admin-Einstellung wird in Supabase gespeichert und gilt auf allen Geräten. Für die Routenberechnung werden Coach-Wohnadresse und bestätigte Spielstätte an die Kartendienste übertragen. Kilometer werden erst nach deiner Kontrolle gespeichert.</p>
@@ -170,11 +180,11 @@
 <dialog id="mail"><form method="dialog" id="mail-form"><h2 id="mail-head">E-Mail versenden</h2><label id="test-recipient-wrap" hidden>Testempfänger
 <select id="test-recipient-mode"><option value="admin">An mich selbst (Admin)</option><option value="assigned">An den zugeordneten Coach / Schiedsrichter</option></select>
 <small class="small">Nur die ausgewählte Adresse erhält die echte Test-E-Mail.</small></label>
-<label>Empfänger <input type="email" id="mail-recipient" maxlength="254" required readonly></label><div id="recipient-edit" hidden><p id="recipient-status" class="small" role="status">Du kannst die Adresse einmalig ändern. Die Schiedsrichter-Stammdaten bleiben unverändert.</p></div><label>Betreff <input id="mail-subject" required></label><label>Nachricht <textarea id="mail-body" required rows="12"></textarea></label><p class="small" id="attachment-info"></p><p class="small">Die persönliche Signatur wird später ergänzt. Vor dem Versand können Text und Betreff geändert werden.</p>
+<label>Empfänger <input type="email" id="mail-recipient" maxlength="254" required readonly></label><div id="recipient-edit" hidden><p id="recipient-status" class="small" role="status">Du kannst die Adresse einmalig ändern. Die Schiedsrichter-Stammdaten bleiben unverändert.</p></div><label>Betreff <input id="mail-subject" required></label><label>Nachricht <textarea id="mail-body" required rows="12"></textarea></label><p class="small" id="attachment-info"></p><p class="small">Die gespeicherte E-Mail-Signatur wird automatisch eingefügt. Text und Betreff kannst du vor dem Versand ändern. <button type="button" id="open-mail-signature" style="padding:3px 7px">Signatur bearbeiten</button></p>
 <label id="test-confirm-wrap" hidden style="display:flex;gap:10px;align-items:flex-start"><input id="test-confirm" type="checkbox" style="width:19px;height:19px;flex:none"> Ich bestätige den ausdrücklich gewünschten Versand dieser TEST-E-Mail an die angezeigte Empfängeradresse.</label><p id="mail-error" role="status"></p><div class="actions"><button type="button" id="cancel-mail">Abbrechen</button><button type="submit" id="mail-submit" class="primary">E-Mail jetzt senden</button></div></form></dialog>
 <script type="module">import {cloudPeople} from "/portal-people.js";
 import{sb,requirePermission,localGames,localPeople,syncGames,syncObservations,associateUniqueObservations,updateGame,updatePlanningStatus,gameColor,dateDE,reminderBody,sendBody,sendMail}from"/portal-workflow.js";
-const $=id=>document.getElementById(id),status=$("status");let userId="",userEmail="",isAdmin=false,savedRecipientEmail="",games=[],docs=[],jsonGameKeys=null,refs=[],coaches=[],selected=null,returningGame=null,mailKind="",gameFilter="all",refereeFilter="",coachFilter="",sortKey="date",sortDir="desc",routeAttempts=[];
+const $=id=>document.getElementById(id),status=$("status");let userId="",userEmail="",isAdmin=false,savedRecipientEmail="",emailSignature="",games=[],docs=[],jsonGameKeys=null,refs=[],coaches=[],selected=null,returningGame=null,mailKind="",gameFilter="all",refereeFilter="",coachFilter="",sortKey="date",sortDir="desc",routeAttempts=[];
 const currentIso=()=>{const t=new Date();return [t.getFullYear(),String(t.getMonth()+1).padStart(2,"0"),String(t.getDate()).padStart(2,"0")].join("-")};
 const automaticManualNote=method=>"Versandweg: "+(method==="whatsapp"?"WhatsApp":"E-Mail")+" (keine zusätzliche Notiz)";
 const displayManualNote=g=>{const note=g.manual_note||"";return note===automaticManualNote("whatsapp")||note===automaticManualNote("email")?"":note;};
@@ -1036,6 +1046,29 @@ function updateTestMailRecipient(){
  $("mail-error").textContent=$("mail-recipient").value?"":"Für die ausgewählte Empfängerart ist keine E-Mail-Adresse hinterlegt.";
 }
 $("test-recipient-mode").addEventListener("change",updateTestMailRecipient);
+$("mail-signature-form").addEventListener("submit",async event=>{
+ event.preventDefault();
+ if(!isAdmin||!userId){$("mail-signature-status").textContent="Nur für Administratoren verfügbar.";return}
+ const save=$("mail-signature-save"),signature=$("mail-signature-text").value.trim();
+ if(signature.length>2000){$("mail-signature-status").textContent="Die Signatur darf höchstens 2000 Zeichen enthalten.";return}
+ save.disabled=true;$("mail-signature-status").textContent="Signatur wird gespeichert …";
+ try{
+  const {data,error}=await sb.from("portal_profiles")
+   .update({email_signature:signature}).eq("user_id",userId).select("email_signature").single();
+  if(error)throw error;
+  emailSignature=data.email_signature||"";
+  $("mail-signature-status").textContent="Signatur gespeichert. Sie wird ab dem nächsten E-Mail-Entwurf automatisch eingefügt.";
+ }catch(e){$("mail-signature-status").textContent="Speichern fehlgeschlagen: "+e.message}
+ finally{save.disabled=false}
+});
+$("open-mail-signature").addEventListener("click",()=>{
+ $("mail").close();
+ const settings=$("mail-signature-settings");
+ if(settings.hidden)return;
+ settings.open=true;
+ settings.scrollIntoView({behavior:"smooth",block:"start"});
+ $("mail-signature-text").focus({preventScroll:true});
+});
 function openMail(g,kind){
  selected=g;mailKind=kind;
  const isRef=kind==="bogen_versendet";
@@ -1048,7 +1081,8 @@ function openMail(g,kind){
  $("recipient-status").textContent="Du kannst die Adresse für diesen Versand ändern. Sie wird nicht gespeichert.";
 
  $("mail-subject").value=isRef?"Beobachtungsbogen: "+g.home+" – "+g.away:"Erinnerung – Fehlender Beobachtungsbogen: "+g.home+" – "+g.away;
- $("mail-body").value=isRef?sendBody(g):g.is_test?"Dies ist ein Test der E-Mail-Funktion für das Testspiel "+g.home+" – "+g.away+".\n\n"+(isRef?"Test des Bogenversands an Schiedsrichter.":"Test einer E-Mail an den Coach.")+"\n\nKeine echte Einteilung oder offizielle Benachrichtigung.":isRef?sendBody(g):reminderBody(g);
+ const bodyText=isRef?sendBody(g):g.is_test?"Dies ist ein Test der E-Mail-Funktion für das Testspiel "+g.home+" – "+g.away+".\n\n"+(isRef?"Test des Bogenversands an Schiedsrichter.":"Test einer E-Mail an den Coach.")+"\n\nKeine echte Einteilung oder offizielle Benachrichtigung.":reminderBody(g);
+ $("mail-body").value=emailSignature?bodyText.trimEnd()+"\n\n"+emailSignature:bodyText;
  $("attachment-info").textContent=g.is_test?(isRef?(g.pdf_id?"Vorhandener PDF-Beobachtungsbogen wird als Test-Anhang versendet.":"Noch kein PDF hinterlegt: Testmail wird ohne PDF-Anhang versendet."):"Testmail ohne PDF-Anhang."):isRef?"Der zugeordnete PDF-Beobachtungsbogen wird automatisch angehängt.":"Erinnerung ohne PDF-Anhang.";
  $("test-recipient-wrap").hidden=!g.is_test;$("test-confirm-wrap").hidden=!g.is_test;
  $("test-recipient-wrap").style.display=g.is_test?"block":"none";
@@ -1110,7 +1144,15 @@ $("mail-form").onsubmit=async e=>{
  }catch(error){$("mail-error").textContent=error.message;button.disabled=false}
 };
 try{
- const{user,ownerId,profile}=await requirePermission("games_view");userId=ownerId;userEmail=user.email||"";isAdmin=profile?.role==="admin";await loadRouteConsent();refs=await cloudPeople(userId,"referee");coaches=await cloudPeople(userId,"coach");
+ const{user,ownerId,profile}=await requirePermission("games_view");userId=ownerId;userEmail=user.email||"";isAdmin=profile?.role==="admin";
+ if(isAdmin){
+  $("mail-signature-settings").hidden=false;
+  const {data:signatureSettings,error:signatureError}=await sb.from("portal_profiles")
+   .select("email_signature").eq("user_id",user.id).single();
+  if(signatureError){$("mail-signature-status").textContent="Signatur konnte nicht geladen werden: "+signatureError.message}
+  else {emailSignature=signatureSettings.email_signature||"";$("mail-signature-text").value=emailSignature}
+ }else $("open-mail-signature").hidden=true;
+ await loadRouteConsent();refs=await cloudPeople(userId,"referee");coaches=await cloudPeople(userId,"coach");
  const refFilter=$("referee-filter");for(const p of [...refs].sort((a,b)=>fullName(a).localeCompare(fullName(b),"de")))refFilter.add(new Option(fullName(p),p.id));
  const requestedReferee=new URLSearchParams(location.search).get("referee");
  if(requestedReferee&&refs.some(p=>String(p.id)===requestedReferee)){refereeFilter=requestedReferee;refFilter.value=requestedReferee;}
