@@ -178,6 +178,13 @@ const $=id=>document.getElementById(id),status=$("status");let userId="",userEma
 const currentIso=()=>{const t=new Date();return [t.getFullYear(),String(t.getMonth()+1).padStart(2,"0"),String(t.getDate()).padStart(2,"0")].join("-")};
 function person(people,id){return people.find(x=>x.id===id||x.name===id)}
 function fullName(p){return p?.name||[p?.first,p?.last].filter(Boolean).join(" ")||""}
+function refereeSendEmail(g){
+ const direct=String(g.referee_email||"").trim();
+ if(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(direct))return direct;
+ const ref=person(refs,g.referee_id);
+ const master=String(ref?.mail||ref?.email||"").trim();
+ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(master)?master:"";
+}
 function cell(row,value){const td=document.createElement("td");td.textContent=value||"–";row.append(td);return td}
 function protectedGame(g){return !!(g.pdf_id||g.received_at||docs.some(d=>d.game_key===g.game_key))}
 function protectedReason(g,description){
@@ -831,8 +838,9 @@ function mobileGameCard(g){
    $("manual-note").value=g.manual_note||"";$("manual-error").textContent="";$("manual").showModal();
   };actions.append(manual);
   if(doc&&!g.sent_at&&!g.sent_manual_at){
-   const send=mobileElement("button","primary","Bogen versenden");send.type="button";send.disabled=!g.referee_email;
-   send.title=g.referee_email?"Bogen an Schiedsrichter senden":"E-Mail-Adresse beim Schiedsrichter fehlt";
+   const recipient=refereeSendEmail(g);
+   const send=mobileElement("button","primary",recipient?"Bogen versenden":"E-Mail fehlt");send.type="button";send.disabled=!recipient;
+   send.title=recipient?"Bogen an hinterlegte E-Mail-Adresse senden":"E-Mail-Adresse in der Schiedsrichterverwaltung ergänzen";
    send.onclick=()=>openMail(g,"bogen_versendet");actions.append(send);
   }
   if(color==="red"){
@@ -972,9 +980,11 @@ function render(){
    selected=g;$("manual-date").value=g.sent_manual_at?String(g.sent_manual_at).slice(0,10):currentIso();$("manual-note").value=g.manual_note||"";$("manual-error").textContent="";$("manual").showModal()
   };sendCell.append(manual);
   if(doc&&!sent&&!g.is_test){
-   const send=document.createElement("button");send.type="button";send.className="primary";send.textContent="Bogen versenden";send.disabled=!g.referee_email;
-   send.title=g.referee_email?"Bogen per E-Mail versenden":"E-Mail-Adresse beim Schiedsrichter fehlt";
-   send.onclick=()=>openMail(g,"bogen_versendet");sendCell.append(send)
+   const recipient=refereeSendEmail(g);
+   const send=document.createElement("button");send.type="button";send.className="primary";send.textContent=recipient?"Bogen versenden":"E-Mail fehlt";send.disabled=!recipient;
+   send.title=recipient?"Bogen an hinterlegte E-Mail-Adresse senden":"E-Mail-Adresse in der Schiedsrichterverwaltung ergänzen";
+   send.onclick=()=>openMail(g,"bogen_versendet");sendCell.append(send);
+   if(!recipient){const info=document.createElement("small");info.textContent="Schiedsrichter-E-Mail in den Stammdaten ergänzen.";sendCell.append(info)}
   }
   if(cls==="red"&&!g.is_test){
    const remind=document.createElement("button");remind.type="button";remind.textContent="Erinnerung versenden";
@@ -1011,7 +1021,7 @@ function openMail(g,kind){
  selected=g;mailKind=kind;
  const isRef=kind==="bogen_versendet";
  $("mail-head").textContent=isRef?"Beobachtungsbogen an Schiedsrichter versenden":g.is_test?"TEST – Coach-Mail":"Erinnerung an Coach versenden";
- $("mail-recipient").value=(isRef?g.referee_email:g.coach_email)||"";
+ $("mail-recipient").value=(isRef?refereeSendEmail(g):g.coach_email)||"";
  $("mail-subject").value=isRef?"Beobachtungsbogen: "+g.home+" – "+g.away:"Erinnerung – Fehlender Beobachtungsbogen: "+g.home+" – "+g.away;
  $("mail-body").value=isRef?sendBody(g):g.is_test?"Dies ist ein Test der E-Mail-Funktion für das Testspiel "+g.home+" – "+g.away+".\n\n"+(isRef?"Test des Bogenversands an Schiedsrichter.":"Test einer E-Mail an den Coach.")+"\n\nKeine echte Einteilung oder offizielle Benachrichtigung.":isRef?sendBody(g):reminderBody(g);
  $("attachment-info").textContent=g.is_test?(isRef?(g.pdf_id?"Vorhandener PDF-Beobachtungsbogen wird als Test-Anhang versendet.":"Noch kein PDF hinterlegt: Testmail wird ohne PDF-Anhang versendet."):"Testmail ohne PDF-Anhang."):isRef?"Der zugeordnete PDF-Beobachtungsbogen wird automatisch angehängt.":"Erinnerung ohne PDF-Anhang.";
