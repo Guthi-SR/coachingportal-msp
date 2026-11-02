@@ -30,7 +30,15 @@ export default async function handler(req,res){
   if(g.is_test!==true&&testMode)return json(res,409,{error:"Testversand ist nur für Testspiele erlaubt."});
   if(g.is_test===true&&(!testMode||testConfirmed!==true))return json(res,409,{error:"Testversand muss ausdrücklich bestätigt werden."});
   if(g.is_test===true&&!["admin","assigned"].includes(testRecipient))return json(res,400,{error:"Ungültiger Testempfänger."});
-  const assignedRecipient=kind==="bogen_versendet"?g.referee_email:g.coach_email;
+  // Older games can lack the referee address even when the assigned referee's master record contains it.
+  // Read only the explicitly linked referee's entry for the same owner; never guess by name.
+  let assignedRecipient=kind==="bogen_versendet"?g.referee_email:g.coach_email;
+  if(kind==="bogen_versendet"&&!mailValid(assignedRecipient)&&g.referee_id){
+   const people=await supa("portal_people?owner_id=eq."+encodeURIComponent(user.id)+"&kind=eq.referee&person_id=eq."+encodeURIComponent(g.referee_id)+"&select=details&limit=1",token);
+   const details=people[0]?.details||{};
+   const masterAddress=details.mail||details.email;
+   if(mailValid(masterAddress))assignedRecipient=masterAddress;
+  }
   const isTest=g.is_test===true;
   const recipient=isTest&&testRecipient==="admin"?(profile.email||user.email):assignedRecipient;
   if(!mailValid(recipient))return json(res,422,{error:"Beim zugeordneten Empfänger fehlt eine gültige E-Mail-Adresse in den Stammdaten."});
