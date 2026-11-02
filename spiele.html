@@ -122,7 +122,7 @@
  </select>
  <div id="venue-route-issues" style="margin-top:12px"></div>
 </details>
-<details class="game-filter-details"><summary>Filter anzeigen / einklappen</summary><div class="game-filters" role="group" aria-label="Spiele filtern"><button type="button" class="active" data-game-filter="all" aria-pressed="true">Alle Spiele</button><button type="button" data-game-filter="future" aria-pressed="false">Zukünftige Spiele</button><button type="button" data-game-filter="without" aria-pressed="false">Spiele ohne Bogen</button></div><div class="game-sort"><label for="referee-filter">Schiedsrichter filtern:</label><select id="referee-filter"><option value="">Alle Schiedsrichter</option></select><label for="coach-filter">Coach / Beobachter filtern:</label><select id="coach-filter"><option value="">Alle Coaches / Beobachter</option></select><label for="game-sort-field">Sortieren nach:</label><select id="game-sort-field"><option value="date">Datum</option><option value="referee">Schiedsrichter</option><option value="coach">Coach / Beobachter</option></select><button type="button" id="game-sort-direction" aria-label="Sortierreihenfolge ändern">Neueste zuerst ↓</button></div></details><p id="filter-count" class="small"></p>
+<details class="game-filter-details"><summary>Filter anzeigen / einklappen</summary><div class="game-filters" role="group" aria-label="Spiele filtern"><button type="button" class="active" data-game-filter="all" aria-pressed="true">Alle Spiele</button><button type="button" data-game-filter="future" aria-pressed="false">Zukünftige Spiele</button><button type="button" data-game-filter="without" aria-pressed="false">Spiele ohne Bogen</button><button type="button" data-game-filter="missing" aria-pressed="false">Eingang offen (vergangene Spiele)</button></div><div class="game-sort"><label for="referee-filter">Schiedsrichter filtern:</label><select id="referee-filter"><option value="">Alle Schiedsrichter</option></select><label for="coach-filter">Coach / Beobachter filtern:</label><select id="coach-filter"><option value="">Alle Coaches / Beobachter</option></select><label for="game-sort-field">Sortieren nach:</label><select id="game-sort-field"><option value="date">Datum</option><option value="referee">Schiedsrichter</option><option value="coach">Coach / Beobachter</option></select><button type="button" id="game-sort-direction" aria-label="Sortierreihenfolge ändern">Neueste zuerst ↓</button></div></details><p id="filter-count" class="small"></p>
 <p class="mobile-list-hint">Tippe bei einem Spiel auf „Details &amp; Bearbeiten“, um weitere Angaben und Aktionen zu öffnen.</p><div id="mobile-game-list" class="mobile-game-list" aria-label="Spiele als Karten"></div>
 <div class="scroll"><table><thead><tr><th>Datum</th><th>Uhrzeit</th><th>Spielkennung</th><th>Heim</th><th>Gast</th><th>Liga</th><th>Einsatzart</th><th>Spielstätte</th><th>Kilometer</th><th>Einteilung</th><th>Schiedsrichter</th><th>Coach / Beobachter</th><th>Bogen</th><th>JSON</th><th>Bearbeitung</th><th>Versand</th><th>Aktion</th></tr></thead><tbody id="rows"></tbody></table></div>
 <p><a href="/spiele-anlegen.html">Neues Spiel anlegen</a> · <a href="/beobachtungsboegen.html">Alle Beobachtungsbögen</a></p>
@@ -927,7 +927,7 @@ function render(){
  const tbody=$("rows");tbody.replaceChildren();const mobileList=$("mobile-game-list");mobileList.replaceChildren();
  const today=currentIso();
  const routeFilter=$("venue-route-filter").value;
- const visible=games.filter(g=>(!refereeFilter||g.referee_id===refereeFilter)&&(!coachFilter||g.coach_id===coachFilter)&&(gameFilter==="future"?g.match_date>=today:gameFilter==="without"?!hasBogen(g):true)&&(routeFilter==="all"||routeStatus(g)===routeFilter)).sort(compareGames);
+ const visible=games.filter(g=>(!refereeFilter||g.referee_id===refereeFilter)&&(!coachFilter||g.coach_id===coachFilter)&&(gameFilter==="future"?g.match_date>=today:gameFilter==="without"?!hasBogen(g):gameFilter==="missing"?!g.is_test&&g.match_date<today&&!g.received_at:true)&&(routeFilter==="all"||routeStatus(g)===routeFilter)).sort(compareGames);
  $("filter-count").textContent=visible.length+" von "+games.length+" Spielen angezeigt.";
  for(const g of visible){
   const row=document.createElement("tr");const cls=g.is_test?"":gameColor(g);if(cls)row.className=cls;
@@ -1025,7 +1025,12 @@ function openMail(g,kind){
  $("mail").showModal()
 }
 $("venue-route-filter").addEventListener("change",()=>{renderRouteOverview();render()});
-document.querySelectorAll("[data-game-filter]").forEach(btn=>btn.addEventListener("click",()=>{gameFilter=btn.dataset.gameFilter;document.querySelectorAll("[data-game-filter]").forEach(b=>{const active=b===btn;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active))});render()}));
+function selectGameFilter(filter){
+ gameFilter=["all","future","without","missing"].includes(filter)?filter:"all";
+ document.querySelectorAll("[data-game-filter]").forEach(b=>{const active=b.dataset.gameFilter===gameFilter;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active))});
+}
+document.querySelectorAll("[data-game-filter]").forEach(btn=>btn.addEventListener("click",()=>{selectGameFilter(btn.dataset.gameFilter);render()}));
+selectGameFilter(new URLSearchParams(location.search).get("filter"));
 $("game-sort-field").addEventListener("change",()=>{sortKey=$("game-sort-field").value;sortDir=sortKey==="date"?"desc":"asc";updateSortDirectionLabel();render()});
 $("game-sort-direction").addEventListener("click",()=>{sortDir=sortDir==="asc"?"desc":"asc";updateSortDirectionLabel();render()});
 updateSortDirectionLabel();
