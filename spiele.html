@@ -1071,7 +1071,7 @@ function render(){
   del.type="button";del.textContent="Spiel löschen";
   del.setAttribute("aria-label","Spiel "+g.game_key+" löschen");
   del.onclick=()=>deleteGame(g,del);
-  const venueBtn=document.createElement("button");venueBtn.type="button";venueBtn.textContent="Spielstätte prüfen";venueBtn.onclick=()=>openVenueCheck(g);const editBtn=document.createElement("button");editBtn.type="button";editBtn.textContent="Spiel bearbeiten";editBtn.onclick=()=>editGame(g);actionCell.append(venueBtn,editBtn,del);row.append(actionCell);tbody.append(row);mobileList.append(mobileGameCard(g))
+  const venueBtn=document.createElement("button");venueBtn.type="button";venueBtn.textContent="Spielstätte prüfen";venueBtn.onclick=()=>openVenueCheck(g);const editBtn=document.createElement("button");editBtn.type="button";editBtn.textContent="Spiel bearbeiten";editBtn.onclick=()=>editGame(g);const actionDetails=document.createElement("details");const actionSummary=document.createElement("summary");actionSummary.textContent="Aktionen anzeigen";actionSummary.style.cursor="pointer";actionSummary.style.fontWeight="600";actionDetails.append(actionSummary);const actionButtons=document.createElement("div");actionButtons.style.display="grid";actionButtons.style.gap="6px";actionButtons.style.marginTop="8px";actionButtons.append(venueBtn,editBtn,del);actionDetails.append(actionButtons);actionCell.append(actionDetails);row.append(actionCell);tbody.append(row);mobileList.append(mobileGameCard(g))
  }
  if(!visible.length)mobileList.append(mobileElement("p","mobile-card-empty","Keine Spiele für diesen Filter gefunden."));
  status.textContent=games.length?games.length+" Spiel(e) vorhanden.":"Noch keine Spiele vorhanden.";
