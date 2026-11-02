@@ -90,7 +90,7 @@ export async function localPdf(id){
   req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
  })}finally{db.close()}
 }
-export async function syncObservations(ownerId){
+export async function syncObservations(ownerId,preferredUpload=null){
  const records=observationAssignments(ownerId);
  const {data:existing,error}=await sb.from("portal_observations").select("*").eq("owner_id",ownerId);
  if(error)throw error;
@@ -100,19 +100,42 @@ export async function syncObservations(ownerId){
  const blocked=new Set((deleted||[]).map(x=>x.document_id));
  for(const o of records){
   if(!o?.id||synced.has(o.id)||blocked.has(o.id))continue;
-  const blob=await localPdf(o.id);if(!(blob instanceof Blob))continue;
+  // iOS Safari can return a locally stored File without its bytes.
+  // Use the original selected file for the current upload.
+  const current=preferredUpload?.id===o.id;
+  let bytes;
+  try{
+   const source=current?preferredUpload.file:await localPdf(o.id);
+   if(!(source instanceof Blob)||!source.size)throw Error("PDF-Datei ist leer.");
+   bytes=await source.arrayBuffer();
+   if(!bytes.byteLength)throw Error("PDF-Datei ist leer.");
+  }catch(e){
+   if(current)throw Error("PDF konnte nicht gelesen werden: "+e.message);
+   console.warn("PDF konnte nicht aus dem lokalen Speicher gelesen werden:",e.message);continue;
+  }
   const path=ownerId+"/"+o.id+".pdf";
-  const uploaded=await sb.storage.from(B).upload(path,blob,{contentType:"application/pdf",upsert:false});
-  if(uploaded.error&&!/already exists|duplicate/i.test(uploaded.error.message||"")){console.warn("PDF Upload:",uploaded.error.message);continue}
+  const uploadBytes=new Blob([bytes],{type:"application/pdf"});
+  const uploaded=await sb.storage.from(B).upload(path,uploadBytes,{contentType:"application/pdf",upsert:false});
+  if(uploaded.error&&!/already exists|duplicate/i.test(uploaded.error.message||"")){
+   if(current)throw Error("Online-Upload fehlgeschlagen: "+uploaded.error.message);
+   console.warn("PDF Upload:",uploaded.error.message);continue;
+  }
   const{error:dbError}=await sb.from("portal_observations").upsert({
    owner_id:ownerId,document_id:o.id,game_key:o.gameKey||null,
    referee_id:o.referee||null,coach_id:o.coach||null,
    file_name:o.fileName||"Beobachtungsbogen.pdf",storage_path:path
   },{onConflict:"owner_id,document_id"});
-  if(dbError){console.warn("PDF Metadaten:",dbError.message);continue}
+  if(dbError){
+   if(current)throw Error("PDF konnte nicht in der Datenbank gespeichert werden: "+dbError.message);
+   console.warn("PDF Metadaten:",dbError.message);continue;
+  }
  }
  const {data:all,error:err}=await sb.from("portal_observations").select("*").eq("owner_id",ownerId).order("created_at",{ascending:false});
- if(err)throw err;return all||[];
+ if(err)throw err;
+ if(preferredUpload?.id&&!(all||[]).some(d=>d.document_id===preferredUpload.id)){
+  throw Error("PDF nicht im Online-Speicher gefunden. Bitte die Datei erneut auswählen.");
+ }
+ return all||[];
 }
 export function matchingGame(game,observation){
  return !!game&&!!observation&&String(game.referee_id||"")===String(observation.referee_id||"")&&String(game.coach_id||"")===String(observation.coach_id||"");
