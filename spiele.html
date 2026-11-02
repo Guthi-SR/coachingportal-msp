@@ -170,7 +170,7 @@
 <dialog id="mail"><form method="dialog" id="mail-form"><h2 id="mail-head">E-Mail versenden</h2><label id="test-recipient-wrap" hidden>Testempfänger
 <select id="test-recipient-mode"><option value="admin">An mich selbst (Admin)</option><option value="assigned">An den zugeordneten Coach / Schiedsrichter</option></select>
 <small class="small">Nur die ausgewählte Adresse erhält die echte Test-E-Mail.</small></label>
-<label>Empfänger <input type="email" id="mail-recipient" maxlength="254" required readonly></label><div id="recipient-edit" hidden><button id="recipient-save" type="button">E-Mail dauerhaft im Schiedsrichterprofil speichern</button><p id="recipient-status" class="small" role="status"></p></div><label>Betreff <input id="mail-subject" required></label><label>Nachricht <textarea id="mail-body" required rows="12"></textarea></label><p class="small" id="attachment-info"></p><p class="small">Die persönliche Signatur wird später ergänzt. Vor dem Versand können Text und Betreff geändert werden.</p>
+<label>Empfänger <input type="email" id="mail-recipient" maxlength="254" required readonly></label><div id="recipient-edit" hidden><p id="recipient-status" class="small" role="status">Du kannst die Adresse einmalig ändern. Die Schiedsrichter-Stammdaten bleiben unverändert.</p></div><label>Betreff <input id="mail-subject" required></label><label>Nachricht <textarea id="mail-body" required rows="12"></textarea></label><p class="small" id="attachment-info"></p><p class="small">Die persönliche Signatur wird später ergänzt. Vor dem Versand können Text und Betreff geändert werden.</p>
 <label id="test-confirm-wrap" hidden style="display:flex;gap:10px;align-items:flex-start"><input id="test-confirm" type="checkbox" style="width:19px;height:19px;flex:none"> Ich bestätige den ausdrücklich gewünschten Versand dieser TEST-E-Mail an die angezeigte Empfängeradresse.</label><p id="mail-error" role="status"></p><div class="actions"><button type="button" id="cancel-mail">Abbrechen</button><button type="submit" id="mail-submit" class="primary">E-Mail jetzt senden</button></div></form></dialog>
 <script type="module">import {cloudPeople} from "/portal-people.js";
 import{sb,requirePermission,localGames,localPeople,syncGames,syncObservations,associateUniqueObservations,updateGame,updatePlanningStatus,gameColor,dateDE,reminderBody,sendBody,sendMail}from"/portal-workflow.js";
@@ -803,9 +803,9 @@ function mobileGameCard(g){
  }else{bogenBox.append(mobileElement("strong","","Noch kein PDF"))}
  if(doc&&!g.is_test&&!g.sent_at&&!g.sent_manual_at){
   const recipient=refereeSendEmail(g);
-  const send=mobileElement("button","primary",recipient?"Bogen versenden":"E-Mail fehlt");
-  send.type="button";send.disabled=!recipient;
-  send.title=recipient?"PDF-Versand vorbereiten":"Bitte Schiedsrichter-E-Mail in den Stammdaten ergänzen";
+  const send=mobileElement("button","primary",(recipient||isAdmin)?"Bogen versenden":"E-Mail fehlt");
+  send.type="button";send.disabled=!recipient&&!isAdmin;
+  send.title=recipient?"PDF-Versand vorbereiten":isAdmin?"Empfängeradresse für diesen Versand eingeben":"Bitte Schiedsrichter-E-Mail in den Stammdaten ergänzen";
   send.onclick=()=>openMail(g,"bogen_versendet");
   bogenBox.append(send);
  }
@@ -991,10 +991,10 @@ function render(){
   };sendCell.append(manual);
   if(doc&&!sent&&!g.is_test){
    const recipient=refereeSendEmail(g);
-   const send=document.createElement("button");send.type="button";send.className="primary";send.textContent=recipient?"Bogen versenden":"E-Mail fehlt";send.disabled=!recipient;
-   send.title=recipient?"Bogen an hinterlegte E-Mail-Adresse senden":"E-Mail-Adresse in der Schiedsrichterverwaltung ergänzen";
+   const send=document.createElement("button");send.type="button";send.className="primary";send.textContent=(recipient||isAdmin)?"Bogen versenden":"E-Mail fehlt";send.disabled=!recipient&&!isAdmin;
+   send.title=recipient?"Bogen an hinterlegte E-Mail-Adresse senden":isAdmin?"Empfängeradresse für diesen Versand eingeben":"E-Mail-Adresse in der Schiedsrichterverwaltung ergänzen";
    send.onclick=()=>openMail(g,"bogen_versendet");sendCell.append(send);
-   if(!recipient){const info=document.createElement("small");info.textContent="Schiedsrichter-E-Mail in den Stammdaten ergänzen.";sendCell.append(info)}
+   if(!recipient){const info=document.createElement("small");info.textContent=isAdmin?"Empfängeradresse im Versandfenster eingeben.":"Schiedsrichter-E-Mail in den Stammdaten ergänzen.";sendCell.append(info)}
   }
   if(cls==="red"&&!g.is_test){
    const remind=document.createElement("button");remind.type="button";remind.textContent="Erinnerung versenden";
@@ -1021,29 +1021,11 @@ function render(){
 $("mail-recipient").addEventListener("input",()=>{
  if($("recipient-edit").hidden)return;
  const changed=$("mail-recipient").value.trim()!==savedRecipientEmail;
- $("recipient-status").textContent=changed?"Adresse geändert – bitte dauerhaft speichern, bevor du versendest.":"Empfängeradresse ist gespeichert.";
- $("mail-submit").disabled=changed;
+ $("recipient-status").textContent=changed?
+  "Einmaliger Empfänger für diesen Bogen. Die Adresse wird nicht gespeichert; vor dem Versand erfolgt eine Bestätigung.":
+  "Hinterlegte Adresse. Du kannst sie nur für diesen Versand überschreiben.";
+ $("mail-submit").disabled=false;
 });
-$("recipient-save").onclick=async()=>{
- const g=selected, email=$("mail-recipient").value.trim(),btn=$("recipient-save");
- if(!isAdmin||!g?.referee_id||g.is_test||mailKind!=="bogen_versendet"){ $("recipient-status").textContent="Schiedsrichterzuordnung oder Berechtigung fehlt.";return; }
- if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254){$("recipient-status").textContent="Bitte gültige E-Mail-Adresse eingeben.";return;}
- if(!confirm("Diese Empfängeradresse dauerhaft im Schiedsrichterprofil speichern und künftig für alle seine Spiele verwenden?"))return;
- btn.disabled=true;$("recipient-status").textContent="Speichern …";
- try{
-  const base=sb.from("portal_people");
-  const {data,error}=await base.select("details").eq("owner_id",userId).eq("kind","referee").eq("person_id",g.referee_id).single();
-  if(error)throw error;
-  const details={...(data.details||{}),mail:email};
-  const saved=await sb.from("portal_people").update({details,updated_at:new Date().toISOString()}).eq("owner_id",userId).eq("kind","referee").eq("person_id",g.referee_id).select("person_id").single();
-  if(saved.error)throw saved.error;
-  const record=person(refs,g.referee_id);if(record)record.mail=email;
-  savedRecipientEmail=email;
-  $("mail-submit").disabled=false;
-  $("recipient-status").textContent="Dauerhaft gespeichert. Du kannst jetzt versenden.";
- }catch(e){$("recipient-status").textContent="Speichern fehlgeschlagen: "+e.message;}
- finally{btn.disabled=false;}
-};
 function updateTestMailRecipient(){
  const g=selected;if(!g?.is_test)return;
  const assigned=mailKind==="bogen_versendet"?g.referee_email:g.coach_email;
@@ -1060,10 +1042,10 @@ function openMail(g,kind){
  $("mail-head").textContent=isRef?"Beobachtungsbogen an Schiedsrichter versenden":g.is_test?"TEST – Coach-Mail":"Erinnerung an Coach versenden";
  $("mail-recipient").value=(isRef?refereeSendEmail(g):g.coach_email)||"";
  savedRecipientEmail=$("mail-recipient").value.trim();
- const editable=isAdmin&&isRef&&!g.is_test&&!!g.referee_id;
+ const editable=isAdmin&&isRef&&!g.is_test;
  $("mail-recipient").readOnly=!editable;
  $("recipient-edit").hidden=!editable;
- $("recipient-status").textContent="Eine geänderte Adresse bitte vor dem Versand dauerhaft speichern.";
+ $("recipient-status").textContent="Du kannst die Adresse für diesen Versand ändern. Sie wird nicht gespeichert.";
 
  $("mail-subject").value=isRef?"Beobachtungsbogen: "+g.home+" – "+g.away:"Erinnerung – Fehlender Beobachtungsbogen: "+g.home+" – "+g.away;
  $("mail-body").value=isRef?sendBody(g):g.is_test?"Dies ist ein Test der E-Mail-Funktion für das Testspiel "+g.home+" – "+g.away+".\n\n"+(isRef?"Test des Bogenversands an Schiedsrichter.":"Test einer E-Mail an den Coach.")+"\n\nKeine echte Einteilung oder offizielle Benachrichtigung.":isRef?sendBody(g):reminderBody(g);
@@ -1103,15 +1085,29 @@ $("manual-form").onsubmit=async e=>{
  finally{button.disabled=false}
 };
 $("mail-form").onsubmit=async e=>{
- e.preventDefault();if(!selected)return;const button=$("mail-submit");button.disabled=true;$("mail-error").textContent="E-Mail wird versendet …";
- if(selected.is_test&&!$("test-confirm").checked){$("mail-error").textContent="Bitte bestätige ausdrücklich den Testversand.";button.disabled=false;return}
- if(selected.is_test&&!$("mail-recipient").value){$("mail-error").textContent="Für den ausgewählten Testempfänger fehlt die E-Mail-Adresse.";button.disabled=false;return}
- if(!selected.is_test&&mailKind==="bogen_versendet"&&$("mail-recipient").value.trim()!==savedRecipientEmail){$("mail-error").textContent="Bitte die neue Empfängeradresse zuerst dauerhaft speichern.";button.disabled=false;return}
- try{await sendMail(selected.game_key,mailKind,$("mail-subject").value.trim(),$("mail-body").value.trim(),selected.is_test?
-   {testMode:true,testRecipient:$("test-recipient-mode").value,testConfirmed:$("test-confirm").checked}:{});
-
-  $("mail").close();games=await syncGames(userId);render();status.textContent=selected.is_test?"TEST-E-Mail erfolgreich versendet. Der offizielle Spielstatus bleibt unverändert.":"E-Mail erfolgreich versendet und protokolliert."}
- catch(error){$("mail-error").textContent=error.message;button.disabled=false}
+ e.preventDefault();if(!selected)return;
+ const button=$("mail-submit");
+ const email=$("mail-recipient").value.trim();
+ const oneTimeOverride=!selected.is_test&&mailKind==="bogen_versendet"&&email!==savedRecipientEmail;
+ if(selected.is_test&&!$("test-confirm").checked){$("mail-error").textContent="Bitte bestätige ausdrücklich den Testversand.";return}
+ if(selected.is_test&&!email){$("mail-error").textContent="Für den ausgewählten Testempfänger fehlt die E-Mail-Adresse.";return}
+ if(oneTimeOverride){
+  if(!isAdmin||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||email.length>254){
+   $("mail-error").textContent="Bitte eine gültige Empfängeradresse eingeben.";return;
+  }
+  const yes=confirm("Beobachtungsbogen wirklich an "+email+" senden? Diese Adresse gilt nur für diese E-Mail und wird NICHT im Schiedsrichterprofil gespeichert.");
+  if(!yes){$("mail-error").textContent="Versand abgebrochen. Es wurde keine E-Mail gesendet.";return}
+ }
+ button.disabled=true;$("mail-error").textContent="E-Mail wird versendet …";
+ try{
+  const options=selected.is_test?
+   {testMode:true,testRecipient:$("test-recipient-mode").value,testConfirmed:$("test-confirm").checked}:
+   oneTimeOverride?{recipientOverride:email,recipientOverrideConfirmed:true}:{};
+  await sendMail(selected.game_key,mailKind,$("mail-subject").value.trim(),$("mail-body").value.trim(),options);
+  $("mail").close();games=await syncGames(userId);render();
+  status.textContent=selected.is_test?"TEST-E-Mail erfolgreich versendet. Der offizielle Spielstatus bleibt unverändert.":oneTimeOverride?
+   "E-Mail an "+email+" versendet. Die Schiedsrichter-Stammdaten wurden nicht geändert.":"E-Mail erfolgreich versendet und protokolliert.";
+ }catch(error){$("mail-error").textContent=error.message;button.disabled=false}
 };
 try{
  const{user,ownerId,profile}=await requirePermission("games_view");userId=ownerId;userEmail=user.email||"";isAdmin=profile?.role==="admin";await loadRouteConsent();refs=await cloudPeople(userId,"referee");coaches=await cloudPeople(userId,"coach");
