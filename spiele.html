@@ -184,7 +184,7 @@ function dispatchHistory(g){
  if(!entries.length&&g.sent_at)entries.push({at:g.sent_at,method:"Portal-E-Mail",to:g.referee_email||"Nicht dokumentiert",note:"Versandstatus gespeichert"});
  const details=document.createElement("details");details.style.marginTop="8px";
  const summary=document.createElement("summary");summary.textContent="Versandhistorie"+(entries.length?" ("+entries.length+")":"");summary.style.cursor="pointer";details.append(summary);
- entries.sort((a,b)=>String(b.at||"").localeCompare(String(a.at||""));
+ entries.sort((a,b)=>String(b.at||"").localeCompare(String(a.at||"")));
  for(const item of entries){const line=document.createElement("p");line.style.whiteSpace="pre-line";line.style.fontSize="13px";line.textContent=new Date(item.at).toLocaleString("de-DE",{timeZone:"Europe/Berlin"})+" · "+item.method+"\nEmpfänger: "+item.to+"\n"+item.note;details.append(line)}
  if(!entries.length){const p=document.createElement("p");p.textContent="Noch kein Versand dokumentiert.";details.append(p)}
  return details;
