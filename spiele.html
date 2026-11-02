@@ -105,7 +105,7 @@
 </style></head><body>
 <header><h1>Coachingportal MSP</h1></header><div class="shell"><nav aria-label="Hauptmenü"><strong>Menü</strong><a href="/">Startseite</a><a href="/spiele-anlegen.html">Spiele anlegen</a><a href="/spiele.html" aria-current="page">Spiele</a><a href="/beobachtungsbogen-erfassen.html">Beobachtungsbogen erfassen</a><a href="/verwaltung.html">Schiedsrichterverwaltung</a><a href="/schiedsrichter.html">Schiedsrichter</a><a href="/coach-beobachter-verwaltung.html">Coach-Beobachter-Verwaltung</a><a href="/coach-beobachter.html">Coach-Beobachter</a></nav>
 <main><section><div id="referee-return-wrap" hidden style="margin:0 0 12px"><a id="referee-return-link" href="/schiedsrichter.html" style="display:inline-flex;align-items:center;gap:7px;padding:9px 13px;border:1px solid #b9c9d8;border-radius:8px;background:#f4f8fc;text-decoration:none;font-weight:650">← Zurück zum Schiedsrichter</a></div><h2>Spiele und Bogenstatus</h2><p id="status" role="status">Spiele und Bögen werden geladen …</p>
-<div class="legend"><span><i class="dot green"></i>Grün: Bogen versendet</span><span><i class="dot yellow"></i>Gelb: Spiel in den nächsten 5 Tagen</span><span><i class="dot red"></i>Rot: 5 Tage nach Spiel noch kein Bogen eingegangen</span></div>
+<div class="legend"><span><i class="dot green"></i>Grün: Bogen versendet</span><span><i class="dot yellow"></i>Gelb: Spiel in den nächsten 5 Tagen</span><span><i class="dot red"></i>Rot: 3 Tage nach Spiel noch kein Bogen eingegangen</span></div>
 <div class="card" id="global-route-setting-card" style="margin:12px 0;padding:14px">
  <label id="global-route-consent-label" style="display:flex;gap:10px;align-items:flex-start;font-weight:650"><input id="global-route-consent" type="checkbox" style="width:20px;height:20px;flex:none"> Automatische Routenberechnung für alle meine Spiele erlauben</label>
  <p class="small" style="margin:7px 0 0">Diese zentrale Admin-Einstellung wird in Supabase gespeichert und gilt auf allen Geräten. Für die Routenberechnung werden Coach-Wohnadresse und bestätigte Spielstätte an die Kartendienste übertragen. Kilometer werden erst nach deiner Kontrolle gespeichert.</p>
@@ -720,7 +720,7 @@ function reviewSelect(g){
  return select;
 }
 function canRemindCoach(g){
- return !g.is_test&&!!g.coach_id&&!!g.match_date&&g.match_date<currentIso()
+ return !g.is_test&&!!g.coach_id&&gameColor(g)==="red"&&!!g.match_date
   &&!g.received_at&&!hasBogen(g)&&!g.sent_at&&!g.sent_manual_at
   &&!["eingegangen","in_bearbeitung","geprueft","zurueck_beobachter"].includes(reviewState(g));
 }
