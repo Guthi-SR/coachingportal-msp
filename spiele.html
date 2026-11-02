@@ -1092,7 +1092,7 @@ $("mail-form").onsubmit=async e=>{
  if(selected.is_test&&!$("test-confirm").checked){$("mail-error").textContent="Bitte bestätige ausdrücklich den Testversand.";return}
  if(selected.is_test&&!email){$("mail-error").textContent="Für den ausgewählten Testempfänger fehlt die E-Mail-Adresse.";return}
  if(oneTimeOverride){
-  if(!isAdmin||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)||email.length>254){
+  if(!isAdmin||!$("mail-recipient").checkValidity()||email.length>254){
    $("mail-error").textContent="Bitte eine gültige Empfängeradresse eingeben.";return;
   }
   const yes=confirm("Beobachtungsbogen wirklich an "+email+" senden? Diese Adresse gilt nur für diese E-Mail und wird NICHT im Schiedsrichterprofil gespeichert.");
