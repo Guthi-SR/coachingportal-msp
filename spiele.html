@@ -799,6 +799,14 @@ function mobileGameCard(g){
   link.href="/beobachtungsbogen-ansehen.html?pdf="+encodeURIComponent(doc.document_id);
   link.target="_blank";link.rel="noopener noreferrer";bogenBox.append(link);
  }else{bogenBox.append(mobileElement("strong","","Noch kein PDF"))}
+ if(doc&&!g.is_test&&!g.sent_at&&!g.sent_manual_at){
+  const recipient=refereeSendEmail(g);
+  const send=mobileElement("button","primary",recipient?"Bogen versenden":"E-Mail fehlt");
+  send.type="button";send.disabled=!recipient;
+  send.title=recipient?"PDF-Versand vorbereiten":"Bitte Schiedsrichter-E-Mail in den Stammdaten ergänzen";
+  send.onclick=()=>openMail(g,"bogen_versendet");
+  bogenBox.append(send);
+ }
  quick.append(kmBox,bogenBox);
  const jsonBox=mobileElement("div","mobile-info");jsonBox.append(mobileElement("small","","JSON-Datei"),jsonStatusControl(g.game_key));quick.append(jsonBox);
  quick.append(mobileInfo("Einteilungsstatus",planningNames[g.planning_status]||"Offen"));
