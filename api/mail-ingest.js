@@ -1,6 +1,6 @@
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
-import { PDFParse } from "pdf-parse";
+// PDF parsing is loaded only when needed; a parser failure must not crash the mail endpoint.
 import { createHash, randomUUID } from "node:crypto";
 
 export const config = { maxDuration: 60 };
@@ -68,7 +68,9 @@ async function uploadPdf(token, path, bytes) {
 async function pdfText(bytes) {
   let parser;
   try {
-    parser = new PDFParse({ data: new Uint8Array(bytes) });
+    const { CanvasFactory } = await import("pdf-parse/worker");
+    const { PDFParse } = await import("pdf-parse");
+    parser = new PDFParse({ data: new Uint8Array(bytes), CanvasFactory });
     const out = await parser.getText();
     return String(out?.text || "").slice(0, 120000);
   } catch (err) {
