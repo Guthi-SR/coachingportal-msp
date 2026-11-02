@@ -174,10 +174,27 @@
 <label id="test-confirm-wrap" hidden style="display:flex;gap:10px;align-items:flex-start"><input id="test-confirm" type="checkbox" style="width:19px;height:19px;flex:none"> Ich bestätige den ausdrücklich gewünschten Versand dieser TEST-E-Mail an die angezeigte Empfängeradresse.</label><p id="mail-error" role="status"></p><div class="actions"><button type="button" id="cancel-mail">Abbrechen</button><button type="submit" id="mail-submit" class="primary">E-Mail jetzt senden</button></div></form></dialog>
 <script type="module">import {cloudPeople} from "/portal-people.js";
 import{sb,requirePermission,localGames,localPeople,syncGames,syncObservations,associateUniqueObservations,updateGame,updatePlanningStatus,gameColor,dateDE,reminderBody,sendBody,sendMail}from"/portal-workflow.js";
-const $=id=>document.getElementById(id),status=$("status");let userId="",userEmail="",isAdmin=false,savedRecipientEmail="",emailSignature="",games=[],docs=[],jsonGameKeys=null,refs=[],coaches=[],selected=null,returningGame=null,mailKind="",gameFilter="all",refereeFilter="",coachFilter="",sortKey="date",sortDir="desc",routeAttempts=[];
+const $=id=>document.getElementById(id),status=$("status");let userId="",userEmail="",isAdmin=false,savedRecipientEmail="",emailSignature="",games=[],docs=[],dispatchByGame=new Map(),jsonGameKeys=null,refs=[],coaches=[],selected=null,returningGame=null,mailKind="",gameFilter="all",refereeFilter="",coachFilter="",sortKey="date",sortDir="desc",routeAttempts=[];
 const currentIso=()=>{const t=new Date();return [t.getFullYear(),String(t.getMonth()+1).padStart(2,"0"),String(t.getDate()).padStart(2,"0")].join("-")};
 const automaticManualNote=method=>"Versandweg: "+(method==="whatsapp"?"WhatsApp":"E-Mail")+" (keine zusätzliche Notiz)";
 const displayManualNote=g=>{const note=g.manual_note||"";return note===automaticManualNote("whatsapp")||note===automaticManualNote("email")?"":note;};
+function dispatchHistory(g){
+ const entries=(dispatchByGame.get(g.game_key)||[]).map(x=>({at:x.sent_at,method:"Portal-E-Mail",to:x.recipient||"Nicht angegeben",note:"Versand bestätigt"}));
+ if(g.sent_manual_at)entries.push({at:g.sent_manual_at,method:g.sent_manual_method==="whatsapp"?"WhatsApp":"Externe E-Mail",to:g.referee_email||"Nicht dokumentiert",note:displayManualNote(g)||"Manuell dokumentiert"});
+ if(!entries.length&&g.sent_at)entries.push({at:g.sent_at,method:"Portal-E-Mail",to:g.referee_email||"Nicht dokumentiert",note:"Versandstatus gespeichert"});
+ const details=document.createElement("details");details.style.marginTop="8px";
+ const summary=document.createElement("summary");summary.textContent="Versandhistorie"+(entries.length?" ("+entries.length+")":"");summary.style.cursor="pointer";details.append(summary);
+ entries.sort((a,b)=>String(b.at||"").localeCompare(String(a.at||""));
+ for(const item of entries){const line=document.createElement("p");line.style.whiteSpace="pre-line";line.style.fontSize="13px";line.textContent=new Date(item.at).toLocaleString("de-DE",{timeZone:"Europe/Berlin"})+" · "+item.method+"\nEmpfänger: "+item.to+"\n"+item.note;details.append(line)}
+ if(!entries.length){const p=document.createElement("p");p.textContent="Noch kein Versand dokumentiert.";details.append(p)}
+ return details;
+}
+async function loadDispatchHistory(){
+ const {data,error}=await sb.from("portal_mail_log").select("game_key,recipient,sent_at").eq("owner_id",userId).eq("kind","bogen_versendet").eq("is_test",false).order("sent_at",{ascending:false});
+ if(error){console.warn("Versandhistorie:",error.message);return}
+ dispatchByGame=new Map();
+ for(const item of data||[]){const list=dispatchByGame.get(item.game_key)||[];list.push(item);dispatchByGame.set(item.game_key,list)}
+}
 function person(people,id){return people.find(x=>x.id===id||x.name===id)}
 function fullName(p){return p?.name||[p?.first,p?.last].filter(Boolean).join(" ")||""}
 function refereeSendEmail(g){
@@ -878,6 +895,7 @@ function mobileGameCard(g){
    resend.onclick=()=>openMail(g,"bogen_versendet");
    actions.append(resend);
   }
+  actions.append(dispatchHistory(g));
   if(doc&&!g.sent_at&&!g.sent_manual_at){
    const recipient=refereeSendEmail(g);
    const send=mobileElement("button","primary",recipient?"Bogen versenden":"E-Mail fehlt");send.type="button";send.disabled=!recipient;
@@ -1029,6 +1047,7 @@ function render(){
    resend.onclick=()=>openMail(g,"bogen_versendet");
    sendCell.append(resend);
   }
+  sendCell.append(dispatchHistory(g));
   if(doc&&!sent&&!g.is_test){
    const recipient=refereeSendEmail(g);
    const send=document.createElement("button");send.type="button";send.className="primary";send.textContent=(recipient||isAdmin)?"Bogen versenden":"E-Mail fehlt";send.disabled=!recipient&&!isAdmin;
@@ -1148,7 +1167,7 @@ $("mail-form").onsubmit=async e=>{
    {testMode:true,testRecipient:$("test-recipient-mode").value,testConfirmed:$("test-confirm").checked}:
    oneTimeOverride?{recipientOverride:email,recipientOverrideConfirmed:true}:{};
   await sendMail(selected.game_key,mailKind,$("mail-subject").value.trim(),$("mail-body").value.trim(),options);
-  $("mail").close();games=await syncGames(userId);render();
+  $("mail").close();games=await syncGames(userId);await loadDispatchHistory();render();
   status.textContent=selected.is_test?"TEST-E-Mail erfolgreich versendet. Der offizielle Spielstatus bleibt unverändert.":oneTimeOverride?
    "E-Mail an "+email+" versendet. Die Schiedsrichter-Stammdaten wurden nicht geändert.":"E-Mail erfolgreich versendet und protokolliert.";
  }catch(error){$("mail-error").textContent=error.message;button.disabled=false}
@@ -1169,7 +1188,7 @@ try{
  const coachSelect=$("coach-filter");for(const p of [...coaches].sort((a,b)=>fullName(a).localeCompare(fullName(b),"de")))coachSelect.add(new Option(fullName(p),p.id));
  const requestedCoach=new URLSearchParams(location.search).get("coach");
  if(requestedCoach&&coaches.some(p=>String(p.id)===requestedCoach)){coachFilter=requestedCoach;coachSelect.value=requestedCoach;}
- games=await syncGames(userId);docs=await syncObservations(userId);await loadJsonGameKeys(profile?.role==="admin");await reconcileConfirmedVenues();await loadRouteAttempts();
+ games=await syncGames(userId);docs=await syncObservations(userId);await loadDispatchHistory();await loadJsonGameKeys(profile?.role==="admin");await reconcileConfirmedVenues();await loadRouteAttempts();
  if(await associateUniqueObservations(userId,games,docs))games=await syncGames(userId);
  render();void startRouteReview()
 }catch(error){status.textContent="Laden fehlgeschlagen: "+error.message}
