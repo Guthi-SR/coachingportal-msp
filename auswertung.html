@@ -204,21 +204,21 @@ function effectiveRange(){
 }
 function matchingGames(p,from,to){
  const name=displayName(p).toLocaleLowerCase("de");
- return games.filter(g=>!g.is_test&&g.match_date<=today&&g.match_date>=from&&g.match_date<=to
+ return games.filter(g=>g.observation_type!=="bezirk"&&!g.is_test&&g.match_date<=today&&g.match_date>=from&&g.match_date<=to
   &&(String(g.coach_id||"")===String(p.id)||(!g.coach_id&&String(g.coach_name||"").trim().toLocaleLowerCase("de")===name)))
   .sort((a,b)=>String(a.match_date).localeCompare(String(b.match_date))||String(a.kickoff||"").localeCompare(String(b.kickoff||"")));
 }
-function coachMatches(p,g){
+function coachMatches(p,g){if(g.observation_type==="bezirk")return false;
  const name=displayName(p).toLocaleLowerCase("de");
  return String(g.coach_id||"")===String(p.id)||(!g.coach_id&&String(g.coach_name||"").trim().toLocaleLowerCase("de")===name);
 }
 function summarize(p,from,to){
  const rows=matchingGames(p,from,to);
- const planned=games.filter(g=>!g.is_test&&g.match_date>today&&coachMatches(p,g))
+ const planned=games.filter(g=>g.observation_type!=="bezirk"&&!g.is_test&&g.match_date>today&&coachMatches(p,g))
   .sort((a,b)=>String(a.match_date).localeCompare(String(b.match_date))||String(a.kickoff||"").localeCompare(String(b.kickoff||"")));
  const sum=rows.reduce((s,g)=>s+(distance(g.kilometers_text)??0),0);
  const plannedSum=planned.reduce((s,g)=>s+(distance(g.kilometers_text)??0),0);
- const unconfirmed=games.filter(g=>!g.is_test&&coachMatches(p,g)&&["voreingeteilt","eingeteilt"].includes(String(g.planning_status||"offen")));
+ const unconfirmed=games.filter(g=>g.observation_type!=="bezirk"&&!g.is_test&&coachMatches(p,g)&&["voreingeteilt","eingeteilt"].includes(String(g.planning_status||"offen")));
  return{name:displayName(p),from,to,games:rows,plannedGames:planned,unconfirmedGames:unconfirmed,sum,plannedSum,
   totalGames:rows.length+planned.length,totalKm:sum+plannedSum,
   missing:rows.filter(g=>String(g.kilometers_text||"").trim()&&distance(g.kilometers_text)===null).length,
@@ -345,7 +345,7 @@ function renderOverview(){
  if(!ordered.length){
   const row=document.createElement("tr"),cell=document.createElement("td");cell.colSpan=15;cell.textContent="Noch keine Coaches angelegt.";row.append(cell);tbody.append(row);
  }
- $("overview-total").textContent=ordered.length+" Coaches · "+totalGames+" Spiele im Zeitraum · "+games.filter(g=>!g.is_test&&g.match_date>today).length+" geplante Spiele insgesamt · "+labelKm(totalKm);
+ $("overview-total").textContent=ordered.length+" Coaches · "+totalGames+" Spiele im Zeitraum · "+games.filter(g=>g.observation_type!=="bezirk"&&!g.is_test&&g.match_date>today).length+" geplante Spiele insgesamt · "+labelKm(totalKm);
  updateCoachExportStatus();
  $("status").textContent="Zeitraum: "+dateDE(from)+" bis "+dateDE(to)+". "+ordered.length+" Coaches angezeigt.";
 }
