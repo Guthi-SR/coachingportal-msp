@@ -1015,7 +1015,7 @@ function render(){
  const tbody=$("rows");tbody.replaceChildren();const mobileList=$("mobile-game-list");mobileList.replaceChildren();
  const today=currentIso();
  const routeFilter=$("venue-route-filter").value;
- const visible=games.filter(g=>(!refereeFilter||g.referee_id===refereeFilter)&&(!coachFilter||g.coach_id===coachFilter)&&(gameFilter==="future"?g.match_date>=today:gameFilter==="without"?!hasBogen(g):gameFilter==="missing"?!g.is_test&&g.match_date<today&&!g.received_at:true)&&(routeFilter==="all"||routeStatus(g)===routeFilter)).sort(compareGames);
+ const visible=games.filter(g=>(!refereeFilter||g.referee_id===refereeFilter)&&(!coachFilter||g.coach_id===coachFilter)&&(gameFilter==="future"?g.match_date>=today:gameFilter==="without"?!hasBogen(g):gameFilter==="missing"?!g.is_test&&g.match_date<today&&!g.received_at:gameFilter==="returned"?reviewState(g)==="zurueck_beobachter":true)&&(routeFilter==="all"||routeStatus(g)===routeFilter)).sort(compareGames);
  $("filter-count").textContent=visible.length+" von "+games.length+" Spielen angezeigt.";
  for(const g of visible){
   const row=document.createElement("tr");const cls=g.is_test?"":gameDisplayColor(g);if(cls)row.className=cls;
@@ -1145,7 +1145,7 @@ function openMail(g,kind){
 }
 $("venue-route-filter").addEventListener("change",()=>{renderRouteOverview();render()});
 function selectGameFilter(filter){
- gameFilter=["all","future","without","missing"].includes(filter)?filter:"all";
+ gameFilter=["all","future","without","missing","returned"].includes(filter)?filter:"all";
  document.querySelectorAll("[data-game-filter]").forEach(b=>{const active=b.dataset.gameFilter===gameFilter;b.classList.toggle("active",active);b.setAttribute("aria-pressed",String(active))});
 }
 document.querySelectorAll("[data-game-filter]").forEach(btn=>btn.addEventListener("click",()=>{selectGameFilter(btn.dataset.gameFilter);render()}));
