@@ -235,7 +235,13 @@ async function loadDashboard(userId){
   const red=games.filter(g=>valid(g)&&gameSignal(g,today)==="red");
   const yellow=games.filter(g=>valid(g)&&gameSignal(g,today)==="yellow");
   const green=games.filter(g=>gameSignal(g,today)==="green");
-  const reviews=games.filter(g=>g.received_at&&!g.checked_at);
+  // Only count reviewable games whose observation document actually exists.
+   // Keep inconsistent game records visible as warnings instead of hiding them silently.
+   const docIds=new Set(docs.map(d=>d.document_id));
+   const docGameKeys=new Set(docs.map(d=>d.game_key).filter(Boolean));
+   const hasDocument=g=>(g.pdf_id&&docIds.has(g.pdf_id))||docGameKeys.has(g.game_key);
+   const reviews=games.filter(g=>g.received_at&&!g.checked_at&&hasDocument(g));
+   const missingReviewDocuments=games.filter(g=>g.received_at&&!g.checked_at&&!hasDocument(g));
   // The coaching-planning tiles count only upcoming, non-test games.
   const planningGames=games.filter(g=>valid(g)&&deltaDate(g.match_date,today)>=0);
   const planningCounts={offen:0,voreingeteilt:0,eingeteilt:0,bestaetigt:0};
@@ -262,6 +268,7 @@ async function loadDashboard(userId){
   const todo=clearList("dash-todo");
   for(const g of red.sort((a,b)=>(a.match_date||"").localeCompare(b.match_date||"")).slice(0,5))addItem(todo,g,"Bogen noch nicht eingegangen","Überfällig","red");
   for(const g of reviews.sort((a,b)=>(b.match_date||"").localeCompare(a.match_date||"")).slice(0,Math.max(0,8-todo.children.length)))addItem(todo,g,"Eingegangen, Prüfung offen","Prüfen","yellow");
+   for(const g of missingReviewDocuments.slice(0,Math.max(0,8-todo.children.length)))addItem(todo,g,"Eingang vermerkt, aber PDF-Bogen fehlt – Zuordnung prüfen","PDF fehlt","red");
   if(!todo.children.length)appendEmpty(todo,"Aktuell keine überfälligen Bögen oder offenen Prüfungen.");
   const upcoming=clearList("dash-upcoming");
   const next=games.filter(g=>valid(g)&&deltaDate(g.match_date,today)>=0).sort((a,b)=>(a.match_date||"").localeCompare(b.match_date||"")||String(a.kickoff||"").localeCompare(String(b.kickoff||"")));
