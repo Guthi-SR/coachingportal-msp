@@ -103,7 +103,8 @@ body.dashboard-active .dash-page{border:0;border-radius:0;min-width:0;max-width:
    <a class="dash-stat" href="/beobachtungsboegen.html"><span>Beobachtungsbögen</span><strong id="dash-docs">–</strong><small>Gespeicherte PDF-Bögen</small></a>
    <a class="dash-stat" href="/spiele.html?filter=missing"><span>Eingang offen</span><strong id="dash-missing">–</strong><small>Vergangene Spiele ohne Bogeneingang</small></a>
    <a class="dash-stat" href="/beobachtungsboegen.html?status=unchecked"><span>Zur Prüfung</span><strong id="dash-review">–</strong><small>Eingegangen, noch nicht geprüft</small></a>
-   <a class="dash-stat" href="/spiele.html"><span>Erledigt / versendet</span><strong id="dash-done">–</strong><small>Bogen bereits versendet</small></a>
+   <a class="dash-stat" href="/beobachtungsboegen.html?status=checked-unsent"><span>Geprüft, noch nicht versendet</span><strong id="dash-checked-unsent">–</strong><small>Geprüfte PDF-Bögen warten auf Versand</small></a>
+    <a class="dash-stat" href="/spiele.html"><span>Erledigt / versendet</span><strong id="dash-done">–</strong><small>Bogen bereits versendet</small></a>
   </div>
   <div class="dash-block" id="dash-planning">
    <div class="dash-heading"><div><h3>Coachingplanung · Einteilungsstatus</h3><p>Kommende reguläre Spiele · ohne Testspiele</p></div><a href="/coachingplanung.html">Coachingplanung öffnen →</a></div>
@@ -261,6 +262,7 @@ async function loadDashboard(userId){
   number("dash-docs")(docs.length);
   number("dash-missing")(past.filter(g=>!g.received_at).length);
   number("dash-review")(reviews.length);
+   number("dash-checked-unsent")(games.filter(g=>g.checked_at&&!g.sent_at&&!g.sent_manual_at&&hasDocument(g)).length);
   number("dash-done")(green.length);
   number("dash-green")(green.length);
   number("dash-yellow")(yellow.length);
