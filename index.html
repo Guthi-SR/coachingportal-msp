@@ -276,7 +276,7 @@ async function loadDashboard(userId){
   if(!todo.children.length)appendEmpty(todo,"Aktuell keine überfälligen Bögen oder offenen Prüfungen.");
   const upcoming=clearList("dash-upcoming");
   const next=games.filter(g=>valid(g)&&deltaDate(g.match_date,today)>=0).sort((a,b)=>(a.match_date||"").localeCompare(b.match_date||"")||String(a.kickoff||"").localeCompare(String(b.kickoff||"")));
-  for(const g of next.slice(0,8)){const d=deltaDate(g.match_date,today);addItem(upcoming,g,g.referee_name?"Schiedsrichter: "+g.referee_name:"",d===0?"Heute":d===1?"Morgen":"In "+d+" Tagen",d<=5?"yellow":"info")}
+  for(const g of next.slice(0,8)){const d=deltaDate(g.match_date,today);addItem(upcoming,g,"",d===0?"Heute":d===1?"Morgen":"In "+d+" Tagen",d<=5?"yellow":"info")}
   if(!next.length)appendEmpty(upcoming,"Keine bevorstehenden Coaching-Spiele eingetragen.");
   const mails=clearList("dash-mails");
   const prepare=next.filter(g=>deltaDate(g.match_date,today)<=5);
