@@ -184,7 +184,7 @@ const addItem=(list,g,subtitle,status,color)=>{
   const link=document.createElement("a");link.href="/spiele.html";link.className="dash-item";
   const detail=document.createElement("div"),title=document.createElement("strong"),sub=document.createElement("small");
   title.textContent=(g.home||"Heim")+" – "+(g.away||"Gast");
-  sub.textContent=asDate(g.match_date)+(g.kickoff?" · "+g.kickoff+" Uhr":"")+(g.coach_name?" · Coach: "+g.coach_name:"")+(subtitle?" · "+subtitle:"");
+  sub.textContent=asDate(g.match_date)+(g.kickoff?" · "+g.kickoff+" Uhr":"")+(g.referee_name?" · Schiedsrichter: "+g.referee_name:"")+(g.coach_name?" · Coach: "+g.coach_name:"")+(subtitle?" · "+subtitle:"");
   detail.append(title,sub);link.append(detail,badge(status,color));list.append(link);
 };
 const gameSignal=(g,today)=>{
