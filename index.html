@@ -103,7 +103,8 @@ body.dashboard-active .dash-page{border:0;border-radius:0;min-width:0;max-width:
    <a class="dash-stat" href="/beobachtungsboegen.html"><span>Beobachtungsbögen</span><strong id="dash-docs">–</strong><small>Gespeicherte PDF-Bögen</small></a>
    <a class="dash-stat" href="/spiele.html?filter=missing"><span>Eingang offen</span><strong id="dash-missing">–</strong><small>Vergangene Spiele ohne Bogeneingang</small></a>
    <a class="dash-stat" href="/beobachtungsboegen.html?status=unchecked"><span>Zur Prüfung</span><strong id="dash-review">–</strong><small>Eingegangen, noch nicht geprüft</small></a>
-   <a class="dash-stat" href="/beobachtungsboegen.html?status=checked-unsent"><span>Geprüft, noch nicht versendet</span><strong id="dash-checked-unsent">–</strong><small>Geprüfte PDF-Bögen warten auf Versand</small></a>
+   <a class="dash-stat" href="/spiele.html?filter=returned"><span>Zurück an Beobachter</span><strong id="dash-returned">–</strong><small>Zur Überarbeitung zurückgegeben</small></a>
+    <a class="dash-stat" href="/beobachtungsboegen.html?status=checked-unsent"><span>Geprüft, noch nicht versendet</span><strong id="dash-checked-unsent">–</strong><small>Geprüfte PDF-Bögen warten auf Versand</small></a>
     <a class="dash-stat" href="/spiele.html"><span>Erledigt / versendet</span><strong id="dash-done">–</strong><small>Bogen bereits versendet</small></a>
   </div>
   <div class="dash-block" id="dash-planning">
@@ -219,7 +220,7 @@ async function loadDashboard(userId){
  el("dash-body").hidden=true;
  try{
   const [gameResult,docResult,coachResult]=await Promise.all([
-   supabase.from("portal_games").select("game_key,match_date,kickoff,home,away,referee_name,coach_name,coach_email,planning_status,pdf_id,is_test,received_at,checked_at,sent_at,sent_manual_at").eq("owner_id",userId),
+   supabase.from("portal_games").select("game_key,match_date,kickoff,home,away,referee_name,coach_name,coach_email,planning_status,pdf_id,is_test,received_at,checked_at,sent_at,sent_manual_at,review_status").eq("owner_id",userId),
    supabase.from("portal_observations").select("document_id,game_key").eq("owner_id",userId),
    supabase.from("portal_people").select("person_id").eq("owner_id",userId).eq("kind","coach")
   ]);
@@ -241,8 +242,8 @@ async function loadDashboard(userId){
    const docIds=new Set(docs.map(d=>d.document_id));
    const docGameKeys=new Set(docs.map(d=>d.game_key).filter(Boolean));
    const hasDocument=g=>(g.pdf_id&&docIds.has(g.pdf_id))||docGameKeys.has(g.game_key);
-   const reviews=games.filter(g=>g.received_at&&!g.checked_at&&hasDocument(g));
-   const missingReviewDocuments=games.filter(g=>g.received_at&&!g.checked_at&&!hasDocument(g));
+   const reviews=games.filter(g=>g.received_at&&!g.checked_at&&hasDocument(g)&&g.review_status!=="zurueck_beobachter");
+   const missingReviewDocuments=games.filter(g=>g.received_at&&!g.checked_at&&!hasDocument(g)&&g.review_status!=="zurueck_beobachter");
   // The coaching-planning tiles count only upcoming, non-test games.
   const planningGames=games.filter(g=>valid(g)&&deltaDate(g.match_date,today)>=0);
   const planningCounts={offen:0,voreingeteilt:0,eingeteilt:0,bestaetigt:0};
@@ -262,6 +263,7 @@ async function loadDashboard(userId){
   number("dash-docs")(docs.length);
   number("dash-missing")(past.filter(g=>!g.received_at).length);
   number("dash-review")(reviews.length);
+   number("dash-returned")(games.filter(g=>g.review_status==="zurueck_beobachter").length);
    number("dash-checked-unsent")(games.filter(g=>g.checked_at&&!g.sent_at&&!g.sent_manual_at&&hasDocument(g)).length);
   number("dash-done")(green.length);
   number("dash-green")(green.length);
