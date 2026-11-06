@@ -518,15 +518,25 @@ async function calculateConfirmedVenueRoute(g){
   const response=await fetch("/api/coach-route",{method:"POST",headers:{"content-type":"application/json",Authorization:"Bearer "+session.access_token},body:JSON.stringify({gameKey:key,coachId})});
   const data=await response.json();if(!response.ok)throw Error(data.error||"Routenberechnung fehlgeschlagen.");
   if(venueGame!==g||String(g.coach_id)!==coachId||g.venue_route_address!==target){$("venue-check-status").textContent="Spiel oder Coach wurde zwischenzeitlich geändert. Bitte erneut berechnen.";return}
-  const message="Gefundene Route:\\nStart: "+data.originResult+"\\nZiel: "+data.destinationResult+"\\n\\nEinfache Fahrt: "+data.oneWayKm+" km\\nHin und zurück: "+data.roundTripKm+" km\\n\\nBitte Start und Sportplatz kontrollieren. Kilometer übernehmen?";
-  if(!confirm(message)){$("venue-check-status").textContent="Route nicht übernommen. Du kannst sie später erneut berechnen.";return}
-  const patch={planned_one_way_km:data.oneWayKm,route_origin:data.origin,route_destination:data.destination,route_checked_at:new Date().toISOString()};
-  // Handgeschriebene Kilometer niemals automatisch überschreiben.
-  if(!g.kilometers_text||g.kilometers_source==="route"){
-   patch.kilometers_text=String(data.roundTripKm);patch.kilometers_source="route";
-  }
+  const routes=Array.isArray(data.routeOptions)&&data.routeOptions.length?data.routeOptions:[{id:1,oneWayKm:data.oneWayKm,roundTripKm:data.roundTripKm}];
+  const mapUrl="https://www.google.com/maps/dir/?api=1&origin="+encodeURIComponent(data.origin)+"&destination="+encodeURIComponent(data.destination)+"&travelmode=driving";
+  const mapsButton=$("venue-google-maps");mapsButton.hidden=false;mapsButton.onclick=()=>window.open(mapUrl,"_blank","noopener,noreferrer");
+  const options=routes.map((r,i)=>"Route "+(i+1)+": "+r.oneWayKm+" km einfach / "+r.roundTripKm+" km gesamt").join("\n");
+  const choice=prompt("Start: "+data.originResult+"\nZiel: "+data.destinationResult+"\n"+options+"\nM: Manuell eingeben\nWähle 1, 2 oder M:","1");
+  if(choice===null)return;
+  let selected;
+  if(choice.trim().toLowerCase()==="m"){
+    const entered=prompt("Einfache Strecke in km:","");
+    if(entered===null)return;
+    const km=Number(entered.replace(",","."));
+    if(!Number.isFinite(km)||km<0||km>2000)throw Error("Ungültige Kilometer.");
+    selected={oneWayKm:km,roundTripKm:Math.round(km*20)/10,manual:true};
+  }else selected=routes[Number(choice)-1];
+  if(!selected)throw Error("Bitte Route 1, Route 2 oder M auswählen.");
+  if(!confirm(selected.oneWayKm+" km einfach / "+selected.roundTripKm+" km gesamt als geprüft übernehmen?"))return;
+  const patch={planned_one_way_km:selected.oneWayKm,route_origin:data.origin,route_destination:data.destination,route_checked_at:new Date().toISOString(),kilometers_text:String(selected.roundTripKm),kilometers_source:selected.manual?"manual":"route"};
   Object.assign(g,await updateGame(userId,key,patch));await recordRouteAttempt(g,"success");render();
-  $("venue-check-status").textContent="Route bestätigt: "+data.oneWayKm+" km einfach / "+data.roundTripKm+" km hin und zurück."+(patch.kilometers_text===undefined?" Manuell eingetragene Kilometer bleiben unverändert.":"");
+  $("venue-check-status").textContent="Route bestätigt: "+selected.oneWayKm+" km einfach / "+selected.roundTripKm+" km hin und zurück."+(patch.kilometers_text===undefined?" Manuell eingetragene Kilometer bleiben unverändert.":"");
  }catch(e){await recordRouteAttempt(g,"failed",e.message);render();$("venue-check-status").textContent="Routenberechnung fehlgeschlagen: "+e.message}
  finally{venueRouteBusy=false;button.disabled=!g.coach_id}
 }
@@ -849,11 +859,11 @@ function mobileGameCard(g){
  km.addEventListener("change",async()=>{
   const old=g.kilometers_text||"",next=km.value.trim();if(old===next)return;
   km.disabled=true;
-  try{Object.assign(g,await updateGame(userId,g.game_key,{kilometers_text:next||null,kilometers_source:"manual"}));km.value=g.kilometers_text||"";status.textContent="Kilometer gespeichert."}
+  try{Object.assign(g,await updateGame(userId,g.game_key,{kilometers_text:next||null,kilometers_source:"manual",route_checked_at:null}));km.value=g.kilometers_text||"";status.textContent="Kilometer gespeichert."}
   catch(error){km.value=old;status.textContent="Kilometer konnten nicht gespeichert werden: "+error.message}
   finally{km.disabled=false}
  });
- kmBox.append(kmLabel,km);if(g.is_test){const hint=mobileElement("small","",testKmInfo(g));kmBox.append(hint)}
+ km.style.borderColor=g.route_checked_at?"#41976b":"#c84949";kmBox.append(kmLabel,km);if(g.is_test){const hint=mobileElement("small","",testKmInfo(g));kmBox.append(hint)}
  const doc=docs.find(d=>d.document_id===g.pdf_id||d.game_key===g.game_key);
  const bogenBox=mobileElement("div","mobile-info");
  bogenBox.append(mobileElement("small","","Beobachtungsbogen"));
@@ -1028,11 +1038,11 @@ function render(){
     const old=g.kilometers_text||"",next=km.value.trim();
     if(next===old)return;
     km.disabled=true;
-    try{Object.assign(g,await updateGame(userId,g.game_key,{kilometers_text:next||null,kilometers_source:"manual"}));status.textContent="Kilometer gespeichert.";km.value=g.kilometers_text||""}
+    try{Object.assign(g,await updateGame(userId,g.game_key,{kilometers_text:next||null,kilometers_source:"manual",route_checked_at:null}));status.textContent="Kilometer gespeichert.";km.value=g.kilometers_text||""}
     catch(error){km.value=old;status.textContent="Kilometer konnten nicht gespeichert werden: "+error.message}
     finally{km.disabled=false}
   });
-  kmTd.append(km);if(g.is_test){const hint=document.createElement("small");hint.style.cssText="display:block;font-size:11px;min-width:160px;margin-top:5px";hint.textContent=testKmInfo(g);kmTd.append(hint)}row.append(kmTd);
+  km.style.borderColor=g.route_checked_at?"#41976b":"#c84949";kmTd.append(km);if(g.is_test){const hint=document.createElement("small");hint.style.cssText="display:block;font-size:11px;min-width:160px;margin-top:5px";hint.textContent=testKmInfo(g);kmTd.append(hint)}row.append(kmTd);
   const planningCell=document.createElement("td");planningCell.append(planningSelect(g));row.append(planningCell);
   for(const type of ["referee","coach"]){
    const td=document.createElement("td"),select=document.createElement("select"),people=type==="referee"?refs:coaches;
