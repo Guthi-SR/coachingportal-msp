@@ -103,14 +103,15 @@ export default async function handler(req,res){
   // A municipality-only result is not precise enough for billing.
   const insufficient=(finish.category==="boundary"||["city","town","village","municipality","administrative"].includes(finish.type));
   if(insufficient)return json(res,422,{error:"Es wurde nur der Ortsmittelpunkt gefunden. Bitte eine genaue Sportplatz-Adresse als Navigationsziel ergänzen."});
-  const routeUrl="https://router.project-osrm.org/route/v1/driving/"+start.lon+","+start.lat+";"+finish.lon+","+finish.lat+"?overview=false&steps=false";
+  const routeUrl="https://router.project-osrm.org/route/v1/driving/"+start.lon+","+start.lat+";"+finish.lon+","+finish.lat+"?overview=false&steps=false&alternatives=true";
   const route=await externalJSON(routeUrl,8000);
   if(route.code!=="Ok"||!route.routes?.[0]||!Number.isFinite(route.routes[0].distance))throw Error("Keine fahrbare Strecke gefunden.");
   // OSRM may snap an imprecise geocoded point to a distant road. Reject such results.
   const snapDistances=route.waypoints?.map(p=>Number(p.distance))||[];
   if(snapDistances.length!==2||snapDistances.some(d=>!Number.isFinite(d)||d>1000))return json(res,422,{error:"Start oder Ziel liegt zu weit von einer befahrbaren Straße entfernt. Bitte Adressen prüfen."});
+  const routeOptions=route.routes.filter(r=>Number.isFinite(r.distance)&&r.distance>=0).slice(0,2).map((r,i)=>({id:i+1,label:"Route "+(i+1),oneWayKm:Math.round(r.distance/100)/10,roundTripKm:Math.round(r.distance/50)/10,estimated:true}));
   const kilometers=Math.round(route.routes[0].distance/100)/10;
-  const value={oneWayKm:kilometers,roundTripKm:Math.round(kilometers*20)/10,origin,destination,
+  const value={routeOptions,oneWayKm:kilometers,roundTripKm:Math.round(kilometers*20)/10,origin,destination,
    originResult:start.label,destinationResult:finish.label,
    coordinates:{origin:[start.lat,start.lon],destination:[finish.lat,finish.lon]},
    provider:"OpenStreetMap/Nominatim & OSRM",estimated:true};
