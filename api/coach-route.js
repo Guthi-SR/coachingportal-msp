@@ -47,6 +47,9 @@ function coachAddress(details){
  return[line,city,"Deutschland"].filter(Boolean).join(", ");
 }
 function placeMatchesOrigin(result,coach){
+ const expectedHouse=small(coach.houseNumber).toLocaleLowerCase("de");
+ const foundHouse=small(result?.address?.house_number).toLocaleLowerCase("de");
+ if(foundHouse&&expectedHouse&&foundHouse!==expectedHouse)return false;
  const postcode=small(coach.zip).replace(/\s/g,"");
  const returned=small(result?.address?.postcode).replace(/\s/g,"");
  if(postcode&&returned&&postcode!==returned)return false;
@@ -93,12 +96,19 @@ export default async function handler(req,res){
     if(finish)break;
   }
   if(!finish)return json(res,422,{error:"Spielstätte nicht eindeutig gefunden. Bitte im Feld „Navigationsziel“ eine vollständige Sportplatz-Adresse eingeben und speichern."});
+  // Never silently route to a different postal-code area when the target contains a postcode.
+  const targetZip=cleanDestination.match(/\b\d{5}\b/)?.[0];
+  const foundZip=small(finish.address?.postcode).replace(/\s/g,"");
+  if(targetZip&&foundZip&&targetZip!==foundZip)return json(res,422,{error:"Die gefundene Spielstätte liegt in einer anderen Postleitzahl. Bitte Navigationsziel kontrollieren."});
   // A municipality-only result is not precise enough for billing.
   const insufficient=(finish.category==="boundary"||["city","town","village","municipality","administrative"].includes(finish.type));
   if(insufficient)return json(res,422,{error:"Es wurde nur der Ortsmittelpunkt gefunden. Bitte eine genaue Sportplatz-Adresse als Navigationsziel ergänzen."});
   const routeUrl="https://router.project-osrm.org/route/v1/driving/"+start.lon+","+start.lat+";"+finish.lon+","+finish.lat+"?overview=false&steps=false";
   const route=await externalJSON(routeUrl,8000);
   if(route.code!=="Ok"||!route.routes?.[0]||!Number.isFinite(route.routes[0].distance))throw Error("Keine fahrbare Strecke gefunden.");
+  // OSRM may snap an imprecise geocoded point to a distant road. Reject such results.
+  const snapDistances=route.waypoints?.map(p=>Number(p.distance))||[];
+  if(snapDistances.length!==2||snapDistances.some(d=>!Number.isFinite(d)||d>1000))return json(res,422,{error:"Start oder Ziel liegt zu weit von einer befahrbaren Straße entfernt. Bitte Adressen prüfen."});
   const kilometers=Math.round(route.routes[0].distance/100)/10;
   const value={oneWayKm:kilometers,roundTripKm:Math.round(kilometers*20)/10,origin,destination,
    originResult:start.label,destinationResult:finish.label,
