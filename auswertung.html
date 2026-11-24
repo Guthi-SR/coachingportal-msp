@@ -375,6 +375,23 @@ function updateCoachExportStatus(){
 for(const mode of document.querySelectorAll('input[name="coach-scope"]')){
  mode.addEventListener("change",()=>{if(mode.checked){coachScope=mode.value;renderOverview();}});
 }
+function addExpenseDetails(book,items){
+ const sheet=book.addWorksheet("Spesendetails");
+ sheet.columns=[{header:"Name des Coaches",width:30},{header:"Datum",width:15},{header:"Spiel",width:50},{header:"Kilometer",width:16},{header:"Fahrtkosten",width:19},{header:"Spielspesen",width:19},{header:"Gesamtbetrag",width:20}];
+ let count=0;
+ for(const item of [...items].sort((a,b)=>a.name.localeCompare(b.name,"de"))){
+  for(const game of item.games){
+   const m=gameCompensation(game);
+   const row=sheet.addRow([item.name,new Date(game.match_date+"T12:00:00Z"),[game.home,game.away].filter(Boolean).join(" – ")||"Coaching",m.km,m.mileage,m.fee,m.total]);
+   if(!m.complete)row.getCell(7).note="Kilometer fehlen – Gesamtbetrag noch nicht vollständig.";
+   count++;
+  }
+ }
+ sheet.getColumn(2).numFmt="dd.mm.yyyy";sheet.getColumn(4).numFmt='0.##" km"';
+ for(const n of [5,6,7])sheet.getColumn(n).numFmt='€ #,##0.00';
+ sheet.views=[{state:"frozen",ySplit:1}];sheet.autoFilter={from:"A1",to:"G"+Math.max(1,count+1)};
+ const header=sheet.getRow(1);header.height=28;header.eachCell(cell=>{cell.font={bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};cell.alignment={vertical:"middle"}});
+}
 async function exportBatchCoaches(){
  const {from,to}=effectiveRange();if(from>to){$("coach-export-status").textContent="Bitte einen gültigen Zeitraum wählen.";return}
  const snapshot=coachRows(getBatchCoaches(),from,to);if(!snapshot.length){$("coach-export-status").textContent="Bitte mindestens einen Coach auswählen.";return}
@@ -411,6 +428,7 @@ async function exportBatchCoaches(){
   overview.autoFilter={from:"A7",to:"O"+Math.max(8,7+snapshot.length)};
   total.eachCell(cell=>{cell.font={bold:true,color:{argb:"FF142B46"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE8F0F8"}}});
   for(const sheet of [overview,details]){const row=sheet.getRow(sheet===overview?7:1);row.height=28;row.eachCell(cell=>{cell.font={bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};cell.alignment={vertical:"middle"}})}
+  addExpenseDetails(book,snapshot);
   const bytes=await book.xlsx.writeBuffer(),blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="Coaches_Auswertung_"+from+"_bis_"+to+".xlsx";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);$("coach-export-status").textContent="Excel erstellt: Spesen und Gesamtsummen nach gesamt, Zeitraum und Zukunft aufgeschlüsselt.";
  }catch(error){$("coach-export-status").textContent="Excel-Export fehlgeschlagen: "+error.message}finally{button.textContent=previous;updateCoachExportStatus()}
 }
@@ -482,6 +500,7 @@ async function exportExcel(){
   sum.autoFilter={from:"A7",to:"O8"};
   const summaryHeader=sum.getRow(7);summaryHeader.height=28;summaryHeader.eachCell(cell=>{cell.font={bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}};cell.alignment={vertical:"middle"}});
   for(const sheet of [sum,detail]){const row=sheet.getRow(1);row.eachCell(cell=>{cell.font={bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF142B46"}}})}
+  addExpenseDetails(book,[current]);
   const bytes=await book.xlsx.writeBuffer(),blob=new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="Coaching_Auswertung_"+current.from+"_bis_"+current.to+".xlsx";document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
  }catch(error){$("km-note").textContent="Excel-Export fehlgeschlagen: "+error.message}finally{button.textContent=oldLabel;button.disabled=false}
 }
