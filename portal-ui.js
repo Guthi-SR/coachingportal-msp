@@ -285,10 +285,11 @@ if(nav){
   const ref=nav.querySelector('a[href="/verwaltung.html"]');
   if(ref)ref.before(section);else nav.append(section);
  }
+ for(const a of nav.querySelectorAll('a[href="/coach-beobachter-verwaltung.html"],a[href="/paten-verwaltung.html"]'))a.remove();
  const administration=nav.querySelector("#portal-administration-menu");
  if(administration){
   const children=administration.querySelector(".person-submenu");
-  for(const [href,label] of [["/verwaltung.html","Schiedsrichterverwaltung"],["/coach-beobachter-verwaltung.html","Coach-Beobachter-Verwaltung"],["/paten-verwaltung.html","Patenverwaltung"],["/benutzerprofile.html","Benutzerprofile & Rechte"],["/zugang-einrichten.html","Benutzerverwaltung"]]){
+  for(const [href,label] of [["/verwaltung.html","Schiedsrichterverwaltung"],["/personalverwaltung.html","Personalverwaltung"],["/benutzerprofile.html","Benutzerprofile & Rechte"],["/zugang-einrichten.html","Benutzerverwaltung"]]){
    let link=nav.querySelector('a[href="'+href+'"]');
    if(!link){link=document.createElement("a");link.href=href;}
    link.textContent=label;
@@ -311,7 +312,7 @@ const permissionPaths={
  "/coachingplanung.html":"coaching_planning_view","/auswertung.html":"reports_view",
  "/beobachtungsboegen.html":"reports_view","/beobachtungsbogen-erfassen.html":"reports_upload",
  "/verwaltung.html":"referees_manage","/schiedsrichter.html":"referees_manage",
- "/coach-beobachter-verwaltung.html":"coaches_manage","/coach-beobachter.html":"coaches_manage",
+ "/coach-beobachter.html":"coaches_manage",
  "/benutzerprofile.html":"users_manage","/zugang-einrichten.html":"users_manage",
  "/textvorlagen.html":"mail_send"
 };

@@ -61,7 +61,7 @@ $("manual-save").addEventListener("click",async()=>{const id=normalizeGameId($("
  const {data:existingCloud,error:readErr}=await sb.from("portal_games").select("game_key").eq("owner_id",user.id).eq("game_key",game.id).maybeSingle();
  if(readErr)throw readErr;
  if(existingCloud){$("status").textContent="⚠️ Doppeltes Spiel verhindert: Die Spielkennung "+game.id+" existiert bereits in der Spieleverwaltung. Es wurde kein weiteres Spiel angelegt.";return}
- const personLists=await Promise.all([cloudPeople(user.id,"referee"),cloudPeople(user.id,"coach")]);
+ const personLists=await Promise.all([cloudPeople(user.id,"referee"),cloudPeople(user.id,"coach","active")]);
  const ref=personLists[0].find(p=>p.id===game.referee),coach=personLists[1].find(p=>p.id===game.coach);
  // Bestätigte Sportplätze ausschließlich bei identischem Namen automatisch übernehmen.
  // Nicht bestätigte Treffer werden niemals als geprüfte Sportstätte markiert.

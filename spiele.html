@@ -259,7 +259,7 @@ function editGame(g){
  for(const [key,id] of Object.entries(gameEditFields))$(id).value=g[key]??"";
  for(const [type,id,people] of [["referee","ge-referee",refs],["coach","ge-coach",coaches]]){
   const select=$(id);select.replaceChildren(new Option("Keine Zuordnung",""));
-  for(const p of people)select.add(new Option(fullName(p),p.id));
+  for(const p of people)if(type!=="coach"||p.isCoach!==false||String(p.id)===String(g.coach_id))select.add(new Option(fullName(p),p.id));
   select.value=g[type+"_id"]||"";
  }
  $("ge-planning").value=g.planning_status||"offen";
@@ -899,7 +899,7 @@ function mobileGameCard(g){
   const id="card-"+type+"-"+String(g.game_key).replace(/[^a-zA-Z0-9_-]/g,"-");
   label.htmlFor=id;label.textContent=isRef?"Schiedsrichter zuordnen":"Coach / Beobachter zuordnen";sel.id=id;
   sel.add(new Option("Bitte auswählen",""));
-  for(const p of isRef?refs:coaches)sel.add(new Option(fullName(p),p.id));
+  for(const p of isRef?refs:coaches)if(isRef||p.isCoach!==false||String(p.id)===String(g.coach_id))sel.add(new Option(fullName(p),p.id));
   sel.value=g[type+"_id"]||"";
   sel.addEventListener("change",()=>assignment(g,type,sel.value));
   holder.append(label,sel);inner.append(holder);
@@ -1048,7 +1048,7 @@ function render(){
    const td=document.createElement("td"),select=document.createElement("select"),people=type==="referee"?refs:coaches;
    select.setAttribute("aria-label",(type==="referee"?"Schiedsrichter":"Coach")+" für "+g.game_key);
    select.add(new Option("Bitte auswählen",""));
-   for(const p of people)select.add(new Option(fullName(p),p.id));
+   for(const p of people)if(type!=="coach"||p.isCoach!==false||String(p.id)===String(g.coach_id))select.add(new Option(fullName(p),p.id));
    select.value=g[type+"_id"]||"";
    select.addEventListener("change",()=>assignment(g,type,select.value));td.append(select);row.append(td)
   }

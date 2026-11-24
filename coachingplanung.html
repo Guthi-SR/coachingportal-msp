@@ -156,7 +156,7 @@ function note(text){$("planning-status").textContent=text}
 function elem(tag,css,txt){const x=document.createElement(tag);if(css)x.className=css;if(txt!==undefined)x.textContent=txt;return x}
 function clearResults(key){for(const k of [...results.keys()])if(k.startsWith(key+"|"))results.delete(k)}
 function orderedCoaches(g){
- return [...coaches].sort((a,b)=>{
+ return coaches.filter(p=>p.isCoach!==false||String(p.id)===String(g.coach_id)).sort((a,b)=>{
   const ar=results.get(routeKey(g,a))?.oneWayKm,br=results.get(routeKey(g,b))?.oneWayKm;
   return (ar==null?1:0)-(br==null?1:0) || (ar!=null&&br!=null?ar-br:0)||collator.compare(coachName(a),coachName(b));
  });
@@ -370,7 +370,7 @@ $("calculate-all").addEventListener("click",async()=>{
  if(!$("route-consent").checked){note("Bitte erst der Adressübertragung an die externen Kartendienste zustimmen.");return}
  pendingAll=true;const token=++runId;
  $("calculate-all").textContent="Berechnung abbrechen";
- const people=[...coaches];
+ const people=coaches.filter(p=>p.isCoach!==false||String(p.id)===String(g.coach_id));
  for(let i=0;i<people.length;i++){
   if(token!==runId)break;
   $("route-progress").textContent="Berechnung "+(i+1)+" von "+people.length+": "+coachName(people[i]);

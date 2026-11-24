@@ -1,9 +1,9 @@
 import {sb,requireAdmin} from "/portal-workflow.js";
 const localKey=(userId,kind)=>(kind==="coach"?"msp-coach-draft-":"msp-admin-draft-")+userId;
-export async function cloudPeople(userId,kind){
- const {data,error}=await sb.from("portal_people").select("person_id,details,created_at").eq("owner_id",userId).eq("kind",kind);
+export async function cloudPeople(userId,kind,mode="history"){
+ const {data,error}=await sb.from("portal_people").select("person_id,details,created_at,staff_coach,staff_pate,staff_ever_coach").eq("owner_id",userId).eq("kind",kind);
  if(error)throw error;
- const people=(data||[]).map(x=>({...x.details,id:x.person_id,createdAt:x.created_at}));
+ const people=(data||[]).map(x=>({...x.details,id:x.person_id,createdAt:x.created_at,isCoach:x.staff_coach,isPate:x.staff_pate,everCoach:x.staff_ever_coach}));
  const key=localKey(userId,kind);
  let local={refs:[],docs:[]};try{local=JSON.parse(localStorage.getItem(key)||"{}")||local}catch{}
  const stored=Array.isArray(local.refs)?local.refs:[];
@@ -13,11 +13,12 @@ export async function cloudPeople(userId,kind){
  if(missing.length){
   const {error:e}=await sb.from("portal_people").upsert(missing.map(p=>({owner_id:userId,kind,person_id:p.id,details:p})),{onConflict:"owner_id,kind,person_id"});
   if(e)throw e;
-  people.push(...missing);
+  people.push(...missing.map(p=>({...p,isCoach:true,isPate:false,everCoach:true})));
  }
- localStorage.setItem(key,JSON.stringify({...local,refs:people}));
+ const history=kind==="coach"?people.filter(p=>p.everCoach!==false):people;
+ localStorage.setItem(key,JSON.stringify({...local,refs:history}));
  localStorage.setItem(marker,"yes");
- return people;
+ return kind!=="coach"?people:mode==="all"?people:mode==="active"?history.filter(p=>p.isCoach!==false):history;
 }
 export async function saveCloudPerson(userId,kind,person){
  const {error}=await sb.from("portal_people").upsert({owner_id:userId,kind,person_id:person.id,details:person,updated_at:new Date().toISOString()},{onConflict:"owner_id,kind,person_id"});
