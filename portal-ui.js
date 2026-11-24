@@ -6,7 +6,7 @@ if(!nav){
  sidebar.className="portal-sidebar";
  sidebar.setAttribute("aria-label","Hauptmenü");
  sidebar.style.cssText="background:white;border-right:1px solid #dce5ee;padding:20px 12px;display:flex;flex-direction:column;gap:6px;min-width:0";
- const items=[["/","Startseite"],["/spiele-anlegen.html","Spiele anlegen"],["/spiele.html","Spiele"],["/coachingplanung.html","Coachingplanung"],["/auswertung.html","Auswertung"],["/beobachtungsbogen-erfassen.html","Beobachtungsbogen erfassen"],["/beobachtungsboegen.html","Beobachtungsbögen"],["/schiedsrichter.html","Schiedsrichter"],["/sammelauswertung.html","Sammelauswertung"],["/coach-beobachter.html","Coach-Beobachter"],["/textvorlagen.html","Textvorlagen"]];
+ const items=[["/","Startseite"],["/spiele-anlegen.html","Spiele anlegen"],["/spiele.html","Spiele"],["/coachingplanung.html","Coachingplanung"],["/auswertung.html","Auswertung"],["/beobachtungsbogen-erfassen.html","Beobachtungsbogen erfassen"],["/beobachtungsboegen.html","Beobachtungsbögen"],["/schiedsrichter.html","Schiedsrichter"],["/sammelauswertung.html","Sammelauswertung"],["/coach-beobachter.html","Coach-Beobachter"],["/paten.html","Paten"],["/textvorlagen.html","Textvorlagen"]];
  for(const [href,label] of items){const link=document.createElement("a");link.href=href;link.textContent=label;link.style.cssText="padding:10px 12px;color:#142b46;text-decoration:none;border-radius:7px";sidebar.append(link)}
  const shell=document.createElement("div");
  shell.className="portal-shell";
@@ -268,6 +268,7 @@ if(nav){
    if(after)after.insertAdjacentElement("afterend",link);else nav.append(link);
  };
  for(const [href,label] of [["/","Startseite"],["/spiele-anlegen.html","Spiele anlegen"],["/spiele.html","Spiele"],["/coachingplanung.html","Coachingplanung"],["/auswertung.html","Auswertung"],["/beobachtungsbogen-erfassen.html","Beobachtungsbogen erfassen"],["/beobachtungsboegen.html","Beobachtungsbögen"],["/coach-beobachter.html","Coach-Beobachter"]])ensureMainLink(href,label,"/spiele.html");
+ ensureMainLink("/paten.html","Paten","/coach-beobachter.html");
  ensureMainLink("/pdf-auswerten.html","PDF auswerten","/auswertung.html");
  ensureMainLink("/sammelauswertung.html","Sammelauswertung","/pdf-auswerten.html");
  ensureMainLink("/verwaltung.html","Schiedsrichterverwaltung","/beobachtungsboegen.html");
@@ -287,7 +288,7 @@ if(nav){
  const administration=nav.querySelector("#portal-administration-menu");
  if(administration){
   const children=administration.querySelector(".person-submenu");
-  for(const [href,label] of [["/verwaltung.html","Schiedsrichterverwaltung"],["/coach-beobachter-verwaltung.html","Coach-Beobachter-Verwaltung"],["/benutzerprofile.html","Benutzerprofile & Rechte"],["/zugang-einrichten.html","Benutzerverwaltung"]]){
+  for(const [href,label] of [["/verwaltung.html","Schiedsrichterverwaltung"],["/coach-beobachter-verwaltung.html","Coach-Beobachter-Verwaltung"],["/paten-verwaltung.html","Patenverwaltung"],["/benutzerprofile.html","Benutzerprofile & Rechte"],["/zugang-einrichten.html","Benutzerverwaltung"]]){
    let link=nav.querySelector('a[href="'+href+'"]');
    if(!link){link=document.createElement("a");link.href=href;}
    link.textContent=label;
