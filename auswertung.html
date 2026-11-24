@@ -110,6 +110,7 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
 <div class="coach-batch-selection">
  <div class="coach-batch-tools" role="group" aria-label="Coaches für Excel-Auswertung auswählen">
   <label><input type="radio" name="coach-scope" value="all" checked> Alle Coaches</label>
+  <label><input type="radio" name="coach-scope" value="played"> Nur Coaches mit Spielen im Zeitraum</label>
   <label><input type="radio" name="coach-scope" value="selected"> Einzelne oder mehrere Coaches</label>
  </div>
  <p class="hint" id="coach-selection-hint">Alle Coaches werden in die gemeinsame Excel-Datei übernommen.</p>
@@ -358,15 +359,17 @@ for(const id of ["from","to"])$(id).addEventListener("change",()=>{
 });
 
 function getBatchCoaches(){
- return [...coaches].filter(p=>coachScope==="all"||selectedCoachIds.has(String(p.id))).sort(compareNames);
+ const {from,to}=effectiveRange();
+ return [...coaches].filter(p=>coachScope==="all"||(coachScope==="played"?matchingGames(p,from,to).length>0:selectedCoachIds.has(String(p.id)))).sort(compareNames);
 }
 function updateCoachExportStatus(){
  const list=getBatchCoaches(),{from,to}=effectiveRange();
  $("export-coaches").disabled=from>to||!list.length;
  $("copy-coach-emails").disabled=from>to||!list.length;
- $("coach-selection-count").textContent=list.length+" von "+coaches.length+" Coaches für den Export";
+ $("coach-selection-count").textContent=list.length+" von "+coaches.length+" Coaches ausgewählt";
  $("coach-selection-hint").textContent=coachScope==="all"
   ?"Alle Coaches werden in die gemeinsame Excel-Datei übernommen."
+  :coachScope==="played"?"Nur Coaches mit mindestens einem Spiel im gewählten Zeitraum werden ausgewählt."
   :"Hake in der Liste einen oder mehrere Coaches an. Nur diese werden exportiert.";
 }
 for(const mode of document.querySelectorAll('input[name="coach-scope"]')){
@@ -415,7 +418,7 @@ $("export-coaches").addEventListener("click",exportBatchCoaches);
 
 function coachEmail(person){
  const raw=String(person.email||person.email_address||person.emailAddress||person.mail||"").trim();
- return /^[^\\s@;,]+@[^\\s@;,]+\\.[^\\s@;,]+$/.test(raw)?raw:"";
+ return /^[^\s@;,]+@[^\s@;,]+\.[^\s@;,]+$/.test(raw)?raw:"";
 }
 $("copy-coach-emails").addEventListener("click",async()=>{
  const {from,to}=effectiveRange(),status=$("coach-email-status");
