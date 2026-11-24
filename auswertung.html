@@ -115,6 +115,8 @@ td,th{padding:13px;border-bottom:1px solid #e4e8ee;text-align:left}tr:last-child
  <p class="hint" id="coach-selection-hint">Alle Coaches werden in die gemeinsame Excel-Datei übernommen.</p>
  <div class="coach-batch-actions">
   <button type="button" id="export-coaches" disabled>Auswahl als Excel exportieren (.xlsx)</button>
+  <button type="button" id="copy-coach-emails" class="secondary" disabled>E-Mail-Adressen kopieren</button>
+  <span id="coach-email-status" role="status" aria-live="polite"></span>
   <span id="coach-selection-count"></span>
   <span id="coach-export-status" role="status" aria-live="polite"></span>
  </div>
@@ -361,6 +363,7 @@ function getBatchCoaches(){
 function updateCoachExportStatus(){
  const list=getBatchCoaches(),{from,to}=effectiveRange();
  $("export-coaches").disabled=from>to||!list.length;
+ $("copy-coach-emails").disabled=from>to||!list.length;
  $("coach-selection-count").textContent=list.length+" von "+coaches.length+" Coaches für den Export";
  $("coach-selection-hint").textContent=coachScope==="all"
   ?"Alle Coaches werden in die gemeinsame Excel-Datei übernommen."
@@ -409,6 +412,33 @@ async function exportBatchCoaches(){
  }catch(error){$("coach-export-status").textContent="Excel-Export fehlgeschlagen: "+error.message}finally{button.textContent=previous;updateCoachExportStatus()}
 }
 $("export-coaches").addEventListener("click",exportBatchCoaches);
+
+function coachEmail(person){
+ const raw=String(person.email||person.email_address||person.emailAddress||person.mail||"").trim();
+ return /^[^\\s@;,]+@[^\\s@;,]+\\.[^\\s@;,]+$/.test(raw)?raw:"";
+}
+$("copy-coach-emails").addEventListener("click",async()=>{
+ const {from,to}=effectiveRange(),status=$("coach-email-status");
+ if(from>to){status.textContent="Bitte zuerst einen gültigen Zeitraum auswählen.";return}
+ const selected=getBatchCoaches();
+ if(!selected.length){status.textContent="Bitte mindestens einen Coach auswählen.";return}
+ const addresses=[...new Set(selected.map(coachEmail).filter(Boolean))];
+ const missing=selected.length-selected.filter(p=>coachEmail(p)).length;
+ if(!addresses.length){status.textContent="Für die Auswahl sind keine gültigen E-Mail-Adressen hinterlegt.";return}
+ const value=addresses.join("; ");
+ try{
+  if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(value)}
+  else{
+   const field=document.createElement("textarea");field.value=value;field.style.position="fixed";field.style.opacity="0";
+   document.body.append(field);field.select();
+   const copied=document.execCommand("copy");field.remove();
+   if(!copied)throw Error("Zwischenablage nicht verfügbar");
+  }
+  status.textContent=addresses.length+" E-Mail-Adresse(n) kopiert"+(missing?"; "+missing+" Coach(es) ohne gültige E-Mail-Adresse ausgelassen.":".");
+ }catch(error){
+  status.textContent="Kopieren nicht möglich. Bitte Browser-Zugriff auf die Zwischenablage erlauben.";
+ }
+});
 
 
 function loadExcelLibrary(){
